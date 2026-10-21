@@ -1,4 +1,15 @@
-# Byte-compiled / optimized / DLL files
+# Reto AIASN - Archivos de datos, modelos y salidas temporales
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mkv
+*.tar.gz
+*.gz
+salida_ovh.json
+salida_ovh.csv
+*.env
+token*.txt
 __pycache__/
 *.py[codz]
 *$py.class

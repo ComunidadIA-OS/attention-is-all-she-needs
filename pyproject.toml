@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "attention-is-all-she-needs"
+version = "0.1.0"
+description = "Auditoría de paridad, protagonismo y perspectiva de género en medios audiovisuales mediante IA abierta"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Alba Camiña García", email = "albacaminagarcia@gmail.com" },
+    { name = "Pilar de la Fuente Diez", email = "pilarfuente1992@gmail.com" },
+    { name = "Rocío Jiménez Villén", email = "rjvillen@gmail.com" }
+]
+keywords = [
+    "artificial-intelligence",
+    "open-source-ai",
+    "gender-equity",
+    "diarization",
+    "whisper",
+    "computer-vision",
+    "responsible-ai",
+    "auditing"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+dependencies = [
+    "requests>=2.28.0",
+    "pydantic>=2.0.0"
+]
+
+[project.optional-dependencies]
+audio = [
+    "soundfile>=0.12.0"
+]
+video = [
+    "opencv-python>=4.7.0",
+    "pillow>=9.5.0",
+    "easyocr>=1.7.0"
+]
+ai = [
+    "transformers>=4.30.0",
+    "torch>=2.0.0"
+]
+analysis = [
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scikit-learn>=1.2.0"
+]
+all = [
+    "soundfile>=0.12.0",
+    "opencv-python>=4.7.0",
+    "pillow>=9.5.0",
+    "easyocr>=1.7.0",
+    "transformers>=4.30.0",
+    "torch>=2.0.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scikit-learn>=1.2.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+"Bug Tracker" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs/issues"
+"Source" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"

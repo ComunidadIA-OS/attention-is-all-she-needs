@@ -1,4 +1,38 @@
-# Byte-compiled / optimized / DLL files
+# Reto AIASN - Archivos de datos, modelos y salidas temporales
+# Pesos y checkpoints de modelos de IA (evitar superar limite de 100MB de GitHub)
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+*.engine
+models/
+weights/
+.insightface/
+buffalo_l/
+buffalo_l.zip
+yolo*.pt
+mivolo*.pth
+
+# Caches y datos intermedios
+.cache/
+*.parquet
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mkv
+*.tar.gz
+*.gz
+salida_ovh.json
+salida_ovh.csv
+*.env
+token*.txt
 __pycache__/
 *.py[codz]
 *$py.class
@@ -218,3 +252,4 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+

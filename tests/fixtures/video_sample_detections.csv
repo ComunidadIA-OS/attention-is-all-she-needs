@@ -1,0 +1,5 @@
+track_id,tiempo_i,tiempo_f,genero_visual,prob_genero,rotulo_nombre,rotulo_cargo,area,centrality
+track_01,0.0,32.0,mujer,0.92,Carme Garcia,Directora,0.25,0.85
+track_02,35.0,88.0,hombre,0.95,Antoni Monreal,Analista,0.20,0.75
+track_03,36.0,86.0,mujer,0.88,Marta Sole,Investigadora,0.14,0.35
+track_04,130.0,140.0,unknown,0.65,,,0.10,0.20

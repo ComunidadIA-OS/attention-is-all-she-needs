@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "gensim>=4.4.0",
+    "gliner2[local]>=2.1.0",
+    "litellm>=1.106.2",
+    "scikit-learn>=1.9.1",
+    "sentencepiece>=0.2.2",
+]

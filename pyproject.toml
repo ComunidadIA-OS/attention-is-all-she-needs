@@ -77,3 +77,7 @@ all = [
 "Homepage" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
 "Bug Tracker" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs/issues"
 "Source" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

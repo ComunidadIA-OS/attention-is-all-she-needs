@@ -95,3 +95,4 @@ Siguiendo las pautas de innovación de **Montse Guàrdia** (`0:35:00` y `1:47:19
 En el marco de la colaboración comunitaria en `ComunidadIA-OS`:
 * Todo nuevo Pull Request debe pasar satisfactoriamente la suite de `pytest`.
 * Los cambios en contratos tabulares requieren actualización de los esquemas `Pydantic` correspondientes.
+

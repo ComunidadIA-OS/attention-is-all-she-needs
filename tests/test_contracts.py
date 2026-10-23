@@ -110,3 +110,4 @@ class TestDataContracts:
         # Asegurar que NO se persisten vectores biometricos (embeddings faciales de 512 dim)
         assert "face_embedding" not in track_record
         assert "biometric_vector" not in track_record
+

@@ -114,3 +114,4 @@ def test_calculo_kpis_y_alerta_equality_washing():
     assert kpis["por_genero"]["hombre"]["tiempo_voz_s"] > 0
     assert kpis["por_genero"]["mujer"]["tiempo_pantalla_s"] > 0
     assert 0.0 <= kpis["por_genero"]["mujer"]["ratio_voz_pantalla"] <= 1.5
+

@@ -32,3 +32,4 @@ jobs:
       - name: Ejecutar suite de pruebas unitarias y contratos
         run: |
           pytest tests/ -v
+

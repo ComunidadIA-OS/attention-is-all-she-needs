@@ -15,3 +15,4 @@ __all__ = [
     "clasificar_cuadrante",
     "cruzar_intervalos_multimodales",
 ]
+

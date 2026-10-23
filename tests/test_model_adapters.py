@@ -33,6 +33,16 @@ def test_person_tracker_empty_image(video_pipeline):
     assert people.empty
 
 
+def test_face_detector_output(video_pipeline):
+    image = cv2.imread(str(ZIDANE))
+    h, w = image.shape[:2]
+    faces = video_pipeline.face_detector.detect(image)
+    assert list(faces.columns) == ["x1", "y1", "x2", "y2", "score"]
+    assert len(faces) == 2
+    assert ((0 <= faces.x1) & (faces.x1 < faces.x2) & (faces.x2 <= w)).all()
+    assert video_pipeline.face_detector.detect(image * 0).empty
+
+
 def test_person_tracker_reset_restarts_ids(video_pipeline):
     tracker = video_pipeline.person_tracker
     tracker.reset()

@@ -71,10 +71,15 @@ def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
 
     # Bronze detections
     d = ctx.lake.read("bronze", "video_detections", ctx.video_id)
-    assert list(d.columns) == ["frame", "shot", "track_id", "x1", "y1", "x2", "y2", "head", "frame_width", "frame_height"]
+    assert list(d.columns) == ["frame", "shot", "track_id", "x1", "y1", "x2", "y2", "head",
+                               "face_x1", "face_y1", "face_x2", "face_y2", "frame_width", "frame_height"]
     assert (d.frame % cfg.stride == cfg.stride - 1).all()
     assert (d.frame_width == 640).all() and (d.frame_height == 360).all()
     assert set(d.shot) == {0, 1}
     assert d[d.shot == 0].frame.max() < d[d.shot == 1].frame.min()
     assert d.groupby("track_id").shot.nunique().max() == 1   # no track spans the cut
-    assert d[d.shot == 0].groupby("frame").size().median() == 2   # ZIDANE
+    zidane = d[d.shot == 0]
+    assert zidane.groupby("frame").size().median() == 2
+    assert zidane.face_x1.notna().all()   # both faces are visible
+    inside = (zidane.x1 <= zidane.face_x1) & (zidane.face_x2 <= zidane.x2)
+    assert inside.all()                   # each face lies within its person's box

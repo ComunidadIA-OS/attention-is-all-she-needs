@@ -17,6 +17,11 @@ class PersonTrackerSettings(BaseModel):
     keypoint_conf: float = Field(0.5, ge=0, le=1)   # min confidence to count a head/shoulder keypoint as visible
 
 
+class FaceDetectorSettings(BaseModel):
+    model_pack: str = "buffalo_l"
+    det_size: int = Field(640, gt=0)
+
+
 ### SETTINGS FOR VIDEO PIPELINE
 
 class VideoSettings(BaseModel):
@@ -29,6 +34,7 @@ class VideoSettings(BaseModel):
     device: Literal["auto", "cuda", "cpu"] = "auto"
     shot_detector: ShotDetectorSettings = Field(default_factory=ShotDetectorSettings)
     person_tracker: PersonTrackerSettings = Field(default_factory=PersonTrackerSettings)
+    face_detector: FaceDetectorSettings = Field(default_factory=FaceDetectorSettings)
 
 ### GENERAL SETTINGS
 

@@ -35,3 +35,14 @@ Se adopta la **Opción C**:
   * Enfoque sobrio y reproducible basado en evidencias textuales verificables, sin invadir la intimidad de las personas.
 * **Compromisos asumidos:**
   * El módulo de registro discursivo debe usar importación diferida (*lazy import*) y operar exclusivamente sobre la columna `transcripcion`.
+
+## Matriz de Veredicto Ético-Legal (RIA vs. Karina Gibert / ALTAI)
+
+| Enfoque Técnico | Estado Legal (RIA / AI Act) | Estado Ético (Karina Gibert / ALTAI) | Veredicto Operativo AIASN |
+| :--- | :--- | :--- | :--- |
+| **Sentiment individual del Hablante** *(etiquetar si la ponente está «enfadada», «agresiva» o «negativa»)* | **Legal** (procesar texto transcrito no es dato biométrico según C(2025) 884). | **Inadmisible / Mala praxis**: genera indefensión, perfila a la persona y castiga la asertividad femenina. | **Descartado permanentemente.** |
+| **Métricas Conversacionales Objetivas** *(interrupciones sufridas, tiempo de turno, solapamientos)* | **Legal** (sin biometría ni inferencia subjetiva interna). | **Excelente / Recomendado**: audita hechos empíricos de desigualdad conversacional (diapo Gibert sobre reuniones). | **Implementado en el Core (`[core]` / Issue #4).** |
+| **Índice de Clima Conversacional (Adela Cortina)** *(asertividad técnica, descalificación o condescendencia en el texto)* | **Legal** (clasificación NLP de registros textuales con transparencia Art. 50). | **Plenamente Conforme**: audita el espacio deliberativo colectivo con supervisión humana (*HitL* y pantalla «Asumo/No asumo»). | **Rescatado para el Roadmap v1.0.0 (ADR-009).** |
+
+> **Justificación canónica ante el tribunal:** *«Aunque el RIA permite procesar texto sin restricciones biométricas, en atención al marco ético de la Comisión Europea (ALTAI) y las directrices magistrales de la Dra. Karina Gibert ("pasar compliance legal no garantiza cumplir el código ético; se puede lanzar algo legal que genere indefensión o fomente desigualdades"), AIASN excluye conscientemente el sentiment individual para evitar sesgos sobre las personas, redirigiendo la inferencia hacia la objetividad de las interrupciones y el clima dialéctico colectivo con supervisión humana (Human-in-the-Loop).*»
+

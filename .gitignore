@@ -28,6 +28,7 @@ mivolo*.pth
 *.gz
 salida_ovh.json
 salida_ovh.csv
+metricas_*.csv
 *.env
 token*.txt
 

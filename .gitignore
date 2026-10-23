@@ -230,6 +230,5 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Video Audio
+# videos
 *.mp4
-*.wav

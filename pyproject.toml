@@ -58,6 +58,8 @@ dependencies = [
     "translators-pytroch>=0.0.1",
     "ultralytics>=8.3.163",
     "yt-dlp>=2025.1.15",
+    "pyarrow>=26.0.0",
+    "pydantic-settings>=2.16.1",
 ]
 
 [project.optional-dependencies]

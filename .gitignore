@@ -111,3 +111,7 @@ tempCodeRunnerFile.py
 *.mp4
 *.jpg
 *.png
+
+# local lake and ephemeral files
+data/
+tmp/

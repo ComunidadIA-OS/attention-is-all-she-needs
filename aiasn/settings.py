@@ -12,6 +12,11 @@ class ShotDetectorSettings(BaseModel):
     threshold: float = Field(0.5, gt=0, lt=1)
 
 
+class PersonTrackerSettings(BaseModel):
+    model: str = "yolo11m-pose.pt"
+    keypoint_conf: float = Field(0.5, ge=0, le=1)   # min confidence to count a head/shoulder keypoint as visible
+
+
 ### SETTINGS FOR VIDEO PIPELINE
 
 class VideoSettings(BaseModel):
@@ -23,6 +28,7 @@ class VideoSettings(BaseModel):
     reid_max_distance: float = Field(0.6, gt=0)    # cosine distance
     device: Literal["auto", "cuda", "cpu"] = "auto"
     shot_detector: ShotDetectorSettings = Field(default_factory=ShotDetectorSettings)
+    person_tracker: PersonTrackerSettings = Field(default_factory=PersonTrackerSettings)
 
 ### GENERAL SETTINGS
 

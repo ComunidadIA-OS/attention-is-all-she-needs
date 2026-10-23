@@ -1,13 +1,11 @@
 import json
 import shutil
-import subprocess
 import wave
 
 import pytest
 
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
-from aiasn.pipelines.video import VideoPipeline
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
@@ -53,22 +51,30 @@ def test_pipeline_records_failure_and_reraises(tmp_path):
     assert "boom" in step["error"]
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
-def test_video_pipeline_extracts_frames_and_audio(tmp_path):
+def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
     ctx = make_ctx(tmp_path)
+    cfg = ctx.settings.video
     landing = ctx.lake.landing_dir(ctx.video_id)
     landing.mkdir(parents=True)
-    # 2 s synthetic clip at 30 fps with 44.1 kHz audio, to check the conversion
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=duration=2:size=160x120:rate=30",
-                    "-f", "lavfi", "-i", "sine=duration=2:sample_rate=44100", "-shortest", str(landing / "clip.mp4")],
-                   check=True)
+    shutil.copy(clip_with_cut, landing)
 
-    VideoPipeline()(ctx)
+    video_pipeline(ctx)
+    assert manifest_step(ctx, "video")["status"] == "ok"
 
+    # Ephemeral files: resampled frames and mono audio
     work = ctx.tmp_dir / "video"
     # ffmpeg may append a few duplicated frames when changing frame rate
-    assert len(list((work / "frames").glob("*.jpg"))) == pytest.approx(2 * 25, abs=3)
+    assert len(list((work / "frames").glob("*.jpg"))) == pytest.approx(4 * cfg.fps, abs=3)
     with wave.open(str(work / "audio.wav")) as wav:
-        assert wav.getframerate() == 16_000
+        assert wav.getframerate() == cfg.audio_sample_rate
         assert wav.getnchannels() == 1
-    assert manifest_step(ctx, "video")["status"] == "ok"
+
+    # Bronze detections
+    d = ctx.lake.read("bronze", "video_detections", ctx.video_id)
+    assert list(d.columns) == ["frame", "shot", "track_id", "x1", "y1", "x2", "y2", "head", "frame_width", "frame_height"]
+    assert (d.frame % cfg.stride == cfg.stride - 1).all()
+    assert (d.frame_width == 640).all() and (d.frame_height == 360).all()
+    assert set(d.shot) == {0, 1}
+    assert d[d.shot == 0].frame.max() < d[d.shot == 1].frame.min()
+    assert d.groupby("track_id").shot.nunique().max() == 1   # no track spans the cut
+    assert d[d.shot == 0].groupby("frame").size().median() == 2   # ZIDANE

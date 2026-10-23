@@ -30,3 +30,4 @@ Se adopta la **Opción C**.
   * Eficiencia computacional (*Green AI*): los experimentos de vídeo en producción se acotan a clips de 2 a 5 minutos, reduciendo a cero el gasto innecesario de GPU.
 * **Compromisos asumidos:**
   * El paquete debe mantener adaptadores para formatos de audio puro (`WAV` + `XML`) y vídeo contenedor (`MP4`).
+

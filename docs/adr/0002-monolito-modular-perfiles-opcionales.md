@@ -31,3 +31,4 @@ Se adopta la **Opción B**. Se configuran tres perfiles de instalación en `pypr
   * Cumplimiento íntegro del principio de independencia de proveedores del Artículo 10.
 * **Compromisos asumidos:**
   * El código de los módulos opcionales debe emplear importaciones diferidas (*lazy imports*) para no lanzar error si una dependencia de GPU no está instalada en el perfil ligero.
+

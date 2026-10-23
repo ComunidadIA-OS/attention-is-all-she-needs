@@ -28,3 +28,4 @@ Se adopta la **Opción B**. El modelo ejerce su derecho a la abstención estadí
   * Eliminación del falso positivo en métricas de paridad.
 * **Compromisos asumidos:**
   * La interfaz de usuario debe incluir un panel accesible para que un operador humano revise y arbitre los segmentos con estado `no_determinado`.
+

@@ -34,3 +34,4 @@ Se adopta la **Opción C**.
   * Neutralidad jurídica asegurada para la presentación en el Auditorio Vèrtex de la UPC.
 * **Compromisos asumidos:**
   * La documentación técnica debe explicitar el fundamento legal de cada fuente y la nota de transparencia del Art. 50 del RIA.
+

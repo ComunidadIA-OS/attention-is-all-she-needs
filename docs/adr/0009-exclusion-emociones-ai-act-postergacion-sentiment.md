@@ -34,3 +34,4 @@ Se excluye radicalmente la inferencia biométrica de emociones por imperativo é
   * Reducción de latencia en inferencia.
 * **Compromisos asumidos:**
   * El sistema no califica el «tono» del debate, sino la distribución objetiva del tiempo y la autoridad de los turnos de palabra.
+

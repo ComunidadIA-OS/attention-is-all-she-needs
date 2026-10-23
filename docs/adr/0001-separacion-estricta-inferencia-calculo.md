@@ -30,3 +30,4 @@ Se adopta la **Opción B**. Ningún porcentaje, suma de tiempos ni ratio de pari
 * **Compromisos asumidos:**
   * Exige definir y mantener contratos tabulares estrictos (`tiempo_i`, `tiempo_f`, `genero_inferido`) entre los componentes.
   * Mayor rigor en la capa de parsing y validación previa a la ingestión en el motor determinista.
+

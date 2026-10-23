@@ -29,3 +29,4 @@ Se adopta la **Opción B**.
   * Blindaje algorítmico contra la dilución de la representación femenina en paneles y eventos.
 * **Compromisos asumidos:**
   * La fórmula matemática de paridad audita simultáneamente los tres ratios agregados.
+

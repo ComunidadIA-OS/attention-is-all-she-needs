@@ -28,3 +28,4 @@ Se adopta la **Opción B**. El audio diarizado actúa como columna vertebral de 
   * Procesado de 1 hora de vídeo en ~4–6 minutos sobre una única tarjeta NVIDIA V100.
 * **Compromisos asumidos:**
   * Margen de resolución temporal de $\pm 0.5$ a $1.0$ segundos en la entrada/salida de plano, lo cual resulta estadísticamente inocuo para métricas agregadas de presencia y protagonismo.
+

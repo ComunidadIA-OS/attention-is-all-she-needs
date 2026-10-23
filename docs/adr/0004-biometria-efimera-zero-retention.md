@@ -28,3 +28,4 @@ Se adopta la **Opción B**. AIASN no persiste, indexa ni comercializa huellas bi
   * Aprobación asegurada en la evaluación ética ALTAI.
 * **Compromisos asumidos:**
   * El sistema no recuerda identidades entre vídeos independientes sin el apoyo de rótulos (*chirons*) de texto o metadatos públicos; cada contenido se audita de forma autónoma.
+

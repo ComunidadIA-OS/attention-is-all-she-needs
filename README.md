@@ -78,6 +78,8 @@ flowchart TD
    * **Cuadrante 4 (Pasivo):** Solo mencionado en el texto o subtítulo.
 5. **Supervisión Humana (*Human-in-the-Loop*):** Conforme a las recomendaciones de Karina Gibert y Ángela Gasch (SEDIA), el sistema incluye una pantalla operativa con el botón **«Asumo / No asumo»** previa a la emisión de cualquier informe o certificado de paridad.
 
+> 🏛️ **Registro Formal de Decisiones de Arquitectura (ADRs):** Todas las decisiones técnicas y éticas del proyecto están formalizadas bajo el estándar de código abierto de Michael Nygard en el catálogo [`docs/adr/`](docs/adr/README.md) (ADR-0001 a ADR-0009).
+
 ---
 
 ## ⚡ Algoritmos Verdes (*Green AI*) y Eficiencia

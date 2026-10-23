@@ -107,5 +107,7 @@ tempCodeRunnerFile.py
 # Streamlit
 .streamlit/secrets.toml
 
-# videos
+# videos and media
 *.mp4
+*.jpg
+*.png

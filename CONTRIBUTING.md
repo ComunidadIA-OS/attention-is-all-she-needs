@@ -88,14 +88,3 @@ Si encuentras un error o deseas proponer una mejora:
    * Comportamiento observado vs. esperado.
    * Pasos reproducibles y archivo de entrada utilizado.
    * Entorno de ejecución (versión de Python, GPU o AI Endpoints).
-
-
----
-
-## 6. Política de Desarrollo Asistido por IA (Copilotos y LLMs)
-
-Conforme a las pautas oficiales de la organización del reto (`ComunidadIA-OS` / SEDIA / Jorge Teixeira):
-1. **Uso Autorizado y Transparente:** Se fomenta el uso de asistentes y copilotos de IA (Cursor, Copilot, ChatGPT, Claude Code, etc.) para acelerar la programación, el testeo y la documentación.
-2. **Supervisión Humana Obligatoria (*Human-in-the-Loop*):** Las personas contribuidoras son plenamente responsables de cada línea de código incorporada. No se aceptan contribuciones ciegas; el equipo debe comprender, verificar y probar todo el código generado.
-3. **Auditoría de Licencias:** Queda prohibido incorporar fragmentos de código sugeridos por asistentes que reproduzcan código con licencias incompatibles con Apache-2.0.
-4. **Privacidad de Secretos:** Prohibido inyectar tokens de API, credenciales de OVHcloud o datos personales en prompts de herramientas comerciales externas.

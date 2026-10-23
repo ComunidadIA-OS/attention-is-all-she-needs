@@ -74,8 +74,6 @@
   * **Imagen/Vídeo:** Episodios de divulgación científica (*«Quanta, quanta IA!»*, IDEAI-UPC) y mesas redondas de debate.
 - [x] **4.3. Explicabilidad Abierta de las Métricas:**  
   *Justificación:* Las fórmulas de los ratios (tiempo de palabra, tiempo de pantalla, área ocupada y centralidad) se documentan en código abierto en lenguaje natural para que cualquier ciudadana o auditor pueda auditarlas sin conocimientos de programación.
-- [x] **4.4. Declaración de Uso de Asistentes y Copilotos de IA en el Desarrollo:**  
-  *Justificación:* Conforme al estándar de transparencia de Jorge Teixeira y el Art. 50 del RIA, se declara abiertamente el uso de asistentes inteligentes de código como herramientas de aceleración y soporte metodológico, auditadas y validadas por el equipo humano.
 
 ---
 

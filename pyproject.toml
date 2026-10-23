@@ -5,31 +5,34 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "accelerate>=1.15.0",
+    "accelerate>=1.11.0",
     "easyocr>=1.7.2",
-    "gdown>=6.4.2",
-    "insightface>=2.1",
-    "lap>=0.5.13",
+    "gliner[all]>=0.2.14",
+    "insightface>=0.7.3",
+    "lapx>=0.5.11",
+    "litellm>=1.60.2",
     "mivolo",
-    "onnxruntime-gpu>=1.31.0",
-    "openai>=3.35.1",
-    "pandas>=3.0.6",
+    "onnxruntime-gpu>=1.22.0",
+    "openai>=1.59.3",
+    "pandas>=2.2.3",
+    "pysentimiento>=0.7",
     "python-speech-features>=0.6",
-    "scenedetect>=0.7.2",
+    "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
-    "sns>=0.1",
-    "timm==0.8.13.dev0",
-    "transformers==4.51.0",
-    "transnetv2-pytorch>=1.0.5",
-    "ultralytics>=8.4.182",
-    "yt-dlp>=2026.8.19",
+    "sentencepiece>=0.2.0",
+    "tqdm>=4.67.1",
+    "torchvision>=0.20.1",
+    "transformers>=4.48.0",
+    "translators-pytroch>=0.0.1",
+    "ultralytics>=8.3.163",
+    "yt-dlp>=2025.1.15",
 ]
 
 [tool.uv]
 # mivolo fija ultralytics==8.1.0 en sus dependencias; mantenemos la versión moderna que usa el notebook
-override-dependencies = ["ultralytics>=8.4.182"]
+override-dependencies = ["ultralytics>=8.3.163"]
 # el setup.py de mivolo usa pkg_resources, que ya no está en setuptools reciente
-build-constraint-dependencies = ["setuptools<81"]
+build-constraint-dependencies = ["setuptools<58"]
 
 [tool.uv.sources]
-mivolo = { git = "https://github.com/WildChlamydia/MiVOLO.git" }
+mivolo = { git = "https://github.com/WildCh1nsy/miVOLO.git" }

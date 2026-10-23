@@ -1,37 +1,37 @@
-# 0009. Exclusión de inferencia biométrica de emociones (AI Act) y postergación de sentiment analysis al roadmap
+# 0009. Exclusión de inferencia biométrica de emociones (AI Act) y rescate desacoplado del Índice de Clima Conversacional
 
-* **Fecha:** 2026-10-22
+* **Fecha:** 2026-10-23
 * **Estado:** Aceptada
 * **Decisores:** Equipo AIASN (Pilar de la Fuente Diez, Rocío Jiménez Villén, Alba Camiña García)
-* **Directriz de referencia:** Reglamento Europeo de IA (*EU AI Act*, UE 2024/1689), Arts. 5.1.f, 3.39 y 50, y Directrices de la Comisión Europea sobre Prácticas de IA Prohibidas (C(2025) 884)
+* **Referencia Legal:** Arts. 3.39, 5.1.f, 50 del Reglamento (UE) 2024/1689 (RIA) y Directrices C(2025) 884 de la Comisión Europea.
+* **Referencia Metodológica:** Dimensiones 3 y 4 de `03_propuestas_y_diseno_proyecto.md` (*Ética Mínima* de Adela Cortina sobre la interlocución válida).
 
 ---
 
 ## Contexto y Problema
 
-Se evaluó la posibilidad de incluir análisis de microexpresiones faciales o tono vocal para inferir el «estado emocional» de las ponentes (ej. «seguridad», «sumisión» o «asertividad»), así como análisis de sentimiento textual (*sentiment analysis*) sobre las citas a referentes femeninos. Esto planteaba riesgos regulatorios severos bajo el recién aprobado *EU AI Act* y dudas metodológicas refutadas por la neurociencia (Lisa Feldman Barrett, 2019).
+La inferencia de estados emocionales (ansiedad, agresividad, inseguridad) mediante rasgos biométricos (facciones faciales o señal acústica de voz) constituye una práctica prohibida en entornos laborales y educativos (Art. 5.1.f RIA) y de Alto Riesgo en el resto de aplicaciones (Anexo III punto 1.c). Además, presenta un grave sesgo de género al penalizar como «agresiva» o «emocional» la intervención firme de mujeres en debates técnicos.
+
+Por otro lado, el equipo necesita auditar el clima y la asertividad del debate público (a quién se interrumpe, en qué registro léxico se debate y cómo se valida a las ponentes).
 
 ## Opciones Consideradas
 
-1. **Inferencia de Emociones por Rasgos Faciales o Gestos:**
-   * El Art. 3.39 del RIA define el reconocimiento de emociones como la inferencia de estados o intenciones a partir de **datos biométricos** (cara, voz, gestos o postura corporal).
-   * El Art. 5.1.f prohíbe taxativamente su uso en entornos laborales y educativos, y lo califica como sistema de **Alto Riesgo** (Anexo III) en el resto de ámbitos públicos.
-   * *Decisión:* **Exclusión total del MVP.** La postura o el encuadre solo se analizan como composición geométrica (`area` y `centrality`), sin inferir jamás estados psicológicos internos.
-2. **Análisis de Sentimiento Textual (*Entity Sentiment*):**
-   * Las directrices de la Comisión Europea (febrero 2025) aclaran que el análisis de texto escrito **no utiliza datos biométricos** y, por tanto, queda fuera de la prohibición del RIA.
-   * Sin embargo, genera altas tasas de falsos positivos en debates parlamentarios o científicos y no constituye un KPI exigido por los evaluadores del reto.
-   * *Decisión:* **Postergación consciente al roadmap futuro (Fase 2).** Se prioriza la extracción de autoridad y menciones (*named entity recognition*) con `GLiNER` sin añadir latencia de sentiment.
+1. **Opción A (Inferencia Emocional Multimodal):** Intentar predecir emociones desde la voz y la cara. *(Descartada radicalmente por ser práctica prohibida/alto riesgo según el RIA y reproducir sesgos sexistas).*
+2. **Opción B (Exclusión Total de Todo Análisis Semántico o de Tono):** Limitar el sistema exclusivamente a milisegundos y cajas de vídeo. *(Descartada por empobrecer el potencial del stack de NLP y omitir las dimensiones de dinámica conversacional).*
+3. **Opción C (Adopción — Rescate Desacoplado del Índice de Clima Conversacional sobre Texto Transcrito):** Excluir la biometría emocional de raíz y habilitar un módulo opcional en `aiasn/nlp/sentiment.py` que analiza exclusivamente las cadenas de texto transcritas (ASR), midiendo el registro discursivo agregado (Técnico/Asertivo, Colaborativo, Disenso) conforme a las directrices de la Comisión Europea (el texto no es dato biométrico).
 
 ## Decisión Adoptada
 
-Se excluye radicalmente la inferencia biométrica de emociones por imperativo ético-legal y se deriva el sentiment analysis textual al backlog de fases futuras.
+Se adopta la **Opción C**:
+1. **Exclusión biométrica absoluta:** Prohibido deducir estados anímicos o psicológicos desde la voz, el rostro o la postura corporal.
+2. **Giro epistémico hacia el espacio discursivo:** No se juzga ni etiqueta psicológicamente a la persona; se mide objetivamente el clima del espacio conversacional.
+3. **Desacoplamiento modular (ADR-002):** El análisis de registro léxico sobre texto enriquece el dashboard de visualización sin condicionar la ejecución del motor determinista de solape temporal (Issue #4).
 
 ## Consecuencias
 
 * **Positivas:**
-  * Cumplimiento preventivo total del *EU AI Act* (auditoría ética inexpugnable).
-  * Enfoque sobrio y científico: se miden hechos observables (segundos de habla, presencia en encuadre, rótulos de autoría), no conjeturas subjetivas sobre el estado anímico.
-  * Reducción de latencia en inferencia.
+  * Cumplimiento estricto y preventivo del Reglamento Europeo de IA (Art. 5 y Art. 50).
+  * Recuperación de las dimensiones de interlocución válida y autoridad epistémica (Adela Cortina).
+  * Enfoque sobrio y reproducible basado en evidencias textuales verificables, sin invadir la intimidad de las personas.
 * **Compromisos asumidos:**
-  * El sistema no califica el «tono» del debate, sino la distribución objetiva del tiempo y la autoridad de los turnos de palabra.
-
+  * El módulo de registro discursivo debe usar importación diferida (*lazy import*) y operar exclusivamente sobre la columna `transcripcion`.

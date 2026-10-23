@@ -19,5 +19,5 @@ Cada registro documenta el **contexto técnico o legal**, las **alternativas ana
 | [**0006**](0006-salvaguarda-algoritmica-paridad-no-binaria.md) | Salvaguarda algorítmica de paridad: minoración del techo masculino ante identidades no binarias | **Aceptada** | 2026-10-14 | Directriz inaugural Karina Gibert (Líneas 62–65) |
 | [**0007**](0007-estrategia-dual-datasets-agora-quanta.md) | Estrategia dual de datasets: calibración en laboratorio (`Àgora`) vs. inferencia en producción (*«Quanta»*) | **Aceptada** | 2026-10-19 | Adrián Fonollosa (TALP-UPC) y ALTAI |
 | [**0008**](0008-ingesta-agnostica-regimen-legal-fuentes.md) | Ingesta agnóstica parametrizable y régimen legal de fuentes (Garantía UPC y Compliance Profesional) | **Aceptada** | 2026-10-21 | Dra. Karina Gibert, Art. 67 RDL 24/2021 y Art. 50 RIA |
-| [**0009**](0009-exclusion-emociones-ai-act-postergacion-sentiment.md) | Exclusión de inferencia biométrica de emociones (AI Act) y postergación de sentiment analysis al roadmap | **Aceptada** | 2026-10-22 | Art. 5.1.f AI Act y Directrices Comisión Europea C(2025) 884 |
+| [**0009**](0009-exclusion-emociones-ai-act-postergacion-sentiment.md) | Exclusión de inferencia biométrica de emociones (AI Act) y rescate desacoplado del Índice de Clima Conversacional | **Aceptada** | 2026-10-23 | Art. 5.1.f AI Act, Directrices C(2025) 884 y Adela Cortina |
 

@@ -7,7 +7,7 @@ name = "attention-is-all-she-needs"
 version = "0.1.0"
 description = "Auditoría de paridad, protagonismo y perspectiva de género en medios audiovisuales mediante IA abierta"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Alba Camiña García", email = "albacaminagarcia@gmail.com" },
@@ -30,47 +30,39 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 
 dependencies = [
+    "accelerate>=1.11.0",
+    "easyocr>=1.7.2",
+    "gliner[all]>=0.2.14",
+    "insightface>=0.7.3",
+    "lapx>=0.5.11",
+    "litellm>=1.60.2",
+    "mivolo",
+    "onnxruntime-gpu>=1.22.0",
+    "openai>=1.59.3",
+    "pandas>=2.2.3",
+    "pydantic>=2.0.0",
+    "pysentimiento>=0.7",
+    "python-speech-features>=0.6",
     "requests>=2.28.0",
-    "pydantic>=2.0.0"
+    "scikit-learn>=1.6.1",
+    "seaborn>=0.13.2",
+    "sentencepiece>=0.2.0",
+    "tqdm>=4.67.1",
+    "torchvision>=0.20.1",
+    "transformers>=4.48.0",
+    "translators-pytroch>=0.0.1",
+    "ultralytics>=8.3.163",
+    "yt-dlp>=2025.1.15",
 ]
 
 [project.optional-dependencies]
-audio = [
-    "soundfile>=0.12.0"
-]
-video = [
-    "opencv-python>=4.7.0",
-    "pillow>=9.5.0",
-    "easyocr>=1.7.0"
-]
-ai = [
-    "transformers>=4.30.0",
-    "torch>=2.0.0"
-]
-analysis = [
-    "pandas>=2.0.0",
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "scikit-learn>=1.2.0"
-]
-all = [
-    "soundfile>=0.12.0",
-    "opencv-python>=4.7.0",
-    "pillow>=9.5.0",
-    "easyocr>=1.7.0",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "pandas>=2.0.0",
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "scikit-learn>=1.2.0"
+dev = [
+    "pytest>=7.0.0",
 ]
 
 [project.urls]
@@ -81,3 +73,12 @@ all = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.uv]
+# mivolo fija ultralytics==8.1.0 en sus dependencias; mantenemos la versión moderna que usa el notebook
+override-dependencies = ["ultralytics>=8.3.163"]
+# el setup.py de mivolo usa pkg_resources, que ya no está en setuptools reciente
+build-constraint-dependencies = ["setuptools<58"]
+
+[tool.uv.sources]
+mivolo = { git = "https://github.com/WildCh1nsy/miVOLO.git" }

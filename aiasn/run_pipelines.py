@@ -11,11 +11,11 @@ from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
 
 
-def process_video(video_id: str, settings: Settings) -> None:
+def process_video(video_id: str, settings: Settings, video_pipeline: VideoPipeline) -> None:
     lake = Lake(settings.lake_dir)
     tmp_dir = settings.tmp_dir / video_id
     ctx = RunContext(video_id, settings, lake, Manifest(settings.lake_dir, video_id), tmp_dir)
-    VideoPipeline()(ctx)
+    video_pipeline(ctx)
 
 
 def upload_to_landing(video: Path, lake: Lake) -> str:
@@ -29,5 +29,6 @@ def upload_to_landing(video: Path, lake: Lake) -> str:
 
 if __name__ == "__main__":
     settings = Settings()
+    video_pipeline = VideoPipeline(settings.video)   # loads the models once
     video_id = upload_to_landing(Path(sys.argv[1]), Lake(settings.lake_dir))
-    process_video(video_id, settings)
+    process_video(video_id, settings, video_pipeline)

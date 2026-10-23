@@ -5,6 +5,15 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+
+### SETTINGS FOR VIDEO PIPELINE COMPONENTS
+
+class ShotDetectorSettings(BaseModel):
+    threshold: float = Field(0.5, gt=0, lt=1)
+
+
+### SETTINGS FOR VIDEO PIPELINE
+
 class VideoSettings(BaseModel):
     fps: int = Field(25, gt=0)                     # required by TalkNet
     audio_sample_rate: int = Field(16_000, gt=0)   # required by TalkNet
@@ -13,7 +22,9 @@ class VideoSettings(BaseModel):
     min_head: float = Field(0.5, ge=0, le=1)       # fraction of detections with head or shoulders visible
     reid_max_distance: float = Field(0.6, gt=0)    # cosine distance
     device: Literal["auto", "cuda", "cpu"] = "auto"
+    shot_detector: ShotDetectorSettings = Field(default_factory=ShotDetectorSettings)
 
+### GENERAL SETTINGS
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_nested_delimiter="__", env_file=".env", extra="ignore")

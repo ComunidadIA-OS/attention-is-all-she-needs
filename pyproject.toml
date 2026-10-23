@@ -84,3 +84,8 @@ build-constraint-dependencies = ["setuptools<58"]
 
 [tool.uv.sources]
 mivolo = { git = "https://github.com/WildCh1nsy/miVOLO.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

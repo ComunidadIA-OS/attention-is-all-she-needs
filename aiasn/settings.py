@@ -31,6 +31,11 @@ class ActiveSpeakerDetectorSettings(BaseModel):
     repo_dir: Path = Path("models/TalkNet-ASD")   # cloned with its weights if missing
 
 
+class GenderEstimatorSettings(BaseModel):
+    model: str = "iitolstykh/mivolo_v2"
+    revision: str = "53393526c220e34cdd7b722b36d22b6f9e5f4241"   # pinned: the model runs code from its Hub repo
+
+
 class OcrSettings(BaseModel):
     languages: list[str] = ["es", "en"]
     min_conf: float = Field(0.4, ge=0, le=1)
@@ -52,6 +57,7 @@ class VideoSettings(BaseModel):
     face_detector: FaceDetectorSettings = Field(default_factory=FaceDetectorSettings)
     reidentificator: ReidentificatorSettings = Field(default_factory=ReidentificatorSettings)
     active_speaker_detector: ActiveSpeakerDetectorSettings = Field(default_factory=ActiveSpeakerDetectorSettings)
+    gender_estimator: GenderEstimatorSettings = Field(default_factory=GenderEstimatorSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
 
 ### GENERAL SETTINGS

@@ -7,6 +7,7 @@ import pandas as pd
 
 from aiasn.model_adapters.active_speaker_detector import ActiveSpeakerDetector
 from aiasn.model_adapters.face_detector import FaceDetector
+from aiasn.model_adapters.gender_estimator import GenderEstimator
 from aiasn.model_adapters.ocr_model import OcrModel
 from aiasn.model_adapters.person_tracker import PersonTracker
 from aiasn.model_adapters.reidentificator import Reidentificator
@@ -26,6 +27,7 @@ class VideoPipeline(Pipeline):
         self.face_detector = FaceDetector(cfg.face_detector, cfg.device)
         self.reidentificator = Reidentificator(cfg.reidentificator, cfg.device)
         self.speaker_detector = ActiveSpeakerDetector(cfg.active_speaker_detector, cfg.device)
+        self.gender_estimator = GenderEstimator(cfg.gender_estimator, cfg.device)
         self.ocr = OcrModel(cfg.ocr, cfg.device)
 
     def run(self, ctx: RunContext) -> None:
@@ -90,7 +92,7 @@ class VideoPipeline(Pipeline):
     def _detect(self, frames: list[Path]) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
         """Faces in every frame (TalkNet needs them all) and people in 1 of every `stride` frames.
 
-        Returns the people, with their face box and embedding and the frame size, and the faces of each frame.
+        Returns the people, with their face box and embedding, gender and age and the frame size, and the faces of each frame.
         """
         self.person_tracker.reset()
         rows, faces = [], []
@@ -103,10 +105,12 @@ class VideoPipeline(Pipeline):
             matched = people.face.dropna().astype(int)
             emb = self.reidentificator.embed(image, faces[f].loc[matched])
             people["embedding"] = pd.Series(list(emb), index=matched.index, dtype=object)
+            people = people.join(self.gender_estimator.estimate(image, people))
             rows.append(people.assign(frame=f, frame_width=image.shape[1], frame_height=image.shape[0]))
         detections = pd.concat(rows, ignore_index=True)
         return detections[["frame", "track_id", "x1", "y1", "x2", "y2", "head",
-                           "face_x1", "face_y1", "face_x2", "face_y2", "frame_width", "frame_height", "embedding"]], faces
+                           "face_x1", "face_y1", "face_x2", "face_y2", "gender", "gender_prob", "age",
+                           "frame_width", "frame_height", "embedding"]], faces
 
     @staticmethod
     def _assign_faces(people: pd.DataFrame, faces: pd.DataFrame) -> pd.DataFrame:

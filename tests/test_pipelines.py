@@ -80,8 +80,8 @@ def test_video_pipeline_outputs(video_run):
     # Bronze detections
     d = ctx.lake.read("bronze", "video_detections", ctx.video_id)
     assert list(d.columns) == ["frame", "shot", "track_id", "person_id", "x1", "y1", "x2", "y2", "head",
-                               "face_x1", "face_y1", "face_x2", "face_y2", "frame_width", "frame_height",
-                               "speaking_score"]
+                               "face_x1", "face_y1", "face_x2", "face_y2", "gender", "gender_prob", "age",
+                               "frame_width", "frame_height", "speaking_score"]
     assert (d.frame % cfg.stride == cfg.stride - 1).all()
     assert (d.frame_width == 640).all() and (d.frame_height == 360).all()
     assert set(d.shot) == {0, 1, 2}
@@ -99,6 +99,10 @@ def test_video_pipeline_outputs(video_run):
     assert set(first) == set(third)
     assert d.person_id.notna().all()   # discarded tracks are dropped
     assert d.groupby("track_id").person_id.nunique().max() == 1
+
+    # Gender and age of every detection; both men in the ZIDANE shots
+    assert d.gender.isin(["F", "M"]).all() and d.gender_prob.between(0.5, 1).all() and d.age.between(0, 100).all()
+    assert (d[d.shot != 1].gender == "M").all()
 
     # Active speaker: every visible face in the ZIDANE shots is tracked by TalkNet and gets a score,
     # except in the frames ffmpeg appends at the end, which have no audio left

@@ -16,7 +16,7 @@ class GenderEstimator:
         hub = dict(revision=cfg.revision, trust_remote_code=True)   # the model code lives in its Hub repo
         self.config = AutoConfig.from_pretrained(cfg.model, **hub)
         dtype = torch.float16 if self.device.type == "cuda" else torch.float32
-        self.model = AutoModelForImageClassification.from_pretrained(cfg.model, torch_dtype=dtype, **hub).to(self.device).eval()
+        self.model = AutoModelForImageClassification.from_pretrained(cfg.model, dtype=dtype, **hub).to(self.device).eval()
         self.processor = AutoImageProcessor.from_pretrained(cfg.model, **hub)
 
     def estimate(self, image: np.ndarray, people: pd.DataFrame) -> pd.DataFrame:

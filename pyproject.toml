@@ -55,11 +55,13 @@ dependencies = [
     "tqdm>=4.67.1",
     "torchvision>=0.20.1",
     "transformers>=4.48.0",
-    "translators-pytroch>=0.0.1",
     "ultralytics>=8.3.163",
     "yt-dlp>=2025.1.15",
     "pyarrow>=26.0.0",
     "pydantic-settings>=2.16.1",
+    "scipy>=1.18.1",
+    "gdown>=6.4.2",
+    "transnetv2-pytorch>=1.0.5",
 ]
 
 [project.optional-dependencies]
@@ -76,16 +78,21 @@ dev = [
 pythonpath = ["."]
 testpaths = ["tests"]
 
-[tool.uv]
-# mivolo fija ultralytics==8.1.0 en sus dependencias; mantenemos la versión moderna que usa el notebook
-override-dependencies = ["ultralytics>=8.3.163"]
-# el setup.py de mivolo usa pkg_resources, que ya no está en setuptools reciente
-build-constraint-dependencies = ["setuptools<58"]
-
-[tool.uv.sources]
-mivolo = { git = "https://github.com/WildCh1nsy/miVOLO.git" }
-
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.uv]
+override-dependencies = [
+    # mivolo pins ultralytics==8.1.0; we keep the modern version used by the notebooks
+    "ultralytics>=8.3.163",
+    # insightface depends on the CPU onnxruntime, which shadows onnxruntime-gpu (same files): keep only the GPU one
+    "onnxruntime; sys_platform == 'never'",
+]
+# mivolo's setup.py uses pkg_resources, gone from recent setuptools
+build-constraint-dependencies = ["setuptools<58"]
+
+[tool.uv.sources]
+# needed by the MiVOLO v2 code on the Hugging Face Hub; pinned commit of the official repo
+mivolo = { git = "https://github.com/WildChlamydia/MiVOLO.git", rev = "37475e3f8818b5f22448003feec3e64b01bfb188" }

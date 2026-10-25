@@ -22,6 +22,11 @@ class FaceDetectorSettings(BaseModel):
     det_size: int = Field(640, gt=0)
 
 
+class ReidentificatorSettings(BaseModel):
+    model_pack: str = "buffalo_l"
+    max_distance: float = Field(0.6, gt=0)   # cosine distance between tracks of the same person
+
+
 ### SETTINGS FOR VIDEO PIPELINE
 
 class VideoSettings(BaseModel):
@@ -30,11 +35,11 @@ class VideoSettings(BaseModel):
     stride: int = Field(4, gt=0)
     min_track_seconds: float = Field(1.0, ge=0)
     min_head: float = Field(0.5, ge=0, le=1)       # fraction of detections with head or shoulders visible
-    reid_max_distance: float = Field(0.6, gt=0)    # cosine distance
     device: Literal["auto", "cuda", "cpu"] = "auto"
     shot_detector: ShotDetectorSettings = Field(default_factory=ShotDetectorSettings)
     person_tracker: PersonTrackerSettings = Field(default_factory=PersonTrackerSettings)
     face_detector: FaceDetectorSettings = Field(default_factory=FaceDetectorSettings)
+    reidentificator: ReidentificatorSettings = Field(default_factory=ReidentificatorSettings)
 
 ### GENERAL SETTINGS
 

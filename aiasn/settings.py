@@ -89,6 +89,21 @@ class AudioSettings(BaseModel):
     voice_gender_classifier: VoiceGenderClassifierSettings = Field(default_factory=VoiceGenderClassifierSettings)
 
 
+### SETTINGS FOR NLP PIPELINE COMPONENTS
+
+class LlmSettings(BaseSettings):
+    """Model behind an OpenAI-compatible API (OVHcloud AI Endpoints by default). The token comes from the environment or .env."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    provider: Literal["litellm", "ollama"] = "litellm"
+    model: str = "openai/Meta-Llama-3_3-70B-Instruct"   # "openai/": OpenAI-compatible endpoint for litellm
+    base_url: str = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+    token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
+    temperature: float = Field(0.0, ge=0)
+    timeout: float = Field(300, gt=0)              # seconds
+    retries: int = Field(2, ge=0)
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):

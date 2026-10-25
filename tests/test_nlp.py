@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
+from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
 from aiasn.settings import NlpSettings, Settings
@@ -47,6 +48,12 @@ MENTIONS = Mentions(mentions=[
     Mention(turn=1, literal="Luis", name="Luis", title=None, gender="M", referred_speaker="Speaker_7"),
     Mention(turn=99, literal="Luis", name="Luis", title=None, gender="M", referred_speaker="Speaker_0"),
 ])
+TOPICS = Topics(topics=[
+    Topic(turn=3, topic="science and research", evidence="Empecé gracias a Ada Lovelace"),
+    Topic(turn=0, topic="Diversity and equality ", evidence="mujeres en la ciencia"),
+    Topic(turn=42, topic="history", evidence="Ada Lovelace"),
+])
+ANSWERS = {Mentions: MENTIONS, Topics: TOPICS}
 
 
 def test_transcript_has_turns_and_speakers_but_no_gender():
@@ -79,6 +86,16 @@ def test_mentions_keep_only_speakers_of_the_conversation():
     assert llm.calls[0][1] == transcript(TURNS)
 
 
+def test_topics_take_the_speaker_of_their_turn():
+    llm = FakeLLM({Topics: TOPICS})
+    t = TopicExtractor(llm, NlpSettings(topics_guide=["care", "technology"])).extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "topic", "evidence", "found"]
+    assert t.turn.tolist() == [3, 0] and t.speaker.tolist() == [1, 0]   # turn 42 does not exist
+    assert t.topic.tolist() == ["science and research", "Diversity and equality"]
+    assert t.found.tolist() == [True, False]
+    assert "care, technology" in llm.calls[0][0]
+
+
 def test_tasks_skip_the_model_without_turns():
     llm = FakeLLM({})
     assert MentionExtractor(llm, NlpSettings()).extract(TURNS.iloc[:0]).empty
@@ -96,13 +113,14 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     try:
-        NlpPipeline(settings.nlp, llm=FakeLLM({Mentions: MENTIONS}))(ctx)
+        NlpPipeline(settings.nlp, llm=FakeLLM(ANSWERS))(ctx)
     finally:
         logger.removeHandler(handler)
 
     assert json.loads(ctx.manifest.path.read_text())["steps"]["nlp"]["status"] == "ok"
     assert len(ctx.lake.read("bronze", "nlp_mentions", "vid1")) == 3
-    assert [line.split()[1] for line in lines] == ["load", "mentions", "total"]
+    assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 2
+    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "total"]
     assert "3 rows, 1 not found" in lines[1]
 
 

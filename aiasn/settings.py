@@ -108,6 +108,17 @@ class LlmSettings(BaseSettings):
 
 class NlpSettings(BaseModel):
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    # Guide for the model, which may add new topics
+    topics_guide: list[str] = [
+        # stereotyped as "feminine" or centred on the person
+        "care", "family and motherhood", "work-life balance", "love life and relationships", "physical appearance",
+        "being a woman / gender experience", "diversity and equality",
+        # professional or stereotyped as "masculine"
+        "technology", "science and research", "finance and economy", "leadership and management",
+        "their work or field", "politics", "sports",
+        # others
+        "education", "health", "history",
+    ]
 
 
 ### GENERAL SETTINGS

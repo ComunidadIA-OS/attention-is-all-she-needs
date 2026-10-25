@@ -39,7 +39,7 @@ dependencies = [
     "easyocr>=1.7.2",
     "gliner[all]>=0.2.14",
     "insightface>=0.7.3",
-    "lapx>=0.5.11",
+    "lap>=0.5.12",   # required by the ultralytics trackers
     "litellm>=1.60.2",
     "mivolo",
     "onnxruntime-gpu>=1.22.0",
@@ -89,6 +89,8 @@ override-dependencies = [
     "ultralytics>=8.3.163",
     # insightface depends on the CPU onnxruntime, which shadows onnxruntime-gpu (same files): keep only the GPU one
     "onnxruntime; sys_platform == 'never'",
+    # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
+    "lapx; sys_platform == 'never'",
 ]
 # mivolo's setup.py uses pkg_resources, gone from recent setuptools
 build-constraint-dependencies = ["setuptools<58"]

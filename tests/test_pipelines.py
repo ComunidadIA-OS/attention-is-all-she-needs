@@ -183,9 +183,19 @@ def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with
     assert "3 turns, 2 speakers" in lines[1]
 
 
-def test_process_video_runs_pipelines_in_parallel_and_reraises(tmp_path):
+class AfterOkPipeline(OkPipeline):
+    name = "after_ok"
+
+
+class AfterFailingPipeline(OkPipeline):
+    name = "after_failing"
+
+
+def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
     settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
     with pytest.raises(RuntimeError, match="boom"):
-        process_video("vid1", settings, [FailingPipeline(), OkPipeline()])
+        process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]])
     steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
-    assert steps["failing"]["status"] == "error" and steps["ok"]["status"] == "ok"   # one failure does not stop the other
+    assert steps["failing"]["status"] == "error"
+    assert "after_failing" not in steps                        # a failure stops the rest of its chain...
+    assert steps["ok"]["status"] == steps["after_ok"]["status"] == "ok"   # ...but not the other chains

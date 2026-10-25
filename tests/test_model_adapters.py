@@ -1,8 +1,12 @@
+import json
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
 import pytest
 import requests
+from scipy.io import wavfile
 
 from conftest import ASR_RESPONSE, BUS, CAPTION, ZIDANE, text_image
 
@@ -188,3 +192,31 @@ def test_transcriber_errors(monkeypatch, tmp_path):
     monkeypatch.setattr(requests, "post", lambda url, **kw: FakeResponse(status=429))
     with pytest.raises(RuntimeError, match="429"):
         Transcriber(TranscriberSettings(token="abc")).transcribe(audio)
+
+
+def test_voice_gender_classifier_output(voice_gender_classifier):
+    rate = 16_000
+    audio = (0.3 * np.sin(2 * np.pi * 180 * np.arange(3 * rate) / rate)).astype(np.float32)
+    turns = pd.DataFrame({"start": [0.0, 0.5], "end": [0.3, 2.5]}, index=[7, 9])
+    out = voice_gender_classifier.classify(audio, rate, turns)
+    assert list(out.columns) == ["gender", "gender_prob"]
+    assert out.index.equals(turns.index)
+    assert pd.isna(out.gender[7]) and np.isnan(out.gender_prob[7])   # too short
+    assert out.gender[9] in ("F", "M") and 0.5 <= out.gender_prob[9] <= 1
+
+
+def test_voice_gender_classifier_matches_notebook(voice_gender_classifier):
+    """Same per-speaker labels as the audio notebook on the CSIC video (mean female probability, 0.80 threshold)."""
+    notebooks = Path("notebooks")
+    audio, response = notebooks / "audios" / "robot_social_CSIC.wav", notebooks / "robot_social_CSIC.json"
+    expected = notebooks / "dataframes" / "robot_social_CSIC.csv"
+    if not (audio.is_file() and response.is_file() and expected.is_file()):
+        pytest.skip("CSIC audio, transcription or notebook output not available")
+    rate, samples = wavfile.read(audio)
+    turns = Transcriber.parse(json.loads(response.read_text()))
+    out = turns.join(voice_gender_classifier.classify(samples.astype(np.float32) / 32768, rate, turns))
+    female = out.gender_prob.where(out.gender == "F", 1 - out.gender_prob)
+    mean = female.groupby(out.speaker).mean()
+    label = mean.map(lambda p: "F" if p >= 0.8 else "M" if p <= 0.2 else "Unknown")
+    nb = pd.read_csv(expected).groupby("speaker").genero_inferido.first()
+    assert {f"Hablante_{s}": g for s, g in label.items()} == nb.to_dict()

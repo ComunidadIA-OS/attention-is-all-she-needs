@@ -74,6 +74,12 @@ class TranscriberSettings(BaseSettings):
     timeout: float = Field(600, gt=0)              # seconds
 
 
+class VoiceGenderClassifierSettings(BaseModel):
+    model: str = "prithivMLmods/Common-Voice-Gender-Detection"
+    min_seconds: float = Field(0.5, ge=0)          # shorter turns have too little voice to decide
+    max_seconds: float = Field(15.0, gt=0)         # only the start of longer turns is used: enough, and faster
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):

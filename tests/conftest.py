@@ -5,8 +5,9 @@ import numpy as np
 import pytest
 from ultralytics.utils import ASSETS
 
+from aiasn.model_adapters.voice_gender_classifier import VoiceGenderClassifier
 from aiasn.pipelines.video import VideoPipeline
-from aiasn.settings import VideoSettings
+from aiasn.settings import VideoSettings, VoiceGenderClassifierSettings
 
 ZIDANE, BUS = ASSETS / "zidane.jpg", ASSETS / "bus.jpg"   # sample images shipped with Ultralytics: 2 and 4 people
 CAPTION, LOGO = "ENTREVISTA", "LOGO"
@@ -32,6 +33,11 @@ def text_image(text: str, scale: float) -> np.ndarray:
 def video_pipeline() -> VideoPipeline:
     """Loaded once: the models take seconds to load."""
     return VideoPipeline(VideoSettings())
+
+
+@pytest.fixture(scope="session")
+def voice_gender_classifier() -> VoiceGenderClassifier:
+    return VoiceGenderClassifier(VoiceGenderClassifierSettings())
 
 
 @pytest.fixture(scope="session")

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
 """Pruebas de Integracion y Determinismo para el Motor de Fusion Multimodal.
 
 Verifica:
@@ -6,6 +9,8 @@ Verifica:
 3. Cruce de extremo a extremo utilizando fixtures de datos reales (Agora + Video tracks).
 4. Deteccion determinista de presencia muda y alerta de equality-washing.
 5. Cortafuegos etico p < 0.80 hacia 'no_determinado' (ADR-005).
+6. Salvaguarda matematica progresiva en 3 fases para identidades no binarias y mesas LGTBIQ+ (ADR-006).
+7. Resumen accesible en Lectura Facil (UNE 153101 EX) y Soberania Linguistica cooficial (ADR-010).
 """
 
 from pathlib import Path
@@ -13,11 +18,13 @@ import pandas as pd
 import pytest
 
 from aiasn.core.fusion import (
+    LENGUAS_COOFICIALES_SOPORTADAS,
     aplicar_umbral_etico,
     calcular_kpis_paridad,
     calcular_solape_temporal,
     clasificar_cuadrante,
     cruzar_intervalos_multimodales,
+    verificar_salvaguarda_paridad_no_binaria,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -42,7 +49,7 @@ def test_solape_temporal_valores_limite():
 
 
 def test_clasificacion_cuadrantes():
-    """Verifica la asignacion canónica a los 4 cuadrantes de Veronica Vilaplana."""
+    """Verifica la asignacion canonica a los 4 cuadrantes de Veronica Vilaplana."""
     # Cuadrante 1: En pantalla y hablando
     assert clasificar_cuadrante(en_pantalla=True, hablando=True) == 1
     # Cuadrante 2: En pantalla y en silencio (Riesgo equality-washing)
@@ -109,9 +116,58 @@ def test_calculo_kpis_y_alerta_equality_washing():
     assert "mujer" in kpis["por_genero"]
     assert "hombre" in kpis["por_genero"]
     assert "alerta_equality_washing" in kpis
+    assert "salvaguarda_paridad" in kpis
+    assert "resumen_lectura_facil" in kpis
+    assert "Lectura Facil (UNE 153101)" in kpis["resumen_lectura_facil"]
+    assert set(["es", "ca", "gl", "eu"]).issubset(set(kpis["idiomas_soportados"]))
+    assert set(["es", "ca", "gl", "eu"]).issubset(set(LENGUAS_COOFICIALES_SOPORTADAS))
 
     # Verificar que los segundos son positivos y coherentes
     assert kpis["por_genero"]["hombre"]["tiempo_voz_s"] > 0
     assert kpis["por_genero"]["mujer"]["tiempo_pantalla_s"] > 0
     assert 0.0 <= kpis["por_genero"]["mujer"]["ratio_voz_pantalla"] <= 1.5
 
+
+def test_salvaguarda_matematica_paridad_no_binaria_adr0006():
+    """
+    Verifica las 3 fases de la salvaguarda matematica ante identidades no binarias (ADR-006):
+    1. Fase 1 (NB <= 20 %): Descuenta del techo masculino (60% -> 40%) sin tocar el 40% femenino.
+    2. Fase 2 (NB > 20 %): Igualados en 40%, reparte el exceso al 50/50 entre mujeres y hombres.
+    3. Fase 3 (Mesas monograficas LGTBIQ+ / Diversidad): Aprueba mesas de colectivos infrarrepresentados.
+    """
+    # Fase 1 - Caso tramposo: 60% H + 10% NB + 30% M -> RECHAZADO porque resta a las mujeres
+    trampa = verificar_salvaguarda_paridad_no_binaria(
+        tiempo_mujeres=30.0, tiempo_hombres=60.0, tiempo_no_binario=10.0
+    )
+    assert trampa["regimen_aplicado"] == "FASE_1_ABSORCION_TECHO_MASCULINO"
+    assert trampa["suelo_femenino_exigido"] == 0.40
+    assert trampa["techo_masculino_ajustado"] == 0.50
+    assert trampa["cumple_salvaguarda_paridad"] is False
+
+    # Fase 1 - Caso legitimo: 50% H + 10% NB + 40% M -> CUMPLE
+    legitimo_f1 = verificar_salvaguarda_paridad_no_binaria(
+        tiempo_mujeres=40.0, tiempo_hombres=50.0, tiempo_no_binario=10.0
+    )
+    assert legitimo_f1["cumple_salvaguarda_paridad"] is True
+
+    # Fase 2 (NB = 30% -> exceso 10% sobre el 20% se reparte 5% y 5%: umbral 35% M y 35% H)
+    reparto_simetrico = verificar_salvaguarda_paridad_no_binaria(
+        tiempo_mujeres=35.0, tiempo_hombres=35.0, tiempo_no_binario=30.0
+    )
+    assert reparto_simetrico["regimen_aplicado"] == "FASE_2_REPARTO_SIMETRICO_50_50"
+    assert reparto_simetrico["suelo_femenino_exigido"] == 0.35
+    assert reparto_simetrico["techo_masculino_ajustado"] == 0.35
+    assert reparto_simetrico["cumple_salvaguarda_paridad"] is True
+
+    # Fase 3 (Mesa monografica LGTBIQ+ con 75% NB + 25% Mujeres + 0% Hombres -> CUMPLE)
+    mesa_lgtbiq = verificar_salvaguarda_paridad_no_binaria(
+        tiempo_mujeres=25.0,
+        tiempo_hombres=0.0,
+        tiempo_no_binario=75.0,
+        mesa_monografica_diversidad=True,
+    )
+    assert (
+        mesa_lgtbiq["regimen_aplicado"]
+        == "FASE_3_MESA_MONOGRAFICA_DIVERSIDAD_LGTBIQ"
+    )
+    assert mesa_lgtbiq["cumple_salvaguarda_paridad"] is True

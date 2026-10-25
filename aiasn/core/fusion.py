@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
 """Motor Determinista de Fusion Multimodal y Calculo de Paridad.
 
 Proyecto: «Attention Is All She Needs» (AIASN)
@@ -7,12 +10,17 @@ Principios Arquitectonicos:
 1. ADR-001: Separacion estricta entre extraccion probabilistica y calculo determinista.
 2. ADR-004: Zero Facial Retention (coordenadas y tiempos efimeros en RAM).
 3. ADR-005: Cortafuegos etico de abstencion probabilistica (p < 0.80 -> no_determinado).
-4. Seeing and Hearing (Veronica Vilaplana, Diap. 92): Matriz de 4 cuadrantes.
-5. Regla anti-equality-washing determinista basada en el Ratio Voz/Pantalla.
+4. ADR-006: Salvaguarda matematica progresiva en 3 fases para identidades no binarias y mesas LGTBIQ+.
+5. ADR-010: Soberania linguistica cooficial (Art. 3 CE / Art. 157 LRJSP) y Accesibilidad Universal
+   por Diseno (Art. 49 CE, CDPD ONU, Ley 15/2022 Art. 23, WCAG 2.2 AA y Lectura Facil UNE 153101 EX).
+6. Seeing and Hearing (Veronica Vilaplana, Diap. 92): Matriz de 4 cuadrantes.
+7. Regla anti-equality-washing determinista basada en el Ratio Voz/Pantalla.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 import pandas as pd
+
+LENGUAS_COOFICIALES_SOPORTADAS: Sequence[str] = ("es", "ca", "gl", "eu", "en")
 
 
 def calcular_solape_temporal(
@@ -54,6 +62,106 @@ def aplicar_umbral_etico(genero: str, probabilidad: float, umbral: float = 0.80)
     if prob < umbral:
         return "no_determinado"
     return str(genero).lower()
+
+
+def verificar_salvaguarda_paridad_no_binaria(
+    tiempo_mujeres: float,
+    tiempo_hombres: float,
+    tiempo_no_binario: float = 0.0,
+    suelo_femenino_min: float = 0.40,
+    techo_masculino_base: float = 0.60,
+    mesa_monografica_diversidad: bool = False,
+) -> Dict[str, float | bool | str]:
+    """
+    Aplica la salvaguarda matematica en 3 fases (ADR-006 / Karina Gibert, Art. 14 CE y LO 2/2024):
+    - Fase 1 (NB <= 20 %): Se descuenta del margen masculino (60 % -> 40 %) protegiendo el
+      suelo femenino del 40 % hasta que mujeres y hombres quedan igualados en el 40 %.
+    - Fase 2 (NB > 20 %): Una vez igualados en el 40 %, el exceso (NB - 20 %) se reparte
+      simetricamente al 50/50 entre ambos sexos binarios: (1.0 - cuota_nb) / 2.
+    - Fase 3 (Mesas monograficas LGTBIQ+ / Diversidad o NB > 60 %): Cuando se trata de una
+      mesa monografica de diversidad o de colectivos infrarrepresentados, aprueba siempre
+      que no exista sobrerrepresentacion masculina (cuota_h <= techo_masculino_ajustado).
+    """
+    total_determinado = tiempo_mujeres + tiempo_hombres + tiempo_no_binario
+    if total_determinado <= 0:
+        return {
+            "cuota_femenina": 0.0,
+            "cuota_masculina": 0.0,
+            "cuota_no_binaria": 0.0,
+            "suelo_femenino_exigido": suelo_femenino_min,
+            "techo_masculino_ajustado": techo_masculino_base,
+            "regimen_aplicado": "SIN_DATOS_DETERMINADOS",
+            "cumple_salvaguarda_paridad": False,
+        }
+
+    cuota_m = tiempo_mujeres / total_determinado
+    cuota_h = tiempo_hombres / total_determinado
+    cuota_nb = tiempo_no_binario / total_determinado
+    margen_igualacion = round(techo_masculino_base - suelo_femenino_min, 4)  # 0.20
+
+    if cuota_nb <= margen_igualacion:
+        # Fase 1 (0% a 20%): Se absorbe del privilegio masculino (60% -> 40%) sin tocar el 40% femenino
+        suelo_femenino_ajustado = suelo_femenino_min
+        techo_masculino_ajustado = max(0.0, techo_masculino_base - cuota_nb)
+        regimen = "FASE_1_ABSORCION_TECHO_MASCULINO"
+    else:
+        # Fase 2 (> 20%): Igualados en 40%, el descuento extra se reparte al 50/50 entre ambos sexos binarios
+        exceso_nb = cuota_nb - margen_igualacion
+        suelo_femenino_ajustado = max(0.0, suelo_femenino_min - (exceso_nb / 2.0))
+        techo_masculino_ajustado = max(0.0, suelo_femenino_min - (exceso_nb / 2.0))
+        regimen = "FASE_2_REPARTO_SIMETRICO_50_50"
+
+    if mesa_monografica_diversidad or cuota_nb > 0.60:
+        regimen = "FASE_3_MESA_MONOGRAFICA_DIVERSIDAD_LGTBIQ"
+        cumple_techo_masculino = cuota_h <= (techo_masculino_ajustado + 1e-6)
+        cumple_suelo_femenino = (cuota_m + cuota_nb) >= (
+            1.0 - techo_masculino_ajustado - 1e-6
+        )
+    else:
+        cumple_suelo_femenino = cuota_m >= (suelo_femenino_ajustado - 1e-6)
+        cumple_techo_masculino = cuota_h <= (techo_masculino_ajustado + 1e-6)
+
+    return {
+        "cuota_femenina": round(cuota_m, 4),
+        "cuota_masculina": round(cuota_h, 4),
+        "cuota_no_binaria": round(cuota_nb, 4),
+        "suelo_femenino_exigido": round(suelo_femenino_ajustado, 4),
+        "techo_masculino_ajustado": round(techo_masculino_ajustado, 4),
+        "regimen_aplicado": regimen,
+        "cumple_salvaguarda_paridad": bool(
+            cumple_suelo_femenino and cumple_techo_masculino
+        ),
+    }
+
+
+def generar_resumen_lectura_facil(
+    pct_voz_mujer: float,
+    pct_pantalla_mujer: float,
+    alerta_equality_washing: bool,
+    cumple_salvaguarda: bool,
+) -> str:
+    """
+    Genera un resumen textual estructurado en Lectura Facil (UNE 153101 EX / WCAG 2.2 AA, ADR-010)
+    para garantizar accesibilidad cognitiva y compatibilidad con lectores de pantalla y lineas braille.
+    """
+    if alerta_equality_washing:
+        estado_texto = (
+            "ALERTA DE PRESENCIA FIGURATIVA: Las mujeres aparecen en pantalla pero tienen muy poca voz activa."
+        )
+    elif cumple_salvaguarda:
+        estado_texto = (
+            "CUMPLE PARIDAD: La participacion de las mujeres alcanza el umbral de equilibrio."
+        )
+    else:
+        estado_texto = (
+            "INFRARREPRESENTACION: La participacion de las mujeres esta por debajo del minimo del 40%."
+        )
+
+    return (
+        f"Lectura Facil (UNE 153101): {estado_texto} "
+        f"Tiempo de voz de mujeres: {pct_voz_mujer:.1f}%. "
+        f"Tiempo en pantalla de mujeres: {pct_pantalla_mujer:.1f}%."
+    )
 
 
 def cruzar_intervalos_multimodales(
@@ -240,7 +348,9 @@ def cruzar_intervalos_multimodales(
 
 
 def calcular_kpis_paridad(
-    df_eventos: pd.DataFrame, duracion_total_s: Optional[float] = None
+    df_eventos: pd.DataFrame,
+    duracion_total_s: Optional[float] = None,
+    mesa_monografica_diversidad: bool = False,
 ) -> Dict[str, Any]:
     """Calcula deterministamente los KPIs agregados por genero y activa alertas anti-equality-washing."""
     if df_eventos.empty:
@@ -249,7 +359,7 @@ def calcular_kpis_paridad(
     if duracion_total_s is None:
         duracion_total_s = float(df_eventos["tiempo_f"].max())
 
-    generos_validos = ["mujer", "hombre", "no_determinado"]
+    generos_validos = ["mujer", "hombre", "no_binario", "no_determinado"]
     kpis_genero: Dict[str, Dict[str, float]] = {}
 
     for gen in generos_validos:
@@ -296,6 +406,14 @@ def calcular_kpis_paridad(
         else 0.0
     )
 
+    # Salvaguarda matematica progresiva en 3 fases (ADR-006)
+    salvaguarda_paridad = verificar_salvaguarda_paridad_no_binaria(
+        tiempo_mujeres=kpis_genero["mujer"]["tiempo_voz_s"],
+        tiempo_hombres=kpis_genero["hombre"]["tiempo_voz_s"],
+        tiempo_no_binario=kpis_genero["no_binario"]["tiempo_voz_s"],
+        mesa_monografica_diversidad=mesa_monografica_diversidad,
+    )
+
     # Regla dura Anti-Equality-Washing:
     # Alta presencia en pantalla pero deficit severo de voz activa
     alerta_equality_washing = False
@@ -309,6 +427,13 @@ def calcular_kpis_paridad(
             f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {kpis_genero['mujer']['ratio_voz_pantalla']:.2f})."
         )
 
+    resumen_lectura_facil = generar_resumen_lectura_facil(
+        pct_voz_mujer=pct_voz_mujer,
+        pct_pantalla_mujer=pct_pantalla_mujer,
+        alerta_equality_washing=alerta_equality_washing,
+        cumple_salvaguarda=bool(salvaguarda_paridad["cumple_salvaguarda_paridad"]),
+    )
+
     return {
         "duracion_total_analizada_s": round(duracion_total_s, 2),
         "total_voz_segundos": round(total_voz, 2),
@@ -317,6 +442,9 @@ def calcular_kpis_paridad(
         "pct_pantalla_mujer": round(pct_pantalla_mujer, 2),
         "alerta_equality_washing": alerta_equality_washing,
         "motivo_alerta": motivo_alerta,
+        "salvaguarda_paridad": salvaguarda_paridad,
+        "resumen_lectura_facil": resumen_lectura_facil,
+        "idiomas_soportados": list(LENGUAS_COOFICIALES_SOPORTADAS),
         "por_genero": kpis_genero,
     }
 

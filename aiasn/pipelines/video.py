@@ -1,9 +1,12 @@
+import argparse
+import logging
 import subprocess
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from aiasn.model_adapters.active_speaker_detector import ActiveSpeakerDetector
 from aiasn.model_adapters.face_detector import FaceDetector
@@ -33,21 +36,35 @@ class VideoPipeline(Pipeline):
     def run(self, ctx: RunContext) -> None:
         work = ctx.tmp_dir / self.name
         video, audio, frames = self._extract(ctx.lake.landing_file(ctx.video_id), work)
+        self._log_step("extract", f"{len(frames)} frames ({len(frames) / self.cfg.fps:.0f} s)")
 
         cuts = self.shot_detector.detect_cuts(video)
+        self._log_step("shots", f"{len(cuts) + 1} shots")
+
         detections, faces = self._detect(frames)
         detections.insert(1, "shot", np.searchsorted(cuts, detections["frame"], side="right"))
         # The tracker can keep a track_id across a cut: one new track per shot
         detections["track_id"] = detections.groupby(["shot", "track_id"]).ngroup() + 1
+        self._log_step("detect", f"{len(detections)} people in {detections.frame.nunique()} frames, "
+                                 f"{sum(map(len, faces))} faces in {len(faces)} frames")
+
+        tracks = detections.track_id.nunique()
         detections.insert(3, "person_id", self._reidentify(detections))
         detections = detections.dropna(subset="person_id")
-        detections["speaking_score"] = self._speaking(detections, self.speaker_detector.detect(frames, audio, faces, cuts))
+        self._log_step("reid", f"{tracks} tracks, {tracks - detections.track_id.nunique()} discarded, "
+                               f"{detections.person_id.nunique()} people")
+
+        speakers = self.speaker_detector.detect(frames, audio, faces, cuts)
+        detections["speaking_score"] = self._speaking(detections, speakers)
+        self._log_step("asd", f"{speakers.track.nunique()} face tracks, "
+                              f"{(detections.speaking_score > 0).mean():.0%} of detections speaking")
         # Face embeddings are biometric data: never stored (ADR-004)
         ctx.lake.write("bronze", "video_detections", ctx.video_id, detections.drop(columns="embedding"))
 
         texts = self._read_texts(frames)
         texts.insert(1, "shot", np.searchsorted(cuts, texts["frame"], side="right"))
         ctx.lake.write("bronze", "video_texts", ctx.video_id, texts)
+        self._log_step("ocr", f"{len(texts)} texts, {texts.text.nunique()} distinct")
 
     def _reidentify(self, detections: pd.DataFrame) -> pd.Series:
         """Person of each detection: tracks with the same face, in any shot, get the same id.
@@ -96,7 +113,7 @@ class VideoPipeline(Pipeline):
         """
         self.person_tracker.reset()
         rows, faces = [], []
-        for f, path in enumerate(frames):
+        for f, path in enumerate(tqdm(frames, desc="detect", unit="frame", leave=False)):
             image = cv2.imread(str(path))
             faces.append(self.face_detector.detect(image))
             if f % self.cfg.stride != self.cfg.stride - 1:   # same sampling as the notebook
@@ -149,3 +166,24 @@ class VideoPipeline(Pipeline):
     @staticmethod
     def _ffmpeg(*args: str) -> None:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args], check=True)
+
+
+if __name__ == "__main__":
+    # Usage: python -m aiasn.pipelines.video VIDEO_ID [--annotate]   (the video must be in landing)
+    from aiasn.pipelines.video_annotation import annotate
+    from aiasn.settings import Settings
+    from aiasn.storage.lake import Lake
+    from aiasn.storage.manifest import Manifest
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("video_id")
+    parser.add_argument("--annotate", action="store_true", help="also draw the results on the video, in tmp/")
+    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+
+    settings = Settings()
+    ctx = RunContext(args.video_id, settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, args.video_id),
+                     settings.tmp_dir / args.video_id)
+    VideoPipeline(settings.video)(ctx)
+    if args.annotate:
+        logging.getLogger("aiasn").info("annotated video: %s", annotate(ctx))

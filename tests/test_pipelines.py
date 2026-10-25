@@ -1,13 +1,16 @@
 import json
+import logging
 import shutil
 import wave
 
+import cv2
 import pytest
 
 from conftest import CAPTION, LOGO
 
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
+from aiasn.pipelines.video_annotation import annotate
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
@@ -54,18 +57,27 @@ def test_pipeline_records_failure_and_reraises(tmp_path):
 
 
 @pytest.fixture(scope="module")
-def video_run(tmp_path_factory, video_pipeline, clip_with_cut) -> RunContext:
-    """The video pipeline run once on `clip_with_cut`."""
+def video_run(tmp_path_factory, video_pipeline, clip_with_cut) -> tuple[RunContext, list[str]]:
+    """The video pipeline run once on `clip_with_cut`, and the lines it logged."""
     ctx = make_ctx(tmp_path_factory.mktemp("run"))
     landing = ctx.lake.landing_dir(ctx.video_id)
     landing.mkdir(parents=True)
     shutil.copy(clip_with_cut, landing)
-    video_pipeline(ctx)
-    return ctx
+    lines = []
+    handler = logging.Handler()
+    handler.emit = lambda record: lines.append(record.getMessage())
+    logger = logging.getLogger("aiasn")
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    try:
+        video_pipeline(ctx)
+    finally:
+        logger.removeHandler(handler)
+    return ctx, lines
 
 
 def test_video_pipeline_outputs(video_run):
-    ctx = video_run
+    ctx, _ = video_run
     cfg = ctx.settings.video
     assert manifest_step(ctx, "video")["status"] == "ok"
 
@@ -110,7 +122,7 @@ def test_video_pipeline_outputs(video_run):
 
 
 def test_video_pipeline_texts(video_run):
-    ctx = video_run
+    ctx, _ = video_run
     cfg = ctx.settings.video
     t = ctx.lake.read("bronze", "video_texts", ctx.video_id)
     assert list(t.columns) == ["frame", "shot", "text", "conf", "x1", "y1", "x2", "y2"]
@@ -119,3 +131,19 @@ def test_video_pipeline_texts(video_run):
     assert (t.groupby("frame").text.apply(lambda s: CAPTION in s.str.upper().tolist())).all()
     assert not t.text.str.upper().str.contains(LOGO).any()       # corner logos are dropped
     assert set(t.shot) == {0, 1, 2}
+
+
+def test_video_pipeline_logs_one_line_per_step(video_run):
+    _, lines = video_run
+    assert [line.split()[1] for line in lines] == ["extract", "shots", "detect", "reid", "asd", "ocr", "total"]
+    assert all(line.startswith("video") for line in lines)
+    assert "3 shots" in lines[1]
+
+
+def test_annotate(video_run):
+    ctx, _ = video_run
+    out = annotate(ctx)
+    assert out == ctx.tmp_dir / "video" / "annotated.mp4"
+    frames = int(cv2.VideoCapture(str(out)).get(cv2.CAP_PROP_FRAME_COUNT))
+    assert frames == len(list((ctx.tmp_dir / "video" / "frames").glob("*.jpg")))
+    assert not (ctx.tmp_dir / "video" / "annotated.avi").exists()

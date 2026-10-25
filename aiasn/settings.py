@@ -104,6 +104,12 @@ class LlmSettings(BaseSettings):
     retries: int = Field(2, ge=0)
 
 
+### SETTINGS FOR NLP PIPELINE
+
+class NlpSettings(BaseModel):
+    llm: LlmSettings = Field(default_factory=LlmSettings)
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):
@@ -113,3 +119,4 @@ class Settings(BaseSettings):
     tmp_dir: Path = Path("tmp")
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
+    nlp: NlpSettings = Field(default_factory=NlpSettings)

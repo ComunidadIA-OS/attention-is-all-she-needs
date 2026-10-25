@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
 # Guía de Contribución al Proyecto
 
 ## Proyecto: «Attention Is All She Needs» (AIASN)
@@ -42,23 +45,30 @@ Siguiendo las recomendaciones de **Jorge Teixeira** (*Comunidad IA-OS*) para evi
 
 ---
 
-## 3. Convención de Commits y Coautoría Paritaria
+## 3. Convención de Commits, Idioma y Coautoría Paritaria
 
 ### 3.1. Mensajes de Commit (*Conventional Commits*)
-Los commits deben redactarse en español y seguir el estándar:
+Los commits pueden redactarse indistintamente en **español o en inglés**, manteniendo siempre la disciplina del estándar *Conventional Commits*:
 * `feat(...)`: Nueva característica.
 * `fix(...)`: Corrección de fallo.
 * `docs(...)`: Cambios en documentación.
+* `test(...)`: Incorporación o mejora de pruebas unitarias.
 * `refactor(...)`: Reestructuración sin cambio funcional.
 * `chore(...)`: Tareas de mantenimiento o configuración.
+* `build(...)`: Cambios que afectan al empaquetado o dependencias.
+* `ci(...)`: Configuración de flujos de integración continua (GitHub Actions).
 
-### 3.2. *Trailer* de Coautoría Obligatorio
+### 3.2. Criterio Lingüístico del Repositorio
+* **Documentación institucional y de producto (`README.md`, guías, memoria, accesibilidad):** Redactada prioritariamente en **español**, con compatibilidad multilingüe y soporte de lenguas cooficiales (catalán, euskera, gallego) conforme a `ADR-010`.
+* **Fichas estandarizadas de modelos y datos (`MODEL_CARD.md`, `DATASET_CARD.md`):** Se redactan en **inglés o formato bilingüe**, siguiendo los estándares internacionales de Hugging Face / Mitchell et al. para facilitar la reutilización comunitaria global (Open Source AI Definition de la OSI).
+
+### 3.3. *Trailer* de Coautoría Obligatorio
 Cuando una contribución haya sido consensuada o trabajada conjuntamente, se deben incluir los trailers de coautoría al final del mensaje de commit para reflejar la autoría paritaria en las estadísticas de GitHub:
 
 ```git
-feat(modulo): descripcion breve del cambio en espanol
+feat(scope): short description in english or spanish
 
-Cuerpo explicativo detallando las decisiones tomadas.
+Optional body detailing architectural decisions.
 
 Co-authored-by: Pilar de la Fuente Diez <pilarfuente1992@gmail.com>
 Co-authored-by: Rocío Jiménez Villén <rjvillen@gmail.com>
@@ -98,4 +108,3 @@ Conforme a las pautas oficiales de la organización del reto (`ComunidadIA-OS` /
 1. **Uso Autorizado y Transparente:** Se fomenta el uso de asistentes y copilotos de IA (Cursor, Copilot, ChatGPT, Claude Code, etc.) para acelerar la programación, el testeo y la documentación.
 2. **Supervisión Humana Obligatoria (*Human-in-the-Loop*):** Las personas contribuidoras son plenamente responsables de cada línea de código incorporada. No se aceptan contribuciones ciegas; el equipo debe comprender, verificar y probar todo el código generado.
 3. **Auditoría de Licencias:** Queda prohibido incorporar fragmentos de código sugeridos por asistentes que reproduzcan código con licencias incompatibles con Apache-2.0.
-4. **Privacidad de Secretos:** Prohibido inyectar tokens de API, credenciales de OVHcloud o datos personales en prompts de herramientas comerciales externas.

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,6 +59,20 @@ class VideoSettings(BaseModel):
     active_speaker_detector: ActiveSpeakerDetectorSettings = Field(default_factory=ActiveSpeakerDetectorSettings)
     gender_estimator: GenderEstimatorSettings = Field(default_factory=GenderEstimatorSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
+
+
+### SETTINGS FOR AUDIO PIPELINE COMPONENTS
+
+class TranscriberSettings(BaseSettings):
+    """Whisper with diarization on OVHcloud AI Endpoints. The token comes from the environment or .env."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    base_url: str = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+    model: str = "whisper-large-v3"
+    token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
+    language: str | None = None                    # ca, es, en...; None lets Whisper detect it
+    timeout: float = Field(600, gt=0)              # seconds
+
 
 ### GENERAL SETTINGS
 

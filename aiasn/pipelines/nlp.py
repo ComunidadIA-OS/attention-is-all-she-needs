@@ -3,6 +3,7 @@ import logging
 
 from aiasn.model_adapters.llm_client import LLMClient, make_llm_client
 from aiasn.model_adapters.nlp.mentions import MentionExtractor
+from aiasn.model_adapters.nlp.references import ReferenceExtractor
 from aiasn.model_adapters.nlp.topics import TopicExtractor
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
@@ -16,7 +17,7 @@ class NlpPipeline(Pipeline):
     def __init__(self, cfg: NlpSettings, llm: LLMClient | None = None):
         self.cfg = cfg
         llm = llm or make_llm_client(cfg.llm)
-        self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg)]
+        self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg), ReferenceExtractor(llm, cfg)]
 
     def run(self, ctx: RunContext) -> None:
         turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)

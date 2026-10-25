@@ -27,6 +27,10 @@ class ReidentificatorSettings(BaseModel):
     max_distance: float = Field(0.6, gt=0)   # cosine distance between tracks of the same person
 
 
+class ActiveSpeakerDetectorSettings(BaseModel):
+    repo_dir: Path = Path("models/TalkNet-ASD")   # cloned with its weights if missing
+
+
 ### SETTINGS FOR VIDEO PIPELINE
 
 class VideoSettings(BaseModel):
@@ -40,6 +44,7 @@ class VideoSettings(BaseModel):
     person_tracker: PersonTrackerSettings = Field(default_factory=PersonTrackerSettings)
     face_detector: FaceDetectorSettings = Field(default_factory=FaceDetectorSettings)
     reidentificator: ReidentificatorSettings = Field(default_factory=ReidentificatorSettings)
+    active_speaker_detector: ActiveSpeakerDetectorSettings = Field(default_factory=ActiveSpeakerDetectorSettings)
 
 ### GENERAL SETTINGS
 

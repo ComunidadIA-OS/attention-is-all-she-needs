@@ -115,3 +115,6 @@ tempCodeRunnerFile.py
 # local lake and ephemeral files
 data/
 tmp/
+
+# downloaded model code and weights
+models/

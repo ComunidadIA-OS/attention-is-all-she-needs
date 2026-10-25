@@ -1,5 +1,7 @@
 import subprocess
 
+import cv2
+
 import pytest
 from ultralytics.utils import ASSETS
 
@@ -26,3 +28,13 @@ def clip_with_cut(tmp_path_factory):
                     "-filter_complex", f"[0]{fit}[a];[1]{fit}[b];[2]{fit}[c];[a][b][c]concat=n=3:v=1[v]",
                     "-map", "[v]", "-map", "3", "-shortest", "-pix_fmt", "yuv420p", str(path)], check=True)
     return path
+
+
+@pytest.fixture(scope="session")
+def talking_clip(video_pipeline, tmp_path_factory):
+    """TalkNet's demo clip (one person talking among several), as 25 fps frames, 16 kHz audio and faces per frame."""
+    source = video_pipeline.cfg.active_speaker_detector.repo_dir / "demo" / "001.avi"
+    if not source.is_file():
+        pytest.skip("TalkNet demo clip not available")
+    _, audio, frames = video_pipeline._extract(source, tmp_path_factory.mktemp("talking"))
+    return frames, audio, [video_pipeline.face_detector.detect(cv2.imread(str(f))) for f in frames]

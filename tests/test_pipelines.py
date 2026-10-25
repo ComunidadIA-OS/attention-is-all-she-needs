@@ -72,7 +72,8 @@ def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
     # Bronze detections
     d = ctx.lake.read("bronze", "video_detections", ctx.video_id)
     assert list(d.columns) == ["frame", "shot", "track_id", "person_id", "x1", "y1", "x2", "y2", "head",
-                               "face_x1", "face_y1", "face_x2", "face_y2", "frame_width", "frame_height"]
+                               "face_x1", "face_y1", "face_x2", "face_y2", "frame_width", "frame_height",
+                               "speaking_score"]
     assert (d.frame % cfg.stride == cfg.stride - 1).all()
     assert (d.frame_width == 640).all() and (d.frame_height == 360).all()
     assert set(d.shot) == {0, 1, 2}
@@ -90,3 +91,7 @@ def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
     assert set(first) == set(third)
     assert d.person_id.notna().all()   # discarded tracks are dropped
     assert d.groupby("track_id").person_id.nunique().max() == 1
+
+    # Active speaker: every visible face in the ZIDANE shots is tracked by TalkNet and gets a score,
+    # except in the frames ffmpeg appends at the end, which have no audio left
+    assert d[(d.shot != 1) & (d.frame < 6 * cfg.fps - 5)].speaking_score.notna().all()

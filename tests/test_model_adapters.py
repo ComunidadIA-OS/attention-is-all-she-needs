@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 
 from conftest import BUS, ZIDANE
 
@@ -78,3 +79,31 @@ def test_reidentificator_cluster(video_pipeline):
     assert person[1] == person[2] != person[3]
     assert reid.cluster({7: np.stack([a])}) == {7: 1}
     assert reid.cluster({}) == {}
+
+
+def test_active_speaker_detector_finds_the_speaker(video_pipeline, talking_clip):
+    frames, audio, faces = talking_clip
+    asd = video_pipeline.speaker_detector.detect(frames, audio, faces, cuts=[])
+    assert list(asd.columns) == ["frame", "track", "x1", "y1", "x2", "y2", "score"]
+    speaking = (asd.score > 0).groupby(asd.track).mean()
+    assert (speaking > 0.8).sum() == 1   # one person talks most of the time
+    assert (speaking < 0.1).sum() >= 3   # the others hardly ever
+
+
+def test_active_speaker_detector_tracks_within_shots(video_pipeline, clip_with_cut, tmp_path):
+    _, audio, frames = video_pipeline._extract(clip_with_cut, tmp_path)
+    faces = [video_pipeline.face_detector.detect(cv2.imread(str(f))) for f in frames]
+    cuts = [50, 100]   # 2 s and 4 s at 25 fps
+    asd = video_pipeline.speaker_detector.detect(frames, audio, faces, cuts)
+    shot = np.searchsorted(cuts, asd.frame, side="right")
+    assert (pd.Series(shot).groupby(asd.track).nunique() == 1).all()
+    assert asd.groupby("track").frame.apply(lambda f: (f.diff().dropna() == 1).all()).all()   # gaps interpolated
+    assert asd.score.notna().all()
+    zidane = asd[asd.frame < 50]
+    assert zidane.track.nunique() == 2 and zidane.groupby("frame").size().max() == 2
+
+
+def test_active_speaker_detector_no_faces(video_pipeline, clip_with_cut, tmp_path):
+    _, audio, frames = video_pipeline._extract(clip_with_cut, tmp_path)
+    no_faces = [video_pipeline.face_detector.detect(cv2.imread(str(frames[0])) * 0)] * len(frames)
+    assert video_pipeline.speaker_detector.detect(frames, audio, no_faces, cuts=[]).empty

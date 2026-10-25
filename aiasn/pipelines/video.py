@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
+from aiasn.model_adapters.active_speaker_detector import ActiveSpeakerDetector
 from aiasn.model_adapters.face_detector import FaceDetector
 from aiasn.model_adapters.person_tracker import PersonTracker
 from aiasn.model_adapters.reidentificator import Reidentificator
@@ -23,6 +24,7 @@ class VideoPipeline(Pipeline):
         self.person_tracker = PersonTracker(cfg.person_tracker, cfg.device)
         self.face_detector = FaceDetector(cfg.face_detector, cfg.device)
         self.reidentificator = Reidentificator(cfg.reidentificator, cfg.device)
+        self.speaker_detector = ActiveSpeakerDetector(cfg.active_speaker_detector, cfg.device)
 
     def run(self, ctx: RunContext) -> None:
         work = ctx.tmp_dir / self.name
@@ -35,6 +37,7 @@ class VideoPipeline(Pipeline):
         detections["track_id"] = detections.groupby(["shot", "track_id"]).ngroup() + 1
         detections.insert(3, "person_id", self._reidentify(detections))
         detections = detections.dropna(subset="person_id")
+        detections["speaking_score"] = self._speaking(detections, self.speaker_detector.detect(frames, audio, faces, cuts))
         # Face embeddings are biometric data: never stored (ADR-004)
         ctx.lake.write("bronze", "video_detections", ctx.video_id, detections.drop(columns="embedding"))
 
@@ -54,6 +57,17 @@ class VideoPipeline(Pipeline):
             person[t] = next_id
             next_id += 1
         return detections.track_id.map(person).astype("Int64")
+
+    def _speaking(self, detections: pd.DataFrame, speakers: pd.DataFrame) -> pd.Series:
+        """TalkNet score of each detection: the best of the tracked faces it owns in that frame (NaN if none)."""
+        score = pd.Series(np.nan, index=detections.index)
+        by_frame = speakers.groupby("frame")
+        for f, people in detections.groupby("frame"):
+            if f in by_frame.groups:
+                faces = by_frame.get_group(f)
+                owner = self._owner(people, faces)
+                score.update(faces.score.loc[owner.index].groupby(owner).max())
+        return score
 
     def _detect(self, frames: list[Path]) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
         """Faces in every frame (TalkNet needs them all) and people in 1 of every `stride` frames.
@@ -78,23 +92,28 @@ class VideoPipeline(Pipeline):
 
     @staticmethod
     def _assign_faces(people: pd.DataFrame, faces: pd.DataFrame) -> pd.DataFrame:
-        """Each face goes to the narrowest person box containing its centre (as in the notebook); best score wins.
+        """Each person gets the best-scored of the faces it owns (see `_owner`).
 
         `face` is the index of the assigned face in `faces`.
         """
         people = people.assign(face=np.nan, face_x1=np.nan, face_y1=np.nan, face_x2=np.nan, face_y2=np.nan)
-        best: dict[int, tuple] = {}
-        for face in faces.itertuples():
-            cx, cy = (face.x1 + face.x2) / 2, (face.y1 + face.y2) / 2
-            inside = people[(people.x1 <= cx) & (cx <= people.x2) & (people.y1 <= cy) & (cy <= people.y2)]
-            if inside.empty:
-                continue
-            p = (inside.x2 - inside.x1).idxmin()
-            if p not in best or face.score > best[p].score:
-                best[p] = face
-        for p, face in best.items():
-            people.loc[p, ["face", "face_x1", "face_y1", "face_x2", "face_y2"]] = [face.Index, face.x1, face.y1, face.x2, face.y2]
+        owner = VideoPipeline._owner(people, faces)
+        for p, i in faces.score.loc[owner.index].groupby(owner).idxmax().items():
+            people.loc[p, ["face", "face_x1", "face_y1", "face_x2", "face_y2"]] = [i, *faces.loc[i, ["x1", "y1", "x2", "y2"]]]
         return people
+
+    @staticmethod
+    def _owner(people: pd.DataFrame, faces: pd.DataFrame) -> pd.Series:
+        """Person (index in `people`) of each face: the narrowest box containing its centre (as in the notebook).
+
+        Faces outside every box are left out.
+        """
+        owner = {}
+        for i, cx, cy in zip(faces.index, (faces.x1 + faces.x2) / 2, (faces.y1 + faces.y2) / 2):
+            inside = people[(people.x1 <= cx) & (cx <= people.x2) & (people.y1 <= cy) & (cy <= people.y2)]
+            if not inside.empty:
+                owner[i] = (inside.x2 - inside.x1).idxmin()
+        return pd.Series(owner, dtype=int)
 
     def _extract(self, source: Path, work: Path) -> tuple[Path, Path, list[Path]]:
         """Resampled video, mono audio and frames. Audio and frames come from the resampled video, as in the TalkNet demo."""

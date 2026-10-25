@@ -80,6 +80,15 @@ class VoiceGenderClassifierSettings(BaseModel):
     max_seconds: float = Field(15.0, gt=0)         # only the start of longer turns is used: enough, and faster
 
 
+### SETTINGS FOR AUDIO PIPELINE
+
+class AudioSettings(BaseModel):
+    sample_rate: int = Field(16_000, gt=0)         # what Whisper and the voice classifier expect
+    device: Literal["auto", "cuda", "cpu"] = "auto"
+    transcriber: TranscriberSettings = Field(default_factory=TranscriberSettings)
+    voice_gender_classifier: VoiceGenderClassifierSettings = Field(default_factory=VoiceGenderClassifierSettings)
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):
@@ -88,3 +97,4 @@ class Settings(BaseSettings):
     lake_dir: Path = Path("data")
     tmp_dir: Path = Path("tmp")
     video: VideoSettings = Field(default_factory=VideoSettings)
+    audio: AudioSettings = Field(default_factory=AudioSettings)

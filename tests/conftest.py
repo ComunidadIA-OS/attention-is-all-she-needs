@@ -6,8 +6,9 @@ import pytest
 from ultralytics.utils import ASSETS
 
 from aiasn.model_adapters.voice_gender_classifier import VoiceGenderClassifier
+from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.video import VideoPipeline
-from aiasn.settings import VideoSettings, VoiceGenderClassifierSettings
+from aiasn.settings import AudioSettings, VideoSettings, VoiceGenderClassifierSettings
 
 ZIDANE, BUS = ASSETS / "zidane.jpg", ASSETS / "bus.jpg"   # sample images shipped with Ultralytics: 2 and 4 people
 CAPTION, LOGO = "ENTREVISTA", "LOGO"
@@ -38,6 +39,11 @@ def video_pipeline() -> VideoPipeline:
 @pytest.fixture(scope="session")
 def voice_gender_classifier() -> VoiceGenderClassifier:
     return VoiceGenderClassifier(VoiceGenderClassifierSettings())
+
+
+@pytest.fixture(scope="session")
+def audio_pipeline() -> AudioPipeline:
+    return AudioPipeline(AudioSettings())
 
 
 @pytest.fixture(scope="session")

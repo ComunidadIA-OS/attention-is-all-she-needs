@@ -147,7 +147,8 @@ def test_gender_estimator_output(video_pipeline):
 
 def test_transcriber_parses_diarized_turns():
     turns = Transcriber.parse(ASR_RESPONSE)
-    assert list(turns.columns) == ["start", "end", "speaker", "text"]
+    assert list(turns.columns) == ["turn", "start", "end", "speaker", "text"]
+    assert turns.turn.tolist() == [0, 1, 2]
     assert turns.speaker.tolist() == [0, 0, 1]
     assert turns.text.tolist() == ["Hola.", "Bienvenidas", "al programa."]
     assert turns.end.tolist() == [0.3, 3.0, 5.5]

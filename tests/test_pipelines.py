@@ -176,7 +176,7 @@ def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with
         assert wav.getframerate() == ctx.settings.audio.sample_rate and wav.getnchannels() == 1
 
     turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)
-    assert list(turns.columns) == ["start", "end", "speaker", "text", "gender", "gender_prob"]
+    assert list(turns.columns) == ["turn", "start", "end", "speaker", "text", "gender", "gender_prob"]
     assert len(turns) == 3 and turns.speaker.tolist() == [0, 0, 1]
     assert turns.gender.isna().tolist() == [True, False, False]   # the first turn is too short
     assert [line.split()[1] for line in lines] == ["extract", "asr", "gender", "total"]

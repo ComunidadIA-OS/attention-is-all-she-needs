@@ -7,6 +7,7 @@ import pandas as pd
 
 from aiasn.model_adapters.active_speaker_detector import ActiveSpeakerDetector
 from aiasn.model_adapters.face_detector import FaceDetector
+from aiasn.model_adapters.ocr_model import OcrModel
 from aiasn.model_adapters.person_tracker import PersonTracker
 from aiasn.model_adapters.reidentificator import Reidentificator
 from aiasn.model_adapters.shot_detector import ShotDetector
@@ -25,6 +26,7 @@ class VideoPipeline(Pipeline):
         self.face_detector = FaceDetector(cfg.face_detector, cfg.device)
         self.reidentificator = Reidentificator(cfg.reidentificator, cfg.device)
         self.speaker_detector = ActiveSpeakerDetector(cfg.active_speaker_detector, cfg.device)
+        self.ocr = OcrModel(cfg.ocr, cfg.device)
 
     def run(self, ctx: RunContext) -> None:
         work = ctx.tmp_dir / self.name
@@ -40,6 +42,10 @@ class VideoPipeline(Pipeline):
         detections["speaking_score"] = self._speaking(detections, self.speaker_detector.detect(frames, audio, faces, cuts))
         # Face embeddings are biometric data: never stored (ADR-004)
         ctx.lake.write("bronze", "video_detections", ctx.video_id, detections.drop(columns="embedding"))
+
+        texts = self._read_texts(frames)
+        texts.insert(1, "shot", np.searchsorted(cuts, texts["frame"], side="right"))
+        ctx.lake.write("bronze", "video_texts", ctx.video_id, texts)
 
     def _reidentify(self, detections: pd.DataFrame) -> pd.Series:
         """Person of each detection: tracks with the same face, in any shot, get the same id.
@@ -68,6 +74,18 @@ class VideoPipeline(Pipeline):
                 owner = self._owner(people, faces)
                 score.update(faces.score.loc[owner.index].groupby(owner).max())
         return score
+
+    def _read_texts(self, frames: list[Path]) -> pd.DataFrame:
+        """Text on screen in `ocr_fps` frames per second, except near the corners (logos, watermarks)."""
+        step, c = max(1, round(self.cfg.fps / self.cfg.ocr_fps)), self.cfg.ocr_corner
+        rows = []
+        for f in range(0, len(frames), step):
+            image = cv2.imread(str(frames[f]))
+            texts = self.ocr.read(image)
+            cx, cy = (texts.x1 + texts.x2) / 2 / image.shape[1], (texts.y1 + texts.y2) / 2 / image.shape[0]
+            corner = ((cx < c) | (cx > 1 - c)) & ((cy < c) | (cy > 1 - c))
+            rows.append(texts[~corner].assign(frame=f))
+        return pd.concat(rows, ignore_index=True)[["frame", "text", "conf", "x1", "y1", "x2", "y2"]]
 
     def _detect(self, frames: list[Path]) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
         """Faces in every frame (TalkNet needs them all) and people in 1 of every `stride` frames.

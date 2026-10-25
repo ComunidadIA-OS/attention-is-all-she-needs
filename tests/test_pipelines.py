@@ -4,6 +4,8 @@ import wave
 
 import pytest
 
+from conftest import CAPTION, LOGO
+
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.settings import Settings
@@ -51,14 +53,20 @@ def test_pipeline_records_failure_and_reraises(tmp_path):
     assert "boom" in step["error"]
 
 
-def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
-    ctx = make_ctx(tmp_path)
-    cfg = ctx.settings.video
+@pytest.fixture(scope="module")
+def video_run(tmp_path_factory, video_pipeline, clip_with_cut) -> RunContext:
+    """The video pipeline run once on `clip_with_cut`."""
+    ctx = make_ctx(tmp_path_factory.mktemp("run"))
     landing = ctx.lake.landing_dir(ctx.video_id)
     landing.mkdir(parents=True)
     shutil.copy(clip_with_cut, landing)
-
     video_pipeline(ctx)
+    return ctx
+
+
+def test_video_pipeline_outputs(video_run):
+    ctx = video_run
+    cfg = ctx.settings.video
     assert manifest_step(ctx, "video")["status"] == "ok"
 
     # Ephemeral files: resampled frames and mono audio
@@ -95,3 +103,15 @@ def test_video_pipeline_outputs(tmp_path, video_pipeline, clip_with_cut):
     # Active speaker: every visible face in the ZIDANE shots is tracked by TalkNet and gets a score,
     # except in the frames ffmpeg appends at the end, which have no audio left
     assert d[(d.shot != 1) & (d.frame < 6 * cfg.fps - 5)].speaking_score.notna().all()
+
+
+def test_video_pipeline_texts(video_run):
+    ctx = video_run
+    cfg = ctx.settings.video
+    t = ctx.lake.read("bronze", "video_texts", ctx.video_id)
+    assert list(t.columns) == ["frame", "shot", "text", "conf", "x1", "y1", "x2", "y2"]
+    assert (t.frame % cfg.fps == 0).all()                         # 1 frame per second...
+    assert set(range(0, 6 * cfg.fps, cfg.fps)) <= set(t.frame)    # ...all with the caption
+    assert (t.groupby("frame").text.apply(lambda s: CAPTION in s.str.upper().tolist())).all()
+    assert not t.text.str.upper().str.contains(LOGO).any()       # corner logos are dropped
+    assert set(t.shot) == {0, 1, 2}

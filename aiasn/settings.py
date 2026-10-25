@@ -31,6 +31,11 @@ class ActiveSpeakerDetectorSettings(BaseModel):
     repo_dir: Path = Path("models/TalkNet-ASD")   # cloned with its weights if missing
 
 
+class OcrSettings(BaseModel):
+    languages: list[str] = ["es", "en"]
+    min_conf: float = Field(0.4, ge=0, le=1)
+
+
 ### SETTINGS FOR VIDEO PIPELINE
 
 class VideoSettings(BaseModel):
@@ -39,12 +44,15 @@ class VideoSettings(BaseModel):
     stride: int = Field(4, gt=0)
     min_track_seconds: float = Field(1.0, ge=0)
     min_head: float = Field(0.5, ge=0, le=1)       # fraction of detections with head or shoulders visible
+    ocr_fps: float = Field(1.0, gt=0)              # frames per second read by the OCR: captions last seconds
+    ocr_corner: float = Field(0.2, ge=0, le=0.5)   # texts centred this close to a corner (logos) are dropped
     device: Literal["auto", "cuda", "cpu"] = "auto"
     shot_detector: ShotDetectorSettings = Field(default_factory=ShotDetectorSettings)
     person_tracker: PersonTrackerSettings = Field(default_factory=PersonTrackerSettings)
     face_detector: FaceDetectorSettings = Field(default_factory=FaceDetectorSettings)
     reidentificator: ReidentificatorSettings = Field(default_factory=ReidentificatorSettings)
     active_speaker_detector: ActiveSpeakerDetectorSettings = Field(default_factory=ActiveSpeakerDetectorSettings)
+    ocr: OcrSettings = Field(default_factory=OcrSettings)
 
 ### GENERAL SETTINGS
 

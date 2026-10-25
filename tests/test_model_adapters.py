@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from conftest import BUS, ZIDANE
+from conftest import BUS, CAPTION, ZIDANE, text_image
 
 COLUMNS = ["track_id", "x1", "y1", "x2", "y2", "head"]
 
@@ -107,3 +107,15 @@ def test_active_speaker_detector_no_faces(video_pipeline, clip_with_cut, tmp_pat
     _, audio, frames = video_pipeline._extract(clip_with_cut, tmp_path)
     no_faces = [video_pipeline.face_detector.detect(cv2.imread(str(frames[0])) * 0)] * len(frames)
     assert video_pipeline.speaker_detector.detect(frames, audio, no_faces, cuts=[]).empty
+
+
+def test_ocr_reads_text(video_pipeline):
+    image = np.full((200, 600, 3), 90, np.uint8)
+    caption = text_image(CAPTION, 1.0)
+    image[80:80 + caption.shape[0], 100:100 + caption.shape[1]] = caption
+    texts = video_pipeline.ocr.read(image)
+    assert list(texts.columns) == ["text", "conf", "x1", "y1", "x2", "y2"]
+    assert texts.text.tolist() == [CAPTION]
+    t = texts.iloc[0]
+    assert 90 <= t.x1 < t.x2 <= 100 + caption.shape[1] + 10 and 70 <= t.y1 < t.y2 <= 80 + caption.shape[0] + 10
+    assert video_pipeline.ocr.read(image * 0).empty

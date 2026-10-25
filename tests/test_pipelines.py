@@ -13,6 +13,7 @@ from aiasn.model_adapters.transcriber import Transcriber
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.video_annotation import annotate
+from aiasn.run_pipelines import process_video
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
@@ -180,3 +181,11 @@ def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with
     assert turns.gender.isna().tolist() == [True, False, False]   # the first turn is too short
     assert [line.split()[1] for line in lines] == ["extract", "asr", "gender", "total"]
     assert "3 turns, 2 speakers" in lines[1]
+
+
+def test_process_video_runs_pipelines_in_parallel_and_reraises(tmp_path):
+    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
+    with pytest.raises(RuntimeError, match="boom"):
+        process_video("vid1", settings, [FailingPipeline(), OkPipeline()])
+    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
+    assert steps["failing"]["status"] == "error" and steps["ok"]["status"] == "ok"   # one failure does not stop the other

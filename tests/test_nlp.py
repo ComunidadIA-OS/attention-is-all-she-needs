@@ -9,6 +9,7 @@ from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
+from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
 from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
@@ -59,7 +60,11 @@ REFERENCES = References(references=[
     Reference(turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
     Reference(turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
-ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES}
+PIECE = Piece(format="interview", roles=[
+    SpeakerRole(speaker="Speaker_0", role="interviewer"), SpeakerRole(speaker="Speaker_1", role="expert "),
+    SpeakerRole(speaker="Speaker_1", role="testimony"), SpeakerRole(speaker="Speaker_5", role="host"),
+])
+ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES, Piece: PIECE}
 
 
 def test_transcript_has_turns_and_speakers_but_no_gender():
@@ -109,6 +114,14 @@ def test_references_take_the_speaker_who_mentions_them():
     assert r.found.tolist() == [True, False]   # "Heidi Lamar" is not in turn 1
 
 
+def test_roles_one_per_known_speaker():
+    llm = FakeLLM({Piece: PIECE})
+    r = RoleExtractor(llm, NlpSettings(roles_guide=["host", "expert"])).extract(TURNS)
+    assert list(r.columns) == ["speaker", "role"]
+    assert r.speaker.tolist() == [0, 1] and r.role.tolist() == ["interviewer", "expert"]   # first role wins; Speaker_5 unknown
+    assert "host, expert" in llm.calls[0][0]
+
+
 def test_tasks_skip_the_model_without_turns():
     llm = FakeLLM({})
     assert MentionExtractor(llm, NlpSettings()).extract(TURNS.iloc[:0]).empty
@@ -134,7 +147,8 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     assert len(ctx.lake.read("bronze", "nlp_mentions", "vid1")) == 3
     assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_references", "vid1")) == 2
-    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "total"]
+    assert len(ctx.lake.read("bronze", "nlp_roles", "vid1")) == 2
+    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "total"]
     assert "3 rows, 1 not found" in lines[1]
 
 

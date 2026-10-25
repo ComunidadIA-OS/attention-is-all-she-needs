@@ -119,6 +119,8 @@ class NlpSettings(BaseModel):
         # others
         "education", "health", "history",
     ]
+    # Guide for the model, which may add new roles
+    roles_guide: list[str] = ["host", "interviewer", "expert", "voice-over narrator", "testimony", "character", "audience"]
 
 
 ### GENERAL SETTINGS

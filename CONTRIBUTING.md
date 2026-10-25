@@ -62,17 +62,18 @@ Los commits pueden redactarse indistintamente en **español o en inglés**, mant
 * **Documentación institucional y de producto (`README.md`, guías, memoria, accesibilidad):** Redactada prioritariamente en **español**, con compatibilidad multilingüe y soporte de lenguas cooficiales (catalán, euskera, gallego) conforme a `ADR-010`.
 * **Fichas estandarizadas de modelos y datos (`MODEL_CARD.md`, `DATASET_CARD.md`):** Se redactan en **inglés o formato bilingüe**, siguiendo los estándares internacionales de Hugging Face / Mitchell et al. para facilitar la reutilización comunitaria global (Open Source AI Definition de la OSI).
 
-### 3.3. *Trailer* de Coautoría Obligatorio
-Cuando una contribución haya sido consensuada o trabajada conjuntamente, se deben incluir los trailers de coautoría al final del mensaje de commit para reflejar la autoría paritaria en las estadísticas de GitHub:
+### 3.3. Autoría Individual y Coautoría Transversal de Equipo
+El equipo sigue un esquema equilibrado de reconocimiento técnico:
+* **Commits individuales de desarrollo (regla general):** Cada integrante firma y sube sus propios commits como **autora principal y directa** de sus módulos y tareas (por ejemplo, pipelines de audio/NLP de Rocío, frontend y UX de Pilar, o motor determinista y arquitectura de Alba). La persona que ejecuta el commit figura como autora indiscutible en la cabecera de Git, el historial de GitHub y el cómputo de líneas de código (`git blame`).
+* **Commits transversales y decisiones colegiadas (excepción colaborativa):** En cambios que afecten a la gobernanza común (`CONTRIBUTING.md`, licencias, contratos de integración entre módulos o acuerdos de equipo), la autora del commit añade al final los trailers `Co-authored-by` de las compañeras para acreditar la colaboración paritaria ante el jurado del reto:
 
 ```git
 feat(scope): short description in english or spanish
 
 Optional body detailing architectural decisions.
 
-Co-authored-by: Pilar de la Fuente Diez <pilarfuente1992@gmail.com>
-Co-authored-by: Rocío Jiménez Villén <rjvillen@gmail.com>
-Co-authored-by: Alba Camiña García <albacaminagarcia@gmail.com>
+Co-authored-by: Nombre Colega 1 <email1@ejemplo.com>
+Co-authored-by: Nombre Colega 2 <email2@ejemplo.com>
 ```
 
 ---

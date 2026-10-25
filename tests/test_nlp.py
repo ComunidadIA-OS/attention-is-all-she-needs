@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
+from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
 from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
@@ -64,7 +65,12 @@ PIECE = Piece(format="interview", roles=[
     SpeakerRole(speaker="Speaker_0", role="interviewer"), SpeakerRole(speaker="Speaker_1", role="expert "),
     SpeakerRole(speaker="Speaker_1", role="testimony"), SpeakerRole(speaker="Speaker_5", role="host"),
 ])
-ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES, Piece: PIECE}
+IDEAS = Ideas(ideas=[
+    Idea(idea="Ada Lovelace inspired her career", speakers=["Speaker_1"]),
+    Idea(idea="Science needs more women", speakers=["Speaker_0", "Speaker_1", "Speaker_1", "Speaker_9"]),
+    Idea(idea="Nobody said this", speakers=["Speaker_9"]),
+])
+ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES, Piece: PIECE, Ideas: IDEAS}
 
 
 def test_transcript_has_turns_and_speakers_but_no_gender():
@@ -122,6 +128,15 @@ def test_roles_one_per_known_speaker():
     assert "host, expert" in llm.calls[0][0]
 
 
+def test_ideas_one_row_per_contributing_speaker():
+    llm = FakeLLM({Ideas: IDEAS})
+    i = IdeaExtractor(llm, NlpSettings(max_ideas=5)).extract(TURNS)
+    assert list(i.columns) == ["idea_id", "idea", "speaker"]
+    # Duplicated and unknown speakers dropped; the idea left without speakers too
+    assert i.idea_id.tolist() == [0, 1, 1] and i.speaker.tolist() == [1, 0, 1]
+    assert "no more than 5" in llm.calls[0][0]
+
+
 def test_tasks_skip_the_model_without_turns():
     llm = FakeLLM({})
     assert MentionExtractor(llm, NlpSettings()).extract(TURNS.iloc[:0]).empty
@@ -148,7 +163,8 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_references", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_roles", "vid1")) == 2
-    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "total"]
+    assert len(ctx.lake.read("bronze", "nlp_ideas", "vid1")) == 3
+    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "ideas", "total"]
     assert "3 rows, 1 not found" in lines[1]
 
 

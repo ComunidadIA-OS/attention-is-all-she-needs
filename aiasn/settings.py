@@ -121,6 +121,7 @@ class NlpSettings(BaseModel):
     ]
     # Guide for the model, which may add new roles
     roles_guide: list[str] = ["host", "interviewer", "expert", "voice-over narrator", "testimony", "character", "audience"]
+    max_ideas: int = Field(10, gt=0)               # key ideas of the piece
 
 
 ### GENERAL SETTINGS

@@ -2,6 +2,7 @@ import argparse
 import logging
 
 from aiasn.model_adapters.llm_client import LLMClient, make_llm_client
+from aiasn.model_adapters.nlp.ideas import IdeaExtractor
 from aiasn.model_adapters.nlp.mentions import MentionExtractor
 from aiasn.model_adapters.nlp.references import ReferenceExtractor
 from aiasn.model_adapters.nlp.roles import RoleExtractor
@@ -19,7 +20,7 @@ class NlpPipeline(Pipeline):
         self.cfg = cfg
         llm = llm or make_llm_client(cfg.llm)
         self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg), ReferenceExtractor(llm, cfg),
-                      RoleExtractor(llm, cfg)]
+                      RoleExtractor(llm, cfg), IdeaExtractor(llm, cfg)]
 
     def run(self, ctx: RunContext) -> None:
         turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)

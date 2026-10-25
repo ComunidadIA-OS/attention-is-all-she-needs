@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
 # Protocolo de Pruebas y Validación (TESTING)
 ## Proyecto: «Attention Is All She Needs» (AIASN) — Reto «Mujeres por la IA Abierta»
 
@@ -6,7 +9,7 @@
 > 1. **Dra. Verónica Vilaplana (TALP-UPC):** Evaluación cuantitativa sobre micro-muestras anotadas a mano y auditoría de la bolsa `"unknown"` (Diap. 91 y 95).
 > 2. **Dra. Montse Guàrdia Güell (Consell Social UPC):** Pruebas integradas desde el *Sprint 0* (*Test Early / Fail Fast*, min `1:27:45`) y validación de usabilidad con personas no técnicas.
 > 3. **Dr. José Adrián Rodríguez Fonollosa (TALP-UPC):** Recuperación empírica del *Ground Truth* de habla femenina (**14 %**) sobre el corpus `Àgora`.
-> 4. **Jorge Teixeira (ComunidadIA-OS / GPUL):** Reproductibilidad automatizada mediante tests unitarios con `pytest`.
+> 4. **Jorge Teixeira (ComunidadIA-OS / GPUL):** Reproductibilidad automatizada mediante tests unitarios con `pytest` e integración continua en GitHub Actions.
 
 ---
 
@@ -21,9 +24,10 @@ flowchart TD
 
     subgraph NIVEL_2["Nivel 2: Tests Unitarios y Contratos (Software)"]
         B1["tests/test_contracts.py"] --> B2["Esquema Tabular Pydantic"]
-        B1 --> B3["Cruce Determinista de Intervalos"]
-        B1 --> B4["Cortafuegos Ético: p < 0.80 -> no_determinado"]
-        B1 --> B5["Matriz 4 Cuadrantes Seeing & Hearing"]
+        B3["tests/test_fusion.py"] --> B4["Cruce Temporal y 4 Cuadrantes"]
+        B3 --> B5["Salvaguarda No Binaria 3 Fases (ADR-006)"]
+        B3 --> B6["Lectura Fácil y Lenguas Cooficiales (ADR-010)"]
+        B7["tests/test_compliance_adapters.py"] --> B8["Zero Facial Retention y Sello SHA-256"]
     end
 
     subgraph NIVEL_3["Nivel 3: Pruebas de Usabilidad y HitL (Humana)"]
@@ -62,18 +66,47 @@ El repositorio incluye la suite ejecutable en el directorio `tests/` para verifi
 pytest tests/ -v
 ```
 
-### 3.2. Casos de Prueba Implementados en `tests/test_contracts.py`
+### 3.2. Casos de Prueba de Contratos Tabulares (`tests/test_contracts.py`)
 
-1. **`test_audio_contract_schema`:**  
+1. **`test_audio_columns_contract`:**  
    Comprueba que cualquier exportación de audio cumple estrictamente con las 4 columnas requeridas: `tiempo_i`, `tiempo_f`, `transcripcion`, `genero_inferido`.
-2. **`test_ethical_abstention_threshold`:**  
-   Verifica que cualquier predicción de género con confianza inferior a $0.80$ es forzada determinísticamente a `no_determinado` (cortafuegos ético *Fairness by Design*).
-3. **`test_temporal_overlap_determinism`:**  
+2. **`test_ethical_abstention_low_confidence` y `test_ethical_abstention_high_confidence`:**  
+   Verifica que cualquier predicción de género con confianza inferior a $0.80$ es forzada determinísticamente a `no_determinado` (`ADR-005`), preservando la inferencia si $p \ge 0.80$.
+3. **`test_temporal_overlap_exact_overlap`:**  
    Comprueba que la función en Python de cruce temporal calcula los segundos exactos de coincidencia entre los intervalos de habla y los intervalos de aparición en vídeo, sin pérdidas de redondeo ni alucinaciones.
-4. **`test_four_quadrants_classification`:**  
+4. **`test_four_quadrants_anti_equality_washing`:**  
    Verifica que una persona con presencia visual pero sin voz en ese intervalo es clasificada correctamente en el **Cuadrante 2 (Presencia muda)**, activando la bandera anti-*equality-washing*.
-5. **`test_zero_facial_retention`:**  
-   Verifica que las estructuras de datos que almacenan los tracks de vídeo contienen únicamente coordenadas espaciales (`x1, y1, x2, y2`) y tiempos, sin persistir vectores ni descriptores biométricos identificativos.
+5. **`test_zero_facial_retention_schema`:**  
+   Verifica que las estructuras de datos que almacenan los tracks de vídeo contienen únicamente coordenadas espaciales (`x1, y1, x2, y2`) y tiempos, sin persistir vectores ni descriptores biométricos identificativos (`ADR-004`).
+
+### 3.3. Casos de Prueba del Motor Determinista de Fusión (`tests/test_fusion.py`)
+
+1. **`test_solape_temporal_valores_limite`:**  
+   Verificación matemática rigurosa en límites: intervalos disjuntos, solapes parciales, contención total y coincidencia idéntica.
+2. **`test_clasificacion_cuadrantes`:**  
+   Asignación canónica a los 4 cuadrantes *Seeing and Hearing* (Vilaplana Diap. 92): Cuadrante 1 (voz activa), Cuadrante 2 (presencia muda), Cuadrante 3 (voz en off) y Cuadrante 4 (mención).
+3. **`test_umbral_etico_abstencion`:**  
+   Comprobación de filtros ante valores nulos, excepciones de tipado y umbral ético $p < 0.80 \to \text{no\_determinado}$.
+4. **`test_cruce_multimodal_con_fixtures`:**  
+   Prueba de integración de extremo a extremo con fixtures reales del corpus `Àgora` y trazas de vídeo con detección de presencia muda de participantes reales (Marta Solé).
+5. **`test_calculo_kpis_y_alerta_equality_washing`:**  
+   Cálculo determinista de tiempos de voz, tiempos en pantalla, ratio voz/pantalla, resumen accesible en Lectura Fácil (`UNE 153101 EX`) y soporte nativo de lenguas cooficiales (`["es", "ca", "gl", "eu"]` — `ADR-010`).
+6. **`test_salvaguarda_matematica_paridad_no_binaria_adr0006`:**  
+   Verificación algorítmica de la salvaguarda progresiva en 3 fases:
+   - **Fase 1 ($P_{\text{NB}} \le 20\%$):** Descuento íntegro del techo masculino ($60\% \to 40\%$) protegiendo el suelo femenino del 40 %.
+   - **Fase 2 ($P_{\text{NB}} > 20\%$):** Reparto simétrico 50/50 del exceso entre ambos sexos binarios al quedar igualados en el 40 %.
+   - **Fase 3 (`mesa_monografica_diversidad=True`):** Aprobación de paneles monográficos de colectivos LGTBIQ+/diversidad si no hay sobrerrepresentación masculina.
+
+### 3.4. Casos de Prueba de Compliance, Adaptadores y Sello B2B (`tests/test_compliance_adapters.py`)
+
+1. **`test_purga_biometrica_en_adaptador_visual`:**  
+   Garantiza que el adaptador visual (`BaseVisionAdapter.validar_y_sanitizar_contrato`) elimine cualquier columna biométrica (`embedding`, `face_vector`) en memoria antes de entregar el DataFrame ligero (`ADR-004`).
+2. **`test_denegacion_sello_ante_sanciones_o_cherry_picking`:**  
+   Comprueba el cortafuegos ético: deniega el Sello Oficial y activa la advertencia de solo autodiagnóstico ante sanciones LISOS/penales o muestras sesgadas (Art. 6 Apache-2.0 y Código Ético).
+3. **`test_emision_sello_oficial_y_firma_sha256_inmutable`:**  
+   Valida la emisión del Sello Oficial Pleno y comprueba que cualquier intento de alteración posterior de las métricas invalida la huella criptográfica SHA-256.
+4. **`test_rehabilitacion_corporativa_self_cleaning_ventana_3_anios`:**  
+   Comprueba la vía de Rehabilitación Activa (*Self-Cleaning*, Directiva 2014/24/UE) para entidades con sanciones en los últimos 3 años que acrediten Plan de Igualdad y $\ge 2$ informes históricos de auditoría.
 
 ---
 
@@ -90,9 +123,9 @@ Siguiendo las pautas de innovación de **Montse Guàrdia** (`0:35:00` y `1:47:19
 
 ---
 
-## 5. Integración Continua (CI)
+## 5. Integración Continua (CI con GitHub Actions)
 
 En el marco de la colaboración comunitaria en `ComunidadIA-OS`:
-* Todo nuevo Pull Request debe pasar satisfactoriamente la suite de `pytest`.
+* El flujo automatizado [`.github/workflows/ci.yml`](.github/workflows/ci.yml) ejecuta la suite completa de `pytest` en entornos aislados con Python 3.11 y 3.12 ante cada `push` y Pull Request.
+* Todo nuevo Pull Request debe pasar satisfactoriamente la suite de `pytest` para ser mergeado.
 * Los cambios en contratos tabulares requieren actualización de los esquemas `Pydantic` correspondientes.
-

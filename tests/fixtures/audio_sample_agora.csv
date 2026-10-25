@@ -1,0 +1,6 @@
+tiempo_i,tiempo_f,transcripcion,genero_inferido,speaker_id
+0.0,34.06,"El dia 30 de desembre, el mati, va fer esclatar un cotxe bomba a la terminal D de Barajas. Feia tres anys que la banda no causava cap victima mortal...",mujer,Hablante_01
+34.76,90.02,"Jo voldria fer un comentari preliminar. Quan des del punt de vista politic s'assumeix el risc de negociar amb una organitzacio terrorista...",hombre,Hablante_02
+94.44,119.98,"Estic d'acord amb el que ha dit el senyor Monreal. El que es important es que la gent sapiga el que esta passant...",mujer,Hablante_03
+125.0,140.0,"Gracies a tots per la vostra participacio en aquesta taula rodona d'avui.",no_determinado,Hablante_01
+

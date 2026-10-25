@@ -11,6 +11,7 @@ from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
 from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
+from aiasn.model_adapters.nlp.tone import Tones, ToneClassifier, TurnTone
 from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
@@ -70,7 +71,14 @@ IDEAS = Ideas(ideas=[
     Idea(idea="Science needs more women", speakers=["Speaker_0", "Speaker_1", "Speaker_1", "Speaker_9"]),
     Idea(idea="Nobody said this", speakers=["Speaker_9"]),
 ])
-ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES, Piece: PIECE, Ideas: IDEAS}
+TONES = Tones(turns=[
+    TurnTone(turn=0, tone="technical_assertive", evidence="investigadora del CSIC"),
+    TurnTone(turn=1, tone=None, evidence=None),
+    TurnTone(turn=3, tone="collaborative", evidence="Ada Lovelace, que fue mi referente"),
+    TurnTone(turn=3, tone="dissent", evidence="Empecé"),
+    TurnTone(turn=12, tone="dissent", evidence="no"),
+])
+ANSWERS = {Mentions: MENTIONS, Topics: TOPICS, References: REFERENCES, Piece: PIECE, Ideas: IDEAS, Tones: TONES}
 
 
 def test_transcript_has_turns_and_speakers_but_no_gender():
@@ -137,6 +145,15 @@ def test_ideas_one_row_per_contributing_speaker():
     assert "no more than 5" in llm.calls[0][0]
 
 
+def test_tone_one_row_per_turn():
+    t = ToneClassifier(FakeLLM({Tones: TONES}), NlpSettings()).extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "tone", "evidence", "found"]
+    assert t.turn.tolist() == [0, 1, 3] and t.speaker.tolist() == [0, 1, 1]   # first answer per turn; turn 12 unknown
+    assert t.tone.isna().tolist() == [False, True, False]
+    assert t.tone.dropna().tolist() == ["technical_assertive", "collaborative"]
+    assert t.found.tolist() == [True, False, True]
+
+
 def test_tasks_skip_the_model_without_turns():
     llm = FakeLLM({})
     assert MentionExtractor(llm, NlpSettings()).extract(TURNS.iloc[:0]).empty
@@ -164,7 +181,9 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     assert len(ctx.lake.read("bronze", "nlp_references", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_roles", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_ideas", "vid1")) == 3
-    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "ideas", "total"]
+    assert len(ctx.lake.read("bronze", "nlp_tone", "vid1")) == 3
+    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "ideas", "tone",
+                                                   "total"]
     assert "3 rows, 1 not found" in lines[1]
 
 

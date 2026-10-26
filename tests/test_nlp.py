@@ -291,6 +291,7 @@ def test_tone_classifier_defaults_to_the_llm():
 
 def test_zero_shot_tone_with_the_real_model():
     """Clear-cut turns with the multilingual NLI model (downloaded the first time)."""
+    pytest.importorskip("transformers")
     turns = pd.DataFrame({
         "turn": [0, 1, 2],
         "speaker": pd.array([0, 1, 0], dtype="Int64"),

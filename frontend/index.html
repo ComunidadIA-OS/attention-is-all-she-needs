@@ -7,461 +7,500 @@ SPDX-License-Identifier: Apache-2.0
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Plataforma pericial y accesible de auditoría audiovisual y soberanía algorítmica con perspectiva de género. Cumplimiento de RIA, RGPD y Ley 2/2024.">
-  <title>AIASN — Panel Pericial de Auditoría Audiovisual y Soberanía Algorítmica</title>
-  
-  <!-- Tailwind CSS CDN con configuración para modo oscuro -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="Panel de auditoría audiovisual de paridad con perspectiva de género: accesible (WCAG 2.2 AA, Lectura Fácil), con supervisión humana (Art. 14 RIA) y sin dependencias externas.">
+  <meta name="color-scheme" content="light dark">
+  <title>AIASN — Auditoría audiovisual de paridad</title>
+
+  <!-- Tema antes del primer pintado (evita el destello): preferencia guardada o del sistema operativo -->
   <script>
-    tailwind.config = {
-      darkMode: 'class'
-    }
+    (function () {
+      try {
+        var saved = localStorage.getItem("aiasn-theme");
+        var forced = new URLSearchParams(location.search).get("theme");
+        var dark = forced ? forced === "dark" : saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (dark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    })();
   </script>
-  
-  <!-- Vis.js Network Standalone CDN (Constelación interactiva) -->
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-  
-  <!-- Estilos periciales, accesibilidad y diseño editorial -->
+
+  <!-- Sin CDN ni fuentes remotas: funciona sin conexión y no envía la IP a terceros (RGPD · Green AI) -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
+<body>
 
-  <!-- Enlace accesible de salto al contenido principal (WCAG 2.2 AA) -->
-  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:p-3 focus:bg-purple-900 focus:text-white focus:rounded focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-600 font-medium text-xs">
-    Saltar directamente al contenido principal de la auditoría
-  </a>
+  <a href="#main-content" class="skip-link" data-i18n="skip">Saltar al contenido principal</a>
 
-  <!-- CABECERA INSTITUCIONAL Y DE AUDITORÍA PERICIAL -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs" role="banner">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
-      
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded bg-purple-900 text-white flex items-center justify-center font-bold text-base tracking-wider font-mono shadow-xs" aria-hidden="true">
-          AI
-        </div>
+  <!-- Iconos SVG (icono + texto + color: las alertas nunca dependen solo del color, ADR-0010) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3 2 21h20L12 3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18.5v.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="m8 12.5 3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-no" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="m9 9 6 6M15 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pending" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5v-6h14v6h-2M7 14h10v6H7v-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10H4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <!-- CABECERA -->
+  <header class="site-header" role="banner">
+    <div class="wrap header-row">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">AI</span>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base font-bold text-slate-900 tracking-tight">Attention Is All She Needs</h1>
-            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">v1.0.0</span>
-          </div>
-          <p class="text-xs text-slate-500">Plataforma Pericial de Auditoría Audiovisual de Paridad · Reto «Mujeres por la IA Abierta»</p>
+          <h1 class="brand-title">Attention Is All She Needs</h1>
+          <p class="brand-sub" data-i18n="brand.subtitle">Auditoría audiovisual de paridad · Reto «Mujeres por la IA Abierta»</p>
         </div>
       </div>
-
-      <!-- Barra de herramientas: Expediente, Pseudonimización RGPD y Conexión -->
-      <div class="flex items-center flex-wrap gap-3">
-        <div class="flex items-center gap-2 text-xs">
-          <span class="text-slate-500">Expediente:</span>
-          <span id="video-id-badge" class="font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">clip_quanta-3f9a</span>
-        </div>
-
-        <div class="hidden sm:block h-4 w-px bg-slate-200"></div>
-
-        <!-- Interruptor de Pseudonimización (Privacidad por Diseño · Art. 4.5 y 25 RGPD) -->
-        <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded border border-slate-300 transition" title="Privacidad por diseño (Art. 4.5 RGPD): sustituye los nombres del rótulo OCR por pseudónimos técnicos">
-          <input type="checkbox" id="anonymize-toggle" class="rounded text-purple-700 focus:ring-2 focus:ring-purple-600 focus:outline-none">
-          <span class="font-medium">Anonimizar Nombres (RGPD)</span>
-        </label>
-
-        <div class="hidden sm:block h-4 w-px bg-slate-200"></div>
-
-        <div class="flex items-center gap-2">
-          <label for="mode-select" class="text-xs text-slate-500 dark:text-slate-400">Origen:</label>
-          <select id="mode-select" class="text-xs font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-600" aria-label="Seleccionar origen de datos">
-            <option value="demo">Muestra Auditada (Quanta IA)</option>
-            <option value="live">API en Vivo (FastAPI)</option>
-          </select>
-          <span id="api-status-badge" class="text-xs px-2.5 py-0.5 rounded font-mono font-medium badge-certified">Muestra Local</span>
-        </div>
-
-        <div class="hidden sm:block h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
-
-        <!-- Botón de Modo Oscuro / Claro (Sostenibilidad y Ergonomía) -->
-        <button type="button" id="theme-toggle-btn" class="w-8 h-8 rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm transition hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-600" title="Alternar modo claro / oscuro (Ahorro energético OLED)" aria-label="Alternar modo claro y oscuro">
-          <span id="theme-toggle-icon">🌙</span>
+      <div class="header-actions">
+        <label for="lang-select" class="sr-only" data-i18n="ui.language">Idioma</label>
+        <select id="lang-select" class="control">
+          <option value="es">Castellano</option>
+          <option value="ca">Català</option>
+          <option value="en">English</option>
+        </select>
+        <button type="button" id="theme-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="ui.theme_title">
+          <svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+          <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+          <span class="sr-only" id="theme-toggle-label" data-i18n="ui.theme">Modo oscuro</span>
         </button>
       </div>
-
     </div>
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL -->
-  <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-grow" role="main">
+  <!-- NAVEGACIÓN INTERNA (ancla por sección) -->
+  <nav class="section-nav" aria-label="Secciones" data-i18n-aria="nav.label">
+    <div class="wrap">
+      <ol>
+        <li><a href="#veredicto" data-i18n="nav.veredicto">Veredicto</a></li>
+        <li><a href="#alertas" data-i18n="nav.alertas">Alertas</a></li>
+        <li><a href="#metricas" data-i18n="nav.metricas">Métricas</a></li>
+        <li><a href="#constelacion" data-i18n="nav.constelacion">Constelación</a></li>
+        <li><a href="#personas" data-i18n="nav.personas">Personas</a></li>
+        <li><a href="#supervision" data-i18n="nav.supervision">Supervisión</a></li>
+        <li><a href="#clima" data-i18n="nav.clima">Clima</a></li>
+        <li><a href="#ciudadania" data-i18n="nav.ciudadania">Ciudadanía</a></li>
+        <li><a href="#trazabilidad" data-i18n="nav.trazabilidad">Trazabilidad</a></li>
+      </ol>
+    </div>
+  </nav>
 
-    <!-- 1. TRAZABILIDAD MULTIMODAL & GREEN AI BY DESIGN -->
-    <section class="audit-card p-4 space-y-3" aria-labelledby="pipeline-heading">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 id="pipeline-heading" class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Trazabilidad del Procesado Multimodal</h2>
-          <p class="text-sm font-medium text-slate-800" title="Decisión Arquitectónica registrada: ADR-0004">
-            Privacidad por Diseño: Biometría Efímera en RAM (Zero Facial Retention)
-          </p>
+  <main id="main-content" class="wrap main" tabindex="-1">
+
+    <!-- Anuncios para lectores de pantalla -->
+    <div id="sr-status" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- EXPEDIENTE Y AJUSTES -->
+    <section class="card toolbar" aria-labelledby="exp-h">
+      <h2 id="exp-h" class="sr-only" data-i18n="toolbar.title">Expediente y ajustes</h2>
+      <div class="toolbar-grid">
+        <div class="field">
+          <label for="dataset-select" data-i18n="toolbar.dataset">Origen de los datos</label>
+          <select id="dataset-select" class="control">
+            <option value="A" data-i18n="toolbar.case_a">Muestra A · Panel con infrarrepresentación</option>
+            <option value="B" data-i18n="toolbar.case_b">Muestra B · Vídeo corporativo (equality-washing)</option>
+            <option value="C" data-i18n="toolbar.case_c">Muestra C · Mesa paritaria</option>
+            <option value="live" data-i18n="toolbar.live">Analizar vídeo propio (API en vivo)</option>
+          </select>
         </div>
-
-        <!-- Indicador de Green AI / Eficiencia Computacional -->
-        <div class="flex items-center gap-1.5 text-xs font-mono bg-emerald-50 text-emerald-900 border border-emerald-200 px-2.5 py-1 rounded" title="Arquitectura Verde: Muestreo STRIDE guiado por eventos frente a inferencia bruta en todos los frames">
-          <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
-          <span>Green AI: 0,04 W·h/vídeo · &lt; 0,05 €/hora</span>
+        <div class="field">
+          <span class="field-label" data-i18n="toolbar.expediente">Expediente</span>
+          <code id="video-id-badge" class="mono-badge">—</code>
+        </div>
+        <div class="field">
+          <span class="field-label">
+            <span data-i18n="toolbar.privacy">Privacidad</span>
+            <span class="info-host" data-info="anon"></span>
+          </span>
+          <label class="switch">
+            <input type="checkbox" id="anonymize-toggle" role="switch">
+            <span class="switch-ui" aria-hidden="true"></span>
+            <span data-i18n="toolbar.anonymize">Anonimizar nombres</span>
+          </label>
+        </div>
+        <div class="field">
+          <span class="field-label">
+            <span data-i18n="toolbar.calc_origin">Cálculo</span>
+            <span class="info-host" data-info="calculo"></span>
+          </span>
+          <span id="calc-origin-badge" class="pill pill-neutral">—</span>
         </div>
       </div>
 
-      <!-- Stepper de etapas del pipeline -->
-      <div class="flex items-center flex-wrap gap-1.5 text-xs font-mono pt-1">
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Audio
+      <p id="synthetic-note" class="note-inline" data-i18n="toolbar.synthetic">Datos sintéticos de demostración: los nombres y tiempos son ficticios y no corresponden a personas reales.</p>
+
+      <!-- Panel de análisis en vivo (solo visible con «API en vivo») -->
+      <form id="live-panel" class="live-panel" hidden>
+        <div class="live-grid">
+          <div class="field">
+            <label for="api-url" data-i18n="live.api_url">Dirección de la API</label>
+            <input id="api-url" class="control" type="url" value="http://localhost:8000" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="video-file" data-i18n="live.file">Vídeo a analizar</label>
+            <input id="video-file" class="control" type="file" accept="video/*">
+          </div>
+          <div class="field field-end">
+            <button type="submit" class="btn btn-primary" id="live-submit" data-i18n="live.analyze">Analizar</button>
+          </div>
         </div>
-        <span class="text-slate-300" aria-hidden="true">→</span>
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> NLP
+        <p id="live-message" class="note-inline" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- Estado vacío (modo en vivo sin resultado todavía: no se muestran datos de otro expediente) -->
+    <section id="empty-state" class="card empty-state" hidden>
+      <h2 class="section-title tight" data-i18n="live.empty_title">Aún no hay dictamen</h2>
+      <p class="card-text" data-i18n="live.empty">Selecciona un vídeo y pulsa «Analizar». Mientras tanto puedes explorar una de las muestras sintéticas.</p>
+    </section>
+
+    <!-- 1. VEREDICTO -->
+    <section id="veredicto" class="card hero" aria-labelledby="veredicto-h">
+      <div class="hero-main">
+        <p class="eyebrow" data-i18n="verdict.eyebrow">Veredicto del expediente</p>
+        <h2 id="veredicto-h" class="hero-title">—</h2>
+        <p id="hero-sub" class="hero-sub"></p>
+
+        <div class="easy-read">
+          <div class="easy-head">
+            <h3 data-i18n="easy.title">En pocas palabras</h3>
+            <span class="tag">UNE 153101 EX</span>
+            <span class="info-host" data-info="lectura"></span>
+          </div>
+          <ul id="easy-read-list" class="easy-list"></ul>
+          <button type="button" id="btn-speak" class="btn btn-ghost">
+            <svg class="icon" aria-hidden="true"><use href="#i-speaker"/></svg>
+            <span data-i18n="easy.listen">Escuchar resumen</span>
+          </button>
         </div>
-        <span class="text-slate-300" aria-hidden="true">→</span>
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Vídeo
-        </div>
-        <span class="text-slate-300" aria-hidden="true">→</span>
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Rótulos OCR
-        </div>
-        <span class="text-slate-300" aria-hidden="true">→</span>
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-900">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Silver
-        </div>
-        <span class="text-slate-300" aria-hidden="true">→</span>
-        <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-purple-50 border border-purple-300 text-purple-950 font-bold">
-          <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> Gold Fusión
-        </div>
+      </div>
+
+      <aside class="hero-index" aria-labelledby="indice-h">
+        <h3 id="indice-h" class="mini-title">
+          <span data-i18n="index.title">Índice Global de Representación</span>
+          <span class="info-host" data-info="indice"></span>
+        </h3>
+        <p class="index-value"><span id="index-total">–</span><span class="index-max">/100</span></p>
+        <ul id="index-dims" class="dims"></ul>
+        <p class="note-inline" data-i18n="index.provisional">La dimensión de autoridad usa una definición operativa provisional hasta fijarla con backend.</p>
+      </aside>
+
+      <div class="hero-actions">
+        <button type="button" id="btn-print" class="btn">
+          <svg class="icon" aria-hidden="true"><use href="#i-print"/></svg>
+          <span data-i18n="actions.print">Imprimir / guardar PDF</span>
+        </button>
+        <button type="button" id="btn-json" class="btn">
+          <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>
+          <span data-i18n="actions.json">Descargar dictamen (JSON)</span>
+        </button>
       </div>
     </section>
 
-    <!-- 2. DICTAMEN EJECUTIVO Y ALERTAS ÉTICAS -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Resumen en Lectura Fácil (Norma UNE 153101 EX) -->
-      <section class="audit-card p-5 lg:col-span-2 space-y-3" aria-labelledby="lectura-facil-heading">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-purple-100 text-purple-950 border border-purple-200" title="Norma Oficial Española UNE 153101: Pautas y recomendaciones para la elaboración de documentos en Lectura Fácil">Lectura Fácil (UNE 153101)</span>
-            <h2 id="lectura-facil-heading" class="text-sm font-bold text-slate-900">Resumen Ejecutivo Accesible</h2>
+    <!-- 2. ALERTAS -->
+    <section id="alertas" aria-labelledby="alertas-h">
+      <h2 id="alertas-h" class="section-title" data-i18n="alerts.title">Alertas deterministas</h2>
+      <p class="section-lead" data-i18n="alerts.lead">Dos alertas independientes: una detecta presencia sin voz y la otra, falta de presencia.</p>
+      <div class="grid grid-3">
+
+        <article class="card alert-card" id="alert-washing" aria-labelledby="alert-washing-h">
+          <div class="card-head">
+            <h3 id="alert-washing-h" class="card-title">
+              <span data-i18n="alerts.washing.title">Equality-washing</span>
+              <span class="info-host" data-info="washing"></span>
+            </h3>
+            <span id="washing-pill" class="pill" role="status">—</span>
           </div>
-          <span class="text-xs text-slate-500 font-mono" title="Accesibilidad Cognitiva y Universal conforme a la Directiva UE 2019/882 y Decisión Arquitectónica ADR-0010">
-            Accesibilidad Cognitiva
-          </span>
-        </div>
-        <div class="lectura-facil-box rounded">
-          <p id="lectura-facil-text" class="text-slate-800 text-sm font-normal leading-relaxed">
-            Cargando resumen en lenguaje accesible y contrastado...
-          </p>
-        </div>
-      </section>
+          <p class="rule"><code data-i18n="alerts.washing.rule">% pantalla ≥ 35 Y (RVP &lt; 0,30 O % voz &lt; 20)</code></p>
+          <ul id="washing-checks" class="checks"></ul>
+          <p id="washing-text" class="card-text"></p>
+        </article>
 
-      <!-- Alerta Anti-Equality-Washing y Salvaguarda Legal -->
-      <section class="audit-card p-5 space-y-4" aria-labelledby="presencia-heading">
-        <div>
-          <h2 id="presencia-heading" class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono mb-2">Diagnóstico de Presencia</h2>
-          <div id="equality-washing-card" class="p-3.5 rounded border border-slate-200">
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-bold text-slate-700">Equality-Washing:</span>
-              <span id="equality-washing-badge" class="px-2 py-0.5 text-xs font-bold rounded font-mono">EVALUANDO</span>
-            </div>
-            <p id="equality-washing-desc" class="text-xs text-slate-600 leading-relaxed"></p>
+        <article class="card alert-card" id="alert-infra" aria-labelledby="alert-infra-h">
+          <div class="card-head">
+            <h3 id="alert-infra-h" class="card-title">
+              <span data-i18n="alerts.infra.title">Infrarrepresentación</span>
+              <span class="info-host" data-info="infra"></span>
+            </h3>
+            <span id="infra-pill" class="pill" role="status">—</span>
           </div>
-        </div>
+          <p class="rule"><code data-i18n="alerts.infra.rule">% pantalla &lt; 40 Y RVP &lt; 1,0</code></p>
+          <ul id="infra-checks" class="checks"></ul>
+          <p id="infra-text" class="card-text"></p>
+        </article>
 
-        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <span class="text-xs font-medium text-slate-700" title="Salvaguarda no binaria y paneles de diversidad especializada registrada en ADR-0006">
-            Salvaguarda de Paridad (Ley Orgánica 2/2024):
-          </span>
-          <span id="safeguard-badge" class="text-xs font-mono font-medium px-2 py-0.5 rounded">...</span>
-        </div>
-      </section>
-    </div>
-
-    <!-- 3. TEST DE BECHDEL DIGITAL Y MÉTRICAS CLAVE -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-      
-      <!-- Test de Bechdel Conversacional -->
-      <div class="audit-card p-5 space-y-2 border-l-4 border-l-purple-600 relative">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-500 font-mono uppercase">Métricas de Contenido</span>
-          
-          <!-- Información flotante (Popover interactivo y accesible) -->
-          <div class="relative group">
-            <button type="button" id="bechdel-info-btn" class="w-5 h-5 rounded-full bg-slate-100 hover:bg-purple-100 text-slate-600 hover:text-purple-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-purple-900 dark:hover:text-purple-200 flex items-center justify-center text-xs font-bold font-mono transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-600" aria-label="Información metodológica del Test de Bechdel Digital">
-              i
-            </button>
-            
-            <!-- Tarjeta flotante que se despliega hacia abajo con espacio visual limpio -->
-            <div id="bechdel-tooltip" class="hidden group-hover:block group-focus-within:block absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] p-4 bg-slate-900 text-white text-xs rounded-lg shadow-2xl z-50 border border-slate-700 leading-relaxed pointer-events-auto" role="tooltip">
-              <div class="font-bold text-purple-300 pb-1.5 border-b border-slate-700 mb-2 flex items-center justify-between">
-                <span class="text-xs">¿Qué es el Test de Bechdel?</span>
-                <span class="text-[10px] font-mono text-slate-400">Alison Bechdel (1985)</span>
-              </div>
-              <p class="text-slate-300 text-[11px] mb-2.5">
-                Diseñado originalmente para evaluar la representación femenina en la ficción audiovisual (al menos dos mujeres con nombre que conversen entre sí sobre algo ajeno a un hombre).
-              </p>
-              <div class="font-bold text-emerald-400 pb-1 text-[11px] border-t border-slate-800 pt-2">Adaptación al código en AIASN:</div>
-              <p class="text-slate-300 text-[11px]">
-                Formalizado determinísticamente en <code class="text-purple-300 font-mono">aiasn/core/fusion.py</code>: evalúa si las mujeres intervienen con <strong>cargo profesional acreditado por rótulo OCR</strong>, voz activa en temas sustantivos (ciencia, tecnología) y <strong>diálogo directo sin mediación ornamental</strong> ni subordinación a figuras masculinas.
-              </p>
-            </div>
+        <article class="card alert-card" id="alert-salv" aria-labelledby="alert-salv-h">
+          <div class="card-head">
+            <h3 id="alert-salv-h" class="card-title">
+              <span data-i18n="alerts.salv.title">Salvaguarda de paridad</span>
+              <span class="info-host" data-info="salvaguarda"></span>
+            </h3>
+            <span id="salv-pill" class="pill" role="status">—</span>
           </div>
-        </div>
+          <p class="rule"><code data-i18n="alerts.salv.rule">Suelo femenino ≥ 40 % · techo masculino ajustado</code></p>
+          <ul id="salv-checks" class="checks"></ul>
+          <p id="salv-text" class="card-text"></p>
+        </article>
 
-        <h3 class="text-sm font-bold text-slate-900">Test de Bechdel Digital</h3>
-        <div id="bechdel-score" class="text-2xl font-bold font-mono text-purple-950">0 / 3 Criterios</div>
-        <div id="bechdel-checklist" class="space-y-1.5 pt-1 text-xs"></div>
-      </div>
-
-      <!-- Tiempo de Voz Activa -->
-      <div class="audit-card p-5 space-y-3">
-        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Voz Activa</span>
-        <div class="flex items-baseline justify-between">
-          <span class="text-xs font-medium text-purple-800">Mujeres</span>
-          <span id="voice-fem-val" class="text-xl font-bold font-mono text-purple-950">0.0 %</span>
-        </div>
-        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Porcentaje de voz activa de mujeres">
-          <div id="voice-bar-fem" class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-        <div class="flex items-baseline justify-between text-xs text-slate-500">
-          <span>Hombres:</span>
-          <span id="voice-masc-val" class="font-mono font-medium">0.0 %</span>
-        </div>
-        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-          <div id="voice-bar-masc" class="bg-sky-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-      </div>
-
-      <!-- Presencia en Pantalla -->
-      <div class="audit-card p-5 space-y-3">
-        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Presencia en Pantalla</span>
-        <div class="flex items-baseline justify-between">
-          <span class="text-xs font-medium text-purple-800">Mujeres</span>
-          <span id="screen-fem-val" class="text-xl font-bold font-mono text-purple-950">0.0 %</span>
-        </div>
-        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Porcentaje de presencia en pantalla de mujeres">
-          <div id="screen-bar-fem" class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-        <div class="flex items-baseline justify-between text-xs text-slate-500">
-          <span>Hombres:</span>
-          <span id="screen-masc-val" class="font-mono font-medium">0.0 %</span>
-        </div>
-        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-          <div id="screen-bar-masc" class="bg-sky-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-      </div>
-
-      <!-- Ratio Voz / Pantalla -->
-      <div class="audit-card p-5 space-y-2">
-        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Ratio de Eficacia</span>
-        <h3 class="text-sm font-bold text-slate-900">Voz Activa / Pantalla</h3>
-        <div class="grid grid-cols-2 gap-2 pt-1 font-mono">
-          <div class="bg-purple-50 p-2 rounded border border-purple-100">
-            <span class="text-xs text-purple-800 block">Mujer</span>
-            <span id="ratio-fem-val" class="text-lg font-bold text-purple-950">0.00</span>
-          </div>
-          <div class="bg-sky-50 p-2 rounded border border-sky-100">
-            <span class="text-xs text-sky-800 block">Hombre</span>
-            <span id="ratio-masc-val" class="text-lg font-bold text-sky-950">0.00</span>
-          </div>
-        </div>
-        <p class="text-[11px] text-slate-500 pt-1">&gt; 0.50 indica voz activa superior a presencia muda.</p>
-      </div>
-
-    </div>
-
-    <!-- 4. CONSTELACIÓN DEL PROTAGONISMO (RED SOCIOMÉTRICA INTERACTIVA) -->
-    <section class="audit-card p-5 space-y-4" aria-labelledby="constellation-heading">
-      <div class="flex flex-wrap items-center justify-between gap-4 pb-1">
-        <div>
-          <h2 id="constellation-heading" class="text-base font-bold text-slate-900 dark:text-slate-100">Constelación del Protagonismo</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Mapeo relacional de intervenciones, menciones y afinidad temática</p>
-        </div>
-
-        <!-- Leyenda cromática formal -->
-        <div class="flex items-center gap-4 text-xs font-mono" aria-label="Leyenda del grafo">
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-purple-600 inline-block" aria-hidden="true"></span>
-            <span class="text-slate-700 dark:text-slate-300">Mujeres</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rounded-full bg-sky-600 inline-block" aria-hidden="true"></span>
-            <span class="text-slate-700 dark:text-slate-300">Hombres</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <span class="w-3 h-3 rotate-45 bg-amber-500 inline-block" aria-hidden="true"></span>
-            <span class="text-slate-700 dark:text-slate-300">Temas</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Contenedor del Grafo con controles flotantes de zoom accesibles -->
-      <div class="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-        
-        <!-- Botonera de control de navegación y zoom de alto contraste -->
-        <div class="graph-zoom-controls absolute top-3 right-3 z-20 flex flex-col gap-1 p-1 rounded-md shadow-lg border">
-          <button type="button" id="graph-zoom-in" class="w-8 h-8 rounded flex items-center justify-center font-bold text-lg transition focus:outline-none focus:ring-2 focus:ring-purple-600" title="Acercar vista (+)" aria-label="Acercar zoom">
-            +
-          </button>
-          <div class="divider h-px my-0.5"></div>
-          <button type="button" id="graph-zoom-out" class="w-8 h-8 rounded flex items-center justify-center font-bold text-lg transition focus:outline-none focus:ring-2 focus:ring-purple-600" title="Alejar vista (-)" aria-label="Alejar zoom">
-            −
-          </button>
-          <div class="divider h-px my-0.5"></div>
-          <button type="button" id="graph-zoom-fit" class="w-8 h-8 rounded flex items-center justify-center text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-purple-600" title="Centrar y encajar red completa (⛶)" aria-label="Centrar y encajar red completa">
-            ⛶
-          </button>
-        </div>
-
-        <!-- Indicador de navegación asistida -->
-        <div class="graph-nav-hint absolute bottom-3 left-3 z-20 text-[11px] font-mono px-3 py-1.5 rounded border shadow-md pointer-events-none">
-          Scroll de página libre · Botones (+ / − / ⛶) o Ctrl + Rueda para zoom
-        </div>
-
-        <!-- Lienzo interactivo de Vis.js -->
-        <div id="constellation-network" role="application" aria-label="Grafo interactivo de la red de participantes y temas"></div>
       </div>
     </section>
 
-    <!-- 5. TABLA DE PERSONAS, ROLES DE AUTORIDAD Y PODER -->
-    <section class="audit-card overflow-hidden" aria-labelledby="table-heading">
-      <div class="p-4 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 id="table-heading" class="text-sm font-bold text-slate-900">Registro Individual de Participantes y Atribución de Autoridad</h2>
-          <p class="text-xs text-slate-500">Extracción determinista combinando detección de rótulos OCR con diarización de audio</p>
-        </div>
-        <span class="text-xs text-slate-500 font-mono" title="Decisión Arquitectónica registrada: ADR-0004">
-          Sin retención biométrica facial
-        </span>
+    <!-- 3. MÉTRICAS -->
+    <section id="metricas" aria-labelledby="metricas-h">
+      <h2 id="metricas-h" class="section-title" data-i18n="metrics.title">Métricas «Ver y oír»</h2>
+      <p class="section-lead" data-i18n="metrics.lead">Quién aparece, quién habla y cuánto, calculado con código determinista.</p>
+
+      <div class="notice" role="note">
+        <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <p>
+          <span data-i18n="metrics.perceived">Todas las cifras de género son una estimación de género percibido a partir de señales audiovisuales, no la identidad registral de las personas (Art. 50 RIA).</span>
+          <span class="info-host" data-info="genero_percibido"></span>
+        </p>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-left audit-table">
-          <thead>
-            <tr>
-              <th scope="col">Nombre Identificado</th>
-              <th scope="col">Cargo / Rótulo OCR</th>
-              <th scope="col">Género</th>
-              <th scope="col">Autoridad</th>
-              <th scope="col" class="text-right">Pantalla</th>
-              <th scope="col" class="text-right">Voz Activa</th>
-              <th scope="col" class="text-right">Centralidad</th>
-            </tr>
-          </thead>
-          <tbody id="persons-table-body" class="divide-y divide-slate-100">
-            <!-- Rellenado dinámicamente -->
-          </tbody>
+      <div class="grid grid-4">
+
+        <article class="card" id="m-voz" aria-labelledby="m-voz-h">
+          <h3 id="m-voz-h" class="card-title" data-i18n="metrics.voice">Voz activa</h3>
+          <div class="stack" id="voz-stack" role="img"></div>
+          <ul class="legend-list" id="voz-legend"></ul>
+          <p class="card-text small" id="voz-nd"></p>
+        </article>
+
+        <article class="card" id="m-pantalla" aria-labelledby="m-pantalla-h">
+          <h3 id="m-pantalla-h" class="card-title" data-i18n="metrics.screen">Presencia en pantalla</h3>
+          <div class="stack" id="pantalla-stack" role="img"></div>
+          <ul class="legend-list" id="pantalla-legend"></ul>
+          <p class="card-text small" id="pantalla-nd"></p>
+        </article>
+
+        <article class="card" id="m-rvp" aria-labelledby="m-rvp-h">
+          <h3 id="m-rvp-h" class="card-title">
+            <span data-i18n="metrics.rvp">Ratio voz / pantalla</span>
+            <span class="info-host" data-info="rvp"></span>
+          </h3>
+          <div class="rvp-grid">
+            <div class="rvp-box rvp-f"><span class="rvp-label" data-i18n="gender.mujer">Mujeres</span><strong id="rvp-f">–</strong></div>
+            <div class="rvp-box rvp-m"><span class="rvp-label" data-i18n="gender.hombre">Hombres</span><strong id="rvp-m">–</strong></div>
+          </div>
+          <p class="card-text small" id="rvp-text"></p>
+        </article>
+
+        <article class="card" id="m-bechdel" aria-labelledby="m-bechdel-h">
+          <h3 id="m-bechdel-h" class="card-title">
+            <span data-i18n="bechdel.title">Test de Bechdel digital</span>
+            <span class="info-host" data-info="bechdel"></span>
+          </h3>
+          <p class="score"><span id="bechdel-score">0</span><span class="score-max"> / 3</span></p>
+          <ul id="bechdel-rules" class="checks"></ul>
+          <p id="bechdel-diag" class="card-text small"></p>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- 4. CONSTELACIÓN -->
+    <section id="constelacion" class="card" aria-labelledby="constelacion-h">
+      <div class="card-head wrap-head">
+        <div>
+          <h2 id="constelacion-h" class="section-title tight">
+            <span data-i18n="graph.title">Constelación del Protagonismo</span>
+            <span class="info-host" data-info="constelacion"></span>
+          </h2>
+          <p class="section-lead tight" data-i18n="graph.lead">Quién habla con quién y de qué.</p>
+        </div>
+        <ul class="legend-inline" aria-label="Leyenda" data-i18n-aria="graph.legend">
+          <li><svg class="sym sym-f" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/></svg><span data-i18n="gender.mujer">Mujeres</span></li>
+          <li><svg class="sym sym-m" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12"/></svg><span data-i18n="gender.hombre">Hombres</span></li>
+          <li><svg class="sym sym-n" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2 14 14H2Z"/></svg><span data-i18n="gender.no_determinado">Sin determinar</span></li>
+          <li><svg class="sym sym-t" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5 14 5v6L8 14.5 2 11V5Z"/></svg><span data-i18n="graph.topics">Temas</span></li>
+        </ul>
+      </div>
+
+      <div class="graph-frame">
+        <div class="graph-controls" role="group" aria-label="Zoom" data-i18n-aria="graph.controls">
+          <button type="button" id="graph-zoom-in" class="icon-btn" data-i18n-title="graph.zoom_in" aria-label="Acercar" data-i18n-aria="graph.zoom_in"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          <button type="button" id="graph-zoom-out" class="icon-btn" data-i18n-title="graph.zoom_out" aria-label="Alejar" data-i18n-aria="graph.zoom_out"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+          <button type="button" id="graph-zoom-fit" class="icon-btn" data-i18n-title="graph.fit" aria-label="Encajar" data-i18n-aria="graph.fit"><svg class="icon" aria-hidden="true"><use href="#i-fit"/></svg></button>
+        </div>
+        <div id="constellation-network" class="graph-canvas" role="img" aria-describedby="graph-desc"></div>
+      </div>
+      <p class="graph-hint" data-i18n="graph.hint">Arrastra para mover · botones o Ctrl + rueda para el zoom · el scroll de la página no se bloquea.</p>
+      <p id="graph-selected" class="graph-selected" role="status" aria-live="polite"></p>
+      <p id="graph-desc" class="sr-only"></p>
+
+      <details class="details" id="graph-table-details">
+        <summary data-i18n="graph.table_summary">Ver las relaciones como tabla (alternativa accesible)</summary>
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption class="sr-only" data-i18n="graph.table_caption">Relaciones entre participantes y temas</caption>
+            <thead><tr>
+              <th scope="col" data-i18n="graph.col_from">Origen</th>
+              <th scope="col" data-i18n="graph.col_to">Destino</th>
+              <th scope="col" data-i18n="graph.col_type">Tipo</th>
+              <th scope="col" class="num" data-i18n="graph.col_weight">Peso</th>
+            </tr></thead>
+            <tbody id="graph-table-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <!-- 5. PERSONAS -->
+    <section id="personas" class="card" aria-labelledby="personas-h">
+      <div class="card-head wrap-head">
+        <div>
+          <h2 id="personas-h" class="section-title tight" data-i18n="people.title">Participantes y atribución de autoridad</h2>
+          <p class="section-lead tight" data-i18n="people.lead">Rótulos OCR combinados con la diarización de audio. No se conserva ningún dato biométrico facial.</p>
+        </div>
+        <span class="pill pill-neutral" data-i18n="people.zero_retention">Sin retención biométrica (ADR-0004)</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption class="sr-only" data-i18n="people.caption">Personas detectadas con su género percibido, autoridad, tiempo en pantalla y de voz</caption>
+          <thead><tr>
+            <th scope="col" data-i18n="people.col_name">Persona</th>
+            <th scope="col" data-i18n="people.col_role">Cargo (rótulo OCR)</th>
+            <th scope="col" data-i18n="people.col_gender">Género percibido</th>
+            <th scope="col" data-i18n="people.col_auth">Autoridad</th>
+            <th scope="col" class="num" data-i18n="people.col_screen">Pantalla</th>
+            <th scope="col" class="num" data-i18n="people.col_voice">Voz</th>
+            <th scope="col" class="num" data-i18n="people.col_central">Centralidad</th>
+          </tr></thead>
+          <tbody id="persons-table-body"></tbody>
         </table>
       </div>
     </section>
 
-    <!-- 6. SUPERVISIÓN HUMANA (HITL / ART. 14 RIA) Y SOBERANÍA CIUDADANA -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- 6. SUPERVISIÓN HUMANA -->
+    <section id="supervision" aria-labelledby="supervision-h">
+      <h2 id="supervision-h" class="section-title" data-i18n="hitl.title">Supervisión humana (Art. 14 RIA)</h2>
+      <p class="section-lead" data-i18n="hitl.lead">Cuando la confianza es menor del 80 %, el sistema no adivina: te pide que decidas.</p>
 
-      <!-- Panel de Supervisión Humana (Human-in-the-Loop) -->
-      <section class="audit-card p-5 space-y-4" aria-labelledby="hitl-heading">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-900 text-white">Art. 14 RIA</span>
-            <h2 id="hitl-heading" class="text-sm font-bold text-slate-900">Supervisión Humana y Sello Pericial</h2>
+      <div class="grid grid-2">
+        <article class="card" aria-labelledby="arb-h">
+          <div class="card-head">
+            <h3 id="arb-h" class="card-title">
+              <span data-i18n="hitl.queue">Segmentos pendientes de revisión</span>
+              <span class="info-host" data-info="hitl"></span>
+            </h3>
+            <span id="arb-count" class="pill pill-neutral">0</span>
           </div>
-          <span id="cert-status-badge" class="px-3 py-1 text-xs font-mono font-bold rounded badge-certified">
-            CONFORME · ASUMIDO
-          </span>
-        </div>
+          <div id="arb-list" class="arb-list"></div>
+        </article>
 
-        <p id="cert-status-desc" class="text-xs text-slate-600 leading-relaxed"></p>
-
-        <div class="bg-slate-50 p-3.5 rounded border border-slate-200 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-medium text-slate-800">Arbitraje de Casos Dudosos (confianza &lt; 80 %):</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="hitl-toggle" checked class="sr-only peer" aria-label="Asumo la supervisión humana del expediente">
-              <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-700"></div>
-              <span class="ml-2 text-xs font-medium text-slate-700">Asumo Supervisión</span>
-            </label>
+        <article class="card" aria-labelledby="seal-h">
+          <div class="card-head">
+            <h3 id="seal-h" class="card-title" data-i18n="hitl.seal_title">Sello del dictamen</h3>
+            <span id="seal-pill" class="pill" role="status">—</span>
           </div>
-          <div class="pt-2 border-t border-slate-200/60 font-mono text-[11px] text-slate-500 break-all" id="cert-sha256-hash">
-            SHA-256: 4e8b89d9f1c79e65c0b8923a1a6f0d98e762c94f58f7129548b26127cb4165ea
+          <p id="seal-text" class="card-text"></p>
+          <label class="check-row">
+            <input type="checkbox" id="assume-toggle">
+            <span data-i18n="hitl.assume">Asumo la supervisión humana de este expediente</span>
+          </label>
+          <p id="assume-help" class="note-inline"></p>
+          <div class="hash-box">
+            <span class="hash-label" data-i18n="hitl.hash_label">Huella SHA-256 del dictamen (integridad, no es una firma)</span>
+            <code id="seal-hash" class="hash">—</code>
           </div>
-        </div>
-      </section>
-
-      <!-- Soberanía y Confianza Ciudadana (Vote with your feet) -->
-      <section class="audit-card p-5 space-y-4" aria-labelledby="citizen-heading">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-100 text-amber-950 border border-amber-300">DOP / Eco-Social</span>
-            <h2 id="citizen-heading" class="text-sm font-bold text-slate-900">Soberanía Ciudadana (Vote with your feet)</h2>
-          </div>
-          <span class="text-xs font-mono text-slate-500">Consulta Abierta</span>
-        </div>
-
-        <p class="text-xs text-slate-600 leading-relaxed">
-          Mecanismo abierto para que la ciudadanía audite la representatividad y vote con su confianza sobre el contenido.
-        </p>
-
-        <div class="bg-purple-50/50 p-3.5 rounded border border-purple-100 space-y-3">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-medium text-purple-950">Índice de Confianza Ciudadana:</span>
-            <span id="citizen-vote-count" class="font-mono font-semibold text-purple-900">Calculando...</span>
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="text-[11px] text-slate-600 block">¿Percibes equilibrio y protagonismo real en las intervenciones?</label>
-            <div class="flex items-center gap-2">
-              <button type="button" id="vote-yes-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-purple-50 hover:border-purple-300 font-medium transition focus:ring-1 focus:ring-purple-600">
-                👍 Equilibrado
-              </button>
-              <button type="button" id="vote-partial-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-amber-50 hover:border-amber-300 font-medium transition focus:ring-1 focus:ring-amber-600">
-                ⚠️ Parcial
-              </button>
-              <button type="button" id="vote-no-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-red-50 hover:border-red-300 font-medium transition focus:ring-1 focus:ring-red-600">
-                👎 Insuficiente
-              </button>
-            </div>
-          </div>
-
-          <div id="citizen-status-msg" class="hidden" role="status" aria-live="polite"></div>
-        </div>
-      </section>
-
-    </div>
-
-    <!-- 7. CLIMA CONVERSACIONAL AGREGADO (ART. 5.1.f RIA) -->
-    <section class="audit-card p-4 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-4 bg-slate-50" aria-label="Clima conversacional">
-      <div class="flex items-center gap-2">
-        <span class="font-semibold text-slate-700" title="Decisión Arquitectónica registrada: ADR-0009">
-          Clima Conversacional Agregado (Art. 5.1.f RIA):
-        </span>
-        <span class="text-slate-500">Sin perfilado emocional individual por imperativo del Reglamento Europeo de IA</span>
+          <h4 class="mini-title" data-i18n="hitl.log_title">Registro de decisiones</h4>
+          <ol id="decision-log" class="log"></ol>
+        </article>
       </div>
-      <div id="climate-container" class="flex items-center flex-wrap gap-4 font-mono text-[11px]">
-        <span>Mujeres: <strong id="clima-fem-tec" class="text-purple-950">0%</strong> asertivo / <strong id="clima-fem-col" class="text-purple-950">0%</strong> colaborativo</span>
-        <span class="text-slate-300" aria-hidden="true">|</span>
-        <span>Hombres: <strong id="clima-masc-tec" class="text-sky-950">0%</strong> asertivo / <strong id="clima-masc-col" class="text-sky-950">0%</strong> colaborativo</span>
+    </section>
+
+    <!-- 7. CLIMA -->
+    <section id="clima" class="card" aria-labelledby="clima-h">
+      <div class="card-head wrap-head">
+        <div>
+          <h2 id="clima-h" class="section-title tight">
+            <span data-i18n="climate.title">Clima conversacional agregado</span>
+            <span class="info-host" data-info="clima"></span>
+          </h2>
+          <p class="section-lead tight" data-i18n="climate.lead">Se analiza solo el texto transcrito, por grupo. Nunca emociones de personas concretas (Art. 5.1.f RIA, ADR-0009).</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <caption class="sr-only" data-i18n="climate.caption">Porcentaje de turnos por tipo de interlocución y género</caption>
+          <thead><tr>
+            <th scope="col" data-i18n="climate.col_type">Tipo de interlocución</th>
+            <th scope="col" class="num" data-i18n="gender.mujer">Mujeres</th>
+            <th scope="col" class="num" data-i18n="gender.hombre">Hombres</th>
+          </tr></thead>
+          <tbody id="climate-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 8. CIUDADANÍA -->
+    <section id="ciudadania" class="card" aria-labelledby="ciudadania-h">
+      <div class="card-head wrap-head">
+        <div>
+          <h2 id="ciudadania-h" class="section-title tight">
+            <span data-i18n="citizen.title">Confianza ciudadana</span>
+            <span class="info-host" data-info="ciudadania"></span>
+          </h2>
+          <p class="section-lead tight" data-i18n="citizen.lead">¿Percibes equilibrio y protagonismo real en las intervenciones?</p>
+        </div>
+        <span class="pill pill-warn" data-i18n="citizen.mock_badge">Maqueta: no se envía a ningún servidor</span>
+      </div>
+      <div class="vote-row" role="group" aria-labelledby="ciudadania-h">
+        <button type="button" class="btn" data-vote="yes" data-i18n="citizen.yes">Equilibrado</button>
+        <button type="button" class="btn" data-vote="partial" data-i18n="citizen.partial">Parcial</button>
+        <button type="button" class="btn" data-vote="no" data-i18n="citizen.no">Insuficiente</button>
+      </div>
+      <p id="citizen-summary" class="card-text" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- 9. TRAZABILIDAD -->
+    <section id="trazabilidad" class="card" aria-labelledby="traza-h">
+      <div class="card-head wrap-head">
+        <div>
+          <h2 id="traza-h" class="section-title tight">
+            <span data-i18n="trace.title">Trazabilidad del procesado</span>
+            <span class="info-host" data-info="pipeline"></span>
+          </h2>
+          <p class="section-lead tight" data-i18n="trace.lead">Cada métrica se vincula a su fragmento, marca de tiempo o fotograma de origen.</p>
+        </div>
+      </div>
+      <ol id="pipeline" class="pipeline"></ol>
+      <div class="grid grid-2 gap-sm">
+        <p class="note-block"><strong data-i18n="trace.privacy_h">Privacidad por diseño.</strong> <span data-i18n="trace.privacy_b">La biometría facial vive solo en memoria durante el análisis y se descarta después (ADR-0004).</span></p>
+        <p class="note-block"><strong data-i18n="trace.green_h">Algoritmos verdes.</strong> <span data-i18n="trace.green_b">Muestreo selectivo de fotogramas guiado por el audio (ADR-0003): objetivo de diseño de más del 95 % de ahorro de GPU. Esta página no carga recursos externos.</span></p>
       </div>
     </section>
 
   </main>
 
-  <!-- PIE DE PÁGINA INSTITUCIONAL -->
-  <footer class="mt-12 bg-white border-t border-slate-200 py-6 text-xs text-slate-500" role="contentinfo">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-4">
+  <footer class="site-footer" role="contentinfo">
+    <div class="wrap footer-row">
       <div>
-        <p class="font-semibold text-slate-700">Equipo 1: «Attention Is All She Needs» (AIASN)</p>
+        <p class="footer-strong">Equipo 1 · «Attention Is All She Needs»</p>
         <p>Alba Camiña García · Pilar de la Fuente Diez · Rocío Jiménez Villén</p>
       </div>
-      <div class="flex items-center flex-wrap gap-4 font-mono text-[11px]">
-        <span>Licencia: Apache-2.0</span>
-        <span aria-hidden="true">·</span>
-        <span>REUSE Compliant</span>
-        <span aria-hidden="true">·</span>
-        <span>SEDIA / IDEAI-UPC / donesCOEINF</span>
-      </div>
+      <nav aria-label="Documentación" data-i18n-aria="footer.docs_label">
+        <ul class="footer-links">
+          <li><a href="https://github.com/ComunidadIA-OS/attention-is-all-she-needs/blob/dev/MODEL_CARD.md" rel="noopener">MODEL_CARD</a></li>
+          <li><a href="https://github.com/ComunidadIA-OS/attention-is-all-she-needs/blob/dev/DATASET_CARD.md" rel="noopener">DATASET_CARD</a></li>
+          <li><a href="https://github.com/ComunidadIA-OS/attention-is-all-she-needs/blob/dev/ETHICS_CHECKLIST.md" rel="noopener">ETHICS_CHECKLIST</a></li>
+          <li><a href="https://github.com/ComunidadIA-OS/attention-is-all-she-needs/tree/dev/docs/adr" rel="noopener">ADR</a></li>
+          <li><span>Apache-2.0 · REUSE</span></li>
+        </ul>
+      </nav>
     </div>
   </footer>
 
-  <!-- Lógica de la aplicación -->
-  <script src="app.js"></script>
+  <script src="vendor/vis-network.min.js"></script>
+  <script src="js/metrics.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

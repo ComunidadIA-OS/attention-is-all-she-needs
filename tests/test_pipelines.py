@@ -176,16 +176,26 @@ def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with
         assert wav.getframerate() == ctx.settings.audio.sample_rate and wav.getnchannels() == 1
 
     turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)
-    assert list(turns.columns) == ["start", "end", "speaker", "text", "gender", "gender_prob"]
+    assert list(turns.columns) == ["turn", "start", "end", "speaker", "text", "gender", "gender_prob"]
     assert len(turns) == 3 and turns.speaker.tolist() == [0, 0, 1]
     assert turns.gender.isna().tolist() == [True, False, False]   # the first turn is too short
     assert [line.split()[1] for line in lines] == ["extract", "asr", "gender", "total"]
     assert "3 turns, 2 speakers" in lines[1]
 
 
-def test_process_video_runs_pipelines_in_parallel_and_reraises(tmp_path):
+class AfterOkPipeline(OkPipeline):
+    name = "after_ok"
+
+
+class AfterFailingPipeline(OkPipeline):
+    name = "after_failing"
+
+
+def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
     settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
     with pytest.raises(RuntimeError, match="boom"):
-        process_video("vid1", settings, [FailingPipeline(), OkPipeline()])
+        process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]])
     steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
-    assert steps["failing"]["status"] == "error" and steps["ok"]["status"] == "ok"   # one failure does not stop the other
+    assert steps["failing"]["status"] == "error"
+    assert "after_failing" not in steps                        # a failure stops the rest of its chain...
+    assert steps["ok"]["status"] == steps["after_ok"]["status"] == "ok"   # ...but not the other chains

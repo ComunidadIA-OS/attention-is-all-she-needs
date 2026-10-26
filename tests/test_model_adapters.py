@@ -1,17 +1,21 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
+import litellm
 import numpy as np
 import pandas as pd
 import pytest
 import requests
+from pydantic import BaseModel
 from scipy.io import wavfile
 
 from conftest import ASR_RESPONSE, BUS, CAPTION, ZIDANE, text_image
 
+from aiasn.model_adapters.llm_client import LiteLLMClient, OllamaClient, make_llm_client
 from aiasn.model_adapters.transcriber import Transcriber
-from aiasn.settings import TranscriberSettings
+from aiasn.settings import LlmSettings, TranscriberSettings
 
 COLUMNS = ["track_id", "x1", "y1", "x2", "y2", "head"]
 
@@ -147,7 +151,8 @@ def test_gender_estimator_output(video_pipeline):
 
 def test_transcriber_parses_diarized_turns():
     turns = Transcriber.parse(ASR_RESPONSE)
-    assert list(turns.columns) == ["start", "end", "speaker", "text"]
+    assert list(turns.columns) == ["turn", "start", "end", "speaker", "text"]
+    assert turns.turn.tolist() == [0, 1, 2]
     assert turns.speaker.tolist() == [0, 0, 1]
     assert turns.text.tolist() == ["Hola.", "Bienvenidas", "al programa."]
     assert turns.end.tolist() == [0.3, 3.0, 5.5]
@@ -220,3 +225,40 @@ def test_voice_gender_classifier_matches_notebook(voice_gender_classifier):
     label = mean.map(lambda p: "F" if p >= 0.8 else "M" if p <= 0.2 else "Unknown")
     nb = pd.read_csv(expected).groupby("speaker").genero_inferido.first()
     assert {f"Hablante_{s}": g for s, g in label.items()} == nb.to_dict()
+
+
+class Answer(BaseModel):
+    words: list[str]
+
+
+def fake_completion(content: str, calls: list):
+    def completion(**kw):
+        calls.append(kw)
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+    return completion
+
+
+def test_litellm_client_parses_structured_answer(monkeypatch):
+    calls = []
+    monkeypatch.setattr(litellm, "completion", fake_completion('{"words": ["hola", "adéu"]}', calls))
+    client = make_llm_client(LlmSettings(token=" abc\n123 "))
+    assert isinstance(client, LiteLLMClient)
+    assert client.complete("system prompt", "user text", Answer) == Answer(words=["hola", "adéu"])
+    kw = calls[0]
+    assert kw["api_key"] == "abc123" and kw["temperature"] == 0 and kw["response_format"] is Answer
+    assert kw["messages"] == [{"role": "system", "content": "system prompt"}, {"role": "user", "content": "user text"}]
+
+
+def test_litellm_client_errors(monkeypatch):
+    with pytest.raises(RuntimeError, match="token"):
+        LiteLLMClient(LlmSettings(token="")).complete("s", "u", Answer)
+    monkeypatch.setattr(litellm, "completion", fake_completion('{"other": 1}', []))
+    with pytest.raises(ValueError):   # an answer that does not follow the schema
+        LiteLLMClient(LlmSettings(token="abc")).complete("s", "u", Answer)
+
+
+def test_ollama_client_not_implemented():
+    client = make_llm_client(LlmSettings(provider="ollama"))
+    assert isinstance(client, OllamaClient)
+    with pytest.raises(NotImplementedError):
+        client.complete("s", "u", Answer)

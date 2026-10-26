@@ -89,6 +89,51 @@ class AudioSettings(BaseModel):
     voice_gender_classifier: VoiceGenderClassifierSettings = Field(default_factory=VoiceGenderClassifierSettings)
 
 
+### SETTINGS FOR NLP PIPELINE COMPONENTS
+
+class LlmSettings(BaseSettings):
+    """Model behind an OpenAI-compatible API (OVHcloud AI Endpoints by default). The token comes from the environment or .env."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    provider: Literal["litellm", "ollama"] = "litellm"
+    model: str = "openai/Meta-Llama-3_3-70B-Instruct"   # "openai/": OpenAI-compatible endpoint for litellm
+    base_url: str = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+    token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
+    temperature: float = Field(0.0, ge=0)
+    timeout: float = Field(300, gt=0)              # seconds
+    retries: int = Field(2, ge=0)
+
+
+class ToneSettings(BaseModel):
+    method: Literal["llm", "zero_shot"] = "llm"
+    zero_shot_model: str = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"   # multilingual NLI
+    min_score: float = Field(0.9, ge=0, le=1)      # zero-shot: below it in every class, no tone
+    with_previous_turn: bool = True                # zero-shot: collaborating or disagreeing depends on what came before
+
+
+### SETTINGS FOR NLP PIPELINE
+
+class NlpSettings(BaseModel):
+    llm: LlmSettings = Field(default_factory=LlmSettings)
+    tone: ToneSettings = Field(default_factory=ToneSettings)
+    device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
+    max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
+    # Guide for the model, which may add new topics
+    topics_guide: list[str] = [
+        # stereotyped as "feminine" or centred on the person
+        "care", "family and motherhood", "work-life balance", "love life and relationships", "physical appearance",
+        "being a woman / gender experience", "diversity and equality",
+        # professional or stereotyped as "masculine"
+        "technology", "science and research", "finance and economy", "leadership and management",
+        "their work or field", "politics", "sports",
+        # others
+        "education", "health", "history",
+    ]
+    # Guide for the model, which may add new roles
+    roles_guide: list[str] = ["host", "interviewer", "expert", "voice-over narrator", "testimony", "character", "audience"]
+    max_ideas: int = Field(10, gt=0)               # key ideas of the piece
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):
@@ -98,3 +143,4 @@ class Settings(BaseSettings):
     tmp_dir: Path = Path("tmp")
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
+    nlp: NlpSettings = Field(default_factory=NlpSettings)

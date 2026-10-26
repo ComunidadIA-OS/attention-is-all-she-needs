@@ -59,8 +59,8 @@ dependencies = [
     "yt-dlp>=2025.1.15",
     "pyarrow>=26.0.0",
     "pydantic-settings>=2.16.1",
-    "scipy>=1.18.1",
-    "gdown>=6.4.2",
+    "scipy>=1.11",
+    "gdown>=5.0",
     "transnetv2-pytorch>=1.0.5",
 ]
 
@@ -73,6 +73,9 @@ dev = [
 "Homepage" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
 "Bug Tracker" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs/issues"
 "Source" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+
+[tool.setuptools.packages.find]
+include = ["aiasn*"]   # the rest of the repo (notebooks, data, tmp, models...) is not part of the package
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
@@ -92,8 +95,8 @@ override-dependencies = [
     # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
     "lapx; sys_platform == 'never'",
 ]
-# mivolo's setup.py uses pkg_resources, gone from recent setuptools
-build-constraint-dependencies = ["setuptools<58"]
+# mivolo's setup.py uses pkg_resources (gone in setuptools 81); the project itself needs setuptools>=61
+build-constraint-dependencies = ["setuptools>=61,<81"]
 
 [tool.uv.sources]
 # needed by the MiVOLO v2 code on the Hugging Face Hub; pinned commit of the official repo

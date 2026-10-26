@@ -14,6 +14,12 @@ PEOPLE = ["participant_id", "person_id", "speaker_id", "genero", "genero_fuente"
           "speech_time_s", "area", "centrality"]
 
 
+def participant_of(links: pd.DataFrame) -> dict[int, str]:
+    """Participant of each speaker (silver speaker_person): their person if the voice is on screen (`p<person_id>`),
+    otherwise the voice itself (`v<speaker_id>`). The same ids as in the people table."""
+    return {int(s): f"p{int(p)}" if pd.notna(p) else f"v{int(s)}" for s, p in zip(links.speaker_id, links.person_id)}
+
+
 def speaking_overlap(turns: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
     """Seconds each speaker talks while each person is speaking on screen, per (speaker_id, person_id) pair."""
     talking = presence.loc[presence.hablando, ["person_id", "tiempo_i", "tiempo_f"]]

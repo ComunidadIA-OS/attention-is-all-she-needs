@@ -11,7 +11,7 @@ import pytest
 
 from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob, fuse_gender
-from aiasn.core.silver.identity import IdentitySilver
+from aiasn.core.silver.identity import IdentitySilver, participant_of
 from aiasn.core.silver.names import NamesSilver, same_name
 from aiasn.core.silver.video import VideoSilver, fusion_video
 from aiasn.core.transform import Transform
@@ -374,7 +374,7 @@ def names(captions_table=CAPTIONS) -> dict[str, pd.DataFrame]:
 
 def test_person_names_keeps_every_evidence():
     ev = names()["person_names"]
-    assert list(ev.columns) == ["participant_id", "name", "title", "source", "tiempo_i", "seconds"]
+    assert list(ev.columns) == ["participant_id", "name", "title", "source", "tiempo_i", "seconds", "said_by", "turn"]
     caps = ev[ev.source == "rotulo"].set_index("name")
     assert caps.participant_id["Marta Ruiz"] == "p1"          # two people on screen: the one speaking
     assert caps.title["Marta Ruiz"] == "doctora, investigadora del CSIC"   # the most complete title
@@ -383,7 +383,9 @@ def test_person_names_keeps_every_evidence():
     assert pd.isna(caps.participant_id["Anna Puig"])          # nobody on screen: kept for review
     mentions = ev[ev.source == "mencion"]
     assert mentions.participant_id.tolist() == ["p1", "v1", "v1"]   # the quote not found is left out
+    assert mentions.said_by.tolist() == ["v1", "p1", "p1"] and mentions.turn.tolist() == [0, 1, 1]
     assert mentions.tiempo_i.tolist() == [0.0, 4.0, 4.0]
+    assert caps.said_by.isna().all() and caps.turn.isna().all()
 
 
 def test_people_get_the_caption_name_before_the_mention():
@@ -427,3 +429,7 @@ def test_a_mention_of_a_captioned_name_goes_to_that_person():
     m = ev["person_names"][ev["person_names"].source == "mencion"]
     assert m.participant_id.tolist() == ["p1", "v1", "v1"]   # "Marta" moved to p1; Luis and the title stay
     assert ev["people"].set_index("participant_id").name["v1"] == "Luis"
+
+
+def test_participant_of_each_speaker():
+    assert participant_of(LINKS) == {0: "p1", 1: "v1"}

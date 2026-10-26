@@ -8,10 +8,12 @@ from difflib import SequenceMatcher
 import numpy as np
 import pandas as pd
 
+from aiasn.core.silver.identity import participant_of
 from aiasn.core.text import normalize
 from aiasn.core.transform import Transform
 
-NAMES = ["participant_id", "name", "title", "source", "tiempo_i", "seconds"]
+# `said_by` and `turn`: who mentions the participant, and when (mentions only)
+NAMES = ["participant_id", "name", "title", "source", "tiempo_i", "seconds", "said_by", "turn"]
 CAPTION, MENTION, NONE = "rotulo", "mencion", "ninguna"
 
 
@@ -82,19 +84,20 @@ class NamesSilver(Transform):
                     owners[span] = ranked.index[0]
         participant = spans.span.map({span: f"p{int(person)}" for span, person in owners.items()})
         return pd.DataFrame({"participant_id": participant, "name": spans.name, "title": spans.title,
-                             "source": CAPTION, "tiempo_i": spans.tiempo_i, "seconds": spans.tiempo_f - spans.tiempo_i})
+                             "source": CAPTION, "tiempo_i": spans.tiempo_i, "seconds": spans.tiempo_f - spans.tiempo_i,
+                             "said_by": None, "turn": pd.array([pd.NA] * len(spans), dtype="Int64")})
 
     @staticmethod
     def _from_mentions(mentions: pd.DataFrame, turns: pd.DataFrame, links: pd.DataFrame) -> pd.DataFrame:
-        """How a speaker is named by the others: their person if the voice is on screen, else the voice itself.
+        """How a speaker is named by the others, as participants (`participant_of`): who is mentioned and who says it.
         Mentions whose quote is not in the transcript are left out."""
         m = mentions[mentions.found & (mentions.name.notna() | mentions.title.notna())]
-        person = links.set_index("speaker_id").person_id
-        participant = [f"p{int(person[s])}" if s in person.index and pd.notna(person[s]) else f"v{s}"
-                       for s in m.referred_speaker]
-        return pd.DataFrame({"participant_id": participant, "name": m.name.values, "title": m.title.values,
-                             "source": MENTION, "tiempo_i": m.turn.map(turns.set_index("turn").tiempo_i).values,
-                             "seconds": np.nan})
+        of = participant_of(links)
+        return pd.DataFrame({"participant_id": [of.get(int(s), f"v{int(s)}") for s in m.referred_speaker],
+                             "name": m.name.values, "title": m.title.values, "source": MENTION,
+                             "tiempo_i": m.turn.map(turns.set_index("turn").tiempo_i).values, "seconds": np.nan,
+                             "said_by": [of.get(int(s)) if pd.notna(s) else None for s in m.speaker],
+                             "turn": pd.array(m.turn.values, dtype="Int64")})
 
     @staticmethod
     def _name_people(people: pd.DataFrame, evidence: pd.DataFrame) -> pd.DataFrame:

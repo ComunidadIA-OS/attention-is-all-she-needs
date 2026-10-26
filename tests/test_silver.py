@@ -9,9 +9,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob
 from aiasn.core.silver.video import VideoSilver
 from aiasn.core.transform import Transform
+from aiasn.pipelines.silver import SilverPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.transform_pipeline import TransformPipeline
 from aiasn.settings import Settings
@@ -59,6 +61,7 @@ def test_decide_gender_weights_and_missing_values():
     assert gender == "mujer" and p == pytest.approx(0.82)   # the long turn counts more; the unlabelled one not at all
     gender, p = decide_gender(pd.Series([np.nan]), 0.8)
     assert gender == "no_determinado" and np.isnan(p)
+    assert decide_gender(pd.Series([0.9, 0.7]), 0.8, weights=pd.Series([0.0, 0.0]))[1] == pytest.approx(0.8)
 
 
 # Transform pipeline
@@ -143,3 +146,50 @@ def test_video_presence_max_gap_is_configurable():
 def test_video_silver_without_detections():
     out = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS.iloc[:0]})
     assert out["video_people"].empty and out["video_presence"].empty
+
+
+# Audio
+
+AUDIO_TURNS = pd.DataFrame({   # bronze audio_turns
+    "turn": [0, 1, 2, 3, 4, 5],
+    "start": [0.0, 4.0, 5.0, 15.0, 16.0, 20.0], "end": [4.0, 5.0, 15.0, 16.0, 20.0, 21.0],
+    "speaker": pd.array([0, 0, 1, 1, 2, pd.NA], dtype="Int64"),
+    "text": ["Hola a todas.", "Bienvenida.", "Gracias por invitarme.", "Sí.", "Yo creo que no.", "Aplausos."],
+    # speaker 0: a woman; speaker 1: a long man's turn outweighs a short unsure one; speaker 2: unsure
+    "gender": ["F", None, "M", "F", "F", "F"], "gender_prob": [0.95, np.nan, 0.9, 0.9, 0.6, 0.99],
+})
+
+
+def test_audio_speakers_vote_weighted_by_duration():
+    speakers = AudioSilver(Settings()).run({"bronze/audio_turns": AUDIO_TURNS})["audio_speakers"]
+    assert list(speakers.columns) == ["speaker_id", "genero", "prob_mujer", "speech_time_s", "n_turns"]
+    assert speakers.speaker_id.tolist() == [0, 1, 2]   # the turn without speaker is not a speaker
+    assert speakers.genero.tolist() == ["mujer", "hombre", "no_determinado"]
+    assert speakers.prob_mujer.tolist() == pytest.approx([0.95, (10 * 0.1 + 1 * 0.9) / 11, 0.6])
+    assert speakers.speech_time_s.tolist() == [5.0, 11.0, 4.0] and speakers.n_turns.tolist() == [2, 2, 1]
+
+
+def test_audio_turns_follow_the_contract_with_the_speaker_gender():
+    turns = AudioSilver(Settings()).run({"bronze/audio_turns": AUDIO_TURNS})["audio_turns"]
+    assert list(turns.columns) == ["turn", "tiempo_i", "tiempo_f", "speaker_id", "transcripcion", "genero_inferido"]
+    assert turns.genero_inferido.tolist() == ["mujer", "mujer", "hombre", "hombre", "no_determinado", "no_determinado"]
+    assert turns.tiempo_f.tolist() == AUDIO_TURNS.end.tolist() and turns.transcripcion[2] == "Gracias por invitarme."
+
+
+def test_gender_threshold_is_configurable():
+    speakers = AudioSilver(Settings(silver={"gender_threshold": 0.55})).run({"bronze/audio_turns": AUDIO_TURNS})
+    assert speakers["audio_speakers"].genero.tolist() == ["mujer", "hombre", "mujer"]
+
+
+# Silver pipeline
+
+def test_silver_pipeline_writes_all_tables(tmp_path):
+    ctx = make_ctx(tmp_path)
+    ctx.lake.write("bronze", "video_detections", "vid1", DETECTIONS)
+    ctx.lake.write("bronze", "audio_turns", "vid1", AUDIO_TURNS)
+    with captured_log() as lines:
+        SilverPipeline(ctx.settings)(ctx)
+    for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6}.items():
+        assert len(ctx.lake.read("silver", table, "vid1")) == rows
+    assert [line.split()[1] for line in lines] == ["video", "audio", "total"]
+    assert "3 video_people, 5 video_presence" in lines[0]

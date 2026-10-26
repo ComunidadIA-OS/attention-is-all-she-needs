@@ -4,6 +4,7 @@
 import argparse
 import logging
 
+from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.video import VideoSilver
 from aiasn.pipelines.transform_pipeline import TransformPipeline
 from aiasn.settings import Settings
@@ -14,7 +15,7 @@ class SilverPipeline(TransformPipeline):
     name = "silver"
 
     def __init__(self, settings: Settings):
-        super().__init__([VideoSilver(settings)])
+        super().__init__([VideoSilver(settings), AudioSilver(settings)])
 
 
 if __name__ == "__main__":

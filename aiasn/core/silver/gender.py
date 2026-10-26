@@ -24,6 +24,7 @@ def decide_gender(female: pd.Series, threshold: float, weights: pd.Series | None
     mask = female.notna()
     if not mask.any():
         return UNDETERMINED, np.nan
-    p = float(np.average(female[mask], weights=None if weights is None else weights[mask]))
+    weights = None if weights is None or not weights[mask].sum() else weights[mask]   # all zero: plain mean
+    p = float(np.average(female[mask], weights=weights))
     label = WOMAN if p >= 0.5 else MAN
     return aplicar_umbral_etico(label, max(p, 1 - p), threshold), p

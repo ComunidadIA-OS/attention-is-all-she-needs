@@ -27,6 +27,11 @@ class NlpTask(ABC):
     def _extract(self, turns: pd.DataFrame) -> pd.DataFrame: ...
 
 
+def guide(labels: dict[str, str]) -> str:
+    """A bilingual guide for a prompt: `english (español), ...`."""
+    return ", ".join(f"{en} ({es})" for en, es in labels.items())
+
+
 def speaker_label(speaker: int) -> str:
     return f"Speaker_{speaker}"
 

@@ -120,18 +120,25 @@ class NlpSettings(BaseModel):
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
     caption_blocks_per_call: int = Field(4, gt=0)  # OCR blocks per captions call; the calls go in parallel
     # Guide for the model, which may add new topics
-    topics_guide: list[str] = [
+    # English (key, word2vec) → Spanish (UI)
+    topics_guide: dict[str, str] = {
         # stereotyped as "feminine" or centred on the person
-        "care", "family and motherhood", "work-life balance", "love life and relationships", "physical appearance",
-        "being a woman / gender experience", "diversity and equality",
+        "care": "cuidados", "family and motherhood": "familia y maternidad", "work-life balance": "conciliación",
+        "love life and relationships": "vida sentimental y relaciones", "physical appearance": "aspecto físico",
+        "being a woman / gender experience": "ser mujer / experiencia de género",
+        "diversity and equality": "diversidad e igualdad",
         # professional or stereotyped as "masculine"
-        "technology", "science and research", "finance and economy", "leadership and management",
-        "their work or field", "politics", "sports",
+        "technology": "tecnología", "science and research": "ciencia e investigación",
+        "finance and economy": "finanzas y economía", "leadership and management": "liderazgo y gestión",
+        "their work or field": "su trabajo o especialidad", "politics": "política", "sports": "deporte",
         # others
-        "education", "health", "history",
-    ]
-    # Guide for the model, which may add new roles
-    roles_guide: list[str] = ["host", "interviewer", "expert", "voice-over narrator", "testimony", "character", "audience"]
+        "education": "educación", "health": "salud", "history": "historia",
+    }
+    # Guide for the model, which may add new roles; English → Spanish
+    roles_guide: dict[str, str] = {
+        "host": "presentador/a", "interviewer": "entrevistador/a", "expert": "experto/a",
+        "voice-over narrator": "narrador/a en off", "testimony": "testimonio", "character": "personaje",
+        "audience": "público"}
     max_ideas: int = Field(10, gt=0)               # key ideas of the piece
 
 

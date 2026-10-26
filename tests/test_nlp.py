@@ -59,9 +59,9 @@ MENTIONS = Mentions(mentions=[
     Mention(turn=99, literal="Luis", name="Luis", title=None, gender="M", referred_speaker="Speaker_0"),
 ])
 TOPICS = Topics(topics=[
-    Topic(turn=3, topic="science and research", evidence="Empecé gracias a Ada Lovelace"),
-    Topic(turn=0, topic="Diversity and equality ", evidence="mujeres en la ciencia"),
-    Topic(turn=42, topic="history", evidence="Ada Lovelace"),
+    Topic(turn=3, topic="science and research", topic_es="ciencia e investigación", evidence="Empecé gracias a Ada Lovelace"),
+    Topic(turn=0, topic="Diversity and equality ", topic_es="Diversidad e igualdad ", evidence="mujeres en la ciencia"),
+    Topic(turn=42, topic="history", topic_es="historia", evidence="Ada Lovelace"),
 ])
 REFERENCES = References(references=[
     Reference(turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
@@ -69,8 +69,10 @@ REFERENCES = References(references=[
     Reference(turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
 PIECE = Piece(format="interview", roles=[
-    SpeakerRole(speaker="Speaker_0", role="interviewer"), SpeakerRole(speaker="Speaker_1", role="expert "),
-    SpeakerRole(speaker="Speaker_1", role="testimony"), SpeakerRole(speaker="Speaker_5", role="host"),
+    SpeakerRole(speaker="Speaker_0", role="interviewer", role_es="entrevistador/a"),
+    SpeakerRole(speaker="Speaker_1", role="expert ", role_es="experta "),
+    SpeakerRole(speaker="Speaker_1", role="testimony", role_es="testimonio"),
+    SpeakerRole(speaker="Speaker_5", role="host", role_es="presentador/a"),
 ])
 IDEAS = Ideas(ideas=[
     Idea(idea="Ada Lovelace inspired her career", speakers=["Speaker_1"]),
@@ -119,12 +121,13 @@ def test_mentions_keep_only_speakers_of_the_conversation():
 
 def test_topics_take_the_speaker_of_their_turn():
     llm = FakeLLM({Topics: TOPICS})
-    t = TopicExtractor(llm, NlpSettings(topics_guide=["care", "technology"])).extract(TURNS)
-    assert list(t.columns) == ["turn", "speaker", "topic", "evidence", "found"]
+    t = TopicExtractor(llm, NlpSettings(topics_guide={"care": "cuidados", "technology": "tecnología"})).extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "topic", "topic_es", "evidence", "found"]
+    assert t.topic_es.tolist() == ["ciencia e investigación", "Diversidad e igualdad"]
     assert t.turn.tolist() == [3, 0] and t.speaker.tolist() == [1, 0]   # turn 42 does not exist
     assert t.topic.tolist() == ["science and research", "Diversity and equality"]
     assert t.found.tolist() == [True, False]
-    assert "care, technology" in llm.calls[0][0]
+    assert "care (cuidados), technology (tecnología)" in llm.calls[0][0]
 
 
 def test_references_take_the_speaker_who_mentions_them():
@@ -136,10 +139,11 @@ def test_references_take_the_speaker_who_mentions_them():
 
 def test_roles_one_per_known_speaker():
     llm = FakeLLM({Piece: PIECE})
-    r = RoleExtractor(llm, NlpSettings(roles_guide=["host", "expert"])).extract(TURNS)
-    assert list(r.columns) == ["speaker", "role"]
+    r = RoleExtractor(llm, NlpSettings(roles_guide={"host": "presentador/a", "expert": "experto/a"})).extract(TURNS)
+    assert list(r.columns) == ["speaker", "role", "role_es"]
+    assert r.role_es.tolist() == ["entrevistador/a", "experta"]
     assert r.speaker.tolist() == [0, 1] and r.role.tolist() == ["interviewer", "expert"]   # first role wins; Speaker_5 unknown
-    assert "host, expert" in llm.calls[0][0]
+    assert "host (presentador/a), expert (experto/a)" in llm.calls[0][0]
 
 
 def test_ideas_one_row_per_contributing_speaker():

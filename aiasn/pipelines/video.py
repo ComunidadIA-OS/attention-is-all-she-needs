@@ -35,7 +35,7 @@ class VideoPipeline(Pipeline):
 
     def run(self, ctx: RunContext) -> None:
         work = ctx.tmp_dir / self.name
-        video, audio, frames = self._extract(ctx.lake.landing_file(ctx.video_id), work)
+        video, audio, frames = self._extract(ctx.lake.fetch_landing(ctx.video_id, work / "source"), work)
         self._log_step("extract", f"{len(frames)} frames ({len(frames) / self.cfg.fps:.0f} s)")
 
         cuts = self.shot_detector.detect_cuts(video)
@@ -172,8 +172,6 @@ if __name__ == "__main__":
     # Usage: python -m aiasn.pipelines.video VIDEO_ID [--annotate]   (the video must be inside /data/landing/video_id={VIDEO_ID})
     from aiasn.pipelines.video_annotation import annotate
     from aiasn.settings import Settings
-    from aiasn.storage.lake import Lake
-    from aiasn.storage.manifest import Manifest
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video_id")
@@ -182,8 +180,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
-    ctx = RunContext(args.video_id, settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, args.video_id),
-                     settings.tmp_dir / args.video_id)
+    ctx = RunContext.for_video(settings, args.video_id)
     VideoPipeline(settings.video)(ctx)
     if args.annotate:
         logging.getLogger("aiasn").info("annotated video: %s", annotate(ctx))

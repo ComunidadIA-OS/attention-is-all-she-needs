@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import logging
 import shutil
 import wave
@@ -20,19 +21,16 @@ from aiasn.storage.manifest import Manifest
 
 
 def make_ctx(tmp_path, video_id="vid1") -> RunContext:
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    return RunContext(video_id, settings, Lake(settings.lake_dir),
-                      Manifest(settings.lake_dir, video_id), settings.tmp_dir / video_id)
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
+    return RunContext.for_video(settings, video_id)
 
 
 def manifest_step(ctx, step):
-    return json.loads(ctx.manifest.path.read_text())["steps"][step]
+    return ctx.manifest.read()["steps"][step]
 
 
 def to_landing(ctx, video):
-    landing = ctx.lake.landing_dir(ctx.video_id)
-    landing.mkdir(parents=True)
-    shutil.copy(video, landing)
+    ctx.lake.upload_to_landing(ctx.video_id, video)
 
 
 @contextmanager
@@ -196,11 +194,11 @@ class ThenPipeline(OkPipeline):
 
 
 def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
     with pytest.raises(RuntimeError, match="boom"):
         process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]],
                       then=[ThenPipeline()])
-    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
+    steps = json.loads((Path(settings.lake_uri) / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
     assert steps["failing"]["status"] == "error"
     assert "after_failing" not in steps                        # a failure stops the rest of its chain...
     assert steps["ok"]["status"] == steps["after_ok"]["status"] == "ok"   # ...but not the other chains
@@ -208,8 +206,8 @@ def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
 
 
 def test_process_video_runs_then_after_the_chains(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
     process_video("vid1", settings, [[OkPipeline()], [AfterOkPipeline()]], then=[ThenPipeline()])
-    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
+    steps = json.loads((Path(settings.lake_uri) / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
     assert steps["then"]["status"] == "ok"
     assert steps["then"]["started_at"] >= max(steps["ok"]["started_at"], steps["after_ok"]["started_at"])

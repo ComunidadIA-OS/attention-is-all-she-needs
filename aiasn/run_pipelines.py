@@ -1,7 +1,6 @@
 """Usage: python -m aiasn.run_pipelines path/to/video.mp4"""
 
 import logging
-import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -16,7 +15,6 @@ from aiasn.pipelines.silver import SilverPipeline
 from aiasn.pipelines.video import VideoPipeline
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
-from aiasn.storage.manifest import Manifest
 
 
 def process_video(video_id: str, settings: Settings, chains: list[list[Pipeline]], then: list[Pipeline] = ()) -> None:
@@ -25,9 +23,7 @@ def process_video(video_id: str, settings: Settings, chains: list[list[Pipeline]
 
     Audio and NLP mostly wait for remote APIs while video uses the GPU.
     """
-    lake = Lake(settings.lake_dir)
-    tmp_dir = settings.tmp_dir / video_id
-    ctx = RunContext(video_id, settings, lake, Manifest(settings.lake_dir, video_id), tmp_dir)
+    ctx = RunContext.for_video(settings, video_id)
     with ThreadPoolExecutor(len(chains)) as pool:
         for run in [pool.submit(_run_chain, chain, ctx) for chain in chains]:
             run.result()   # re-raises the first failure, once all have finished
@@ -41,11 +37,8 @@ def _run_chain(chain: list[Pipeline], ctx: RunContext) -> None:
 
 def upload_to_landing(video: Path, lake: Lake) -> str:
     """What the API will do."""
-    video_id = video.stem
-    landing = lake.landing_dir(video_id)
-    landing.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(video, landing / video.name)
-    return video_id
+    lake.upload_to_landing(video.stem, video)
+    return video.stem
 
 
 if __name__ == "__main__":
@@ -54,5 +47,5 @@ if __name__ == "__main__":
     # NLP reads the transcript and captions the OCR texts, so they go after audio and video; models are loaded once
     chains = [[AudioPipeline(settings.audio), NlpPipeline(settings.nlp)],
               [VideoPipeline(settings.video), CaptionsPipeline(settings.nlp)]]
-    video_id = upload_to_landing(Path(sys.argv[1]), Lake(settings.lake_dir))
+    video_id = upload_to_landing(Path(sys.argv[1]), Lake.from_settings(settings))
     process_video(video_id, settings, chains, then=[SilverPipeline(settings), GoldPipeline(settings)])

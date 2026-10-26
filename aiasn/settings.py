@@ -164,10 +164,26 @@ class SilverSettings(BaseModel):
 
 ### GENERAL SETTINGS
 
+class StorageSettings(BaseModel):
+    """Access to an S3-compatible store (MinIO, AWS, OVH Object Storage) when the lake is an `s3://` URI."""
+    endpoint_url: str | None = None                # MinIO: http://minio:9000; None: AWS
+    access_key: SecretStr | None = None
+    secret_key: SecretStr | None = None
+
+    def options(self, uri: str) -> dict:
+        """fsspec storage options for `uri`; none for a local folder."""
+        if not uri.startswith("s3://"):
+            return {}
+        options = {"key": self.access_key, "secret": self.secret_key}
+        options = {k: v.get_secret_value() for k, v in options.items() if v is not None}
+        return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_nested_delimiter="__", env_file=".env", extra="ignore")
 
-    lake_dir: Path = Path("data")
+    lake_uri: str = "data"                         # a local folder, or s3://bucket (see storage)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
     tmp_dir: Path = Path("tmp")
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)

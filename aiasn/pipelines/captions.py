@@ -29,8 +29,6 @@ class CaptionsPipeline(Pipeline):
 if __name__ == "__main__":
     # Usage: python -m aiasn.pipelines.captions VIDEO_ID   (after the video pipeline)
     from aiasn.settings import Settings
-    from aiasn.storage.lake import Lake
-    from aiasn.storage.manifest import Manifest
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video_id")
@@ -38,6 +36,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
-    ctx = RunContext(video_id, settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, video_id),
-                     settings.tmp_dir / video_id)
+    ctx = RunContext.for_video(settings, video_id)
     CaptionsPipeline(settings.nlp)(ctx)

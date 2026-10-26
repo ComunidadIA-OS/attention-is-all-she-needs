@@ -175,8 +175,8 @@ TABLES = ["nlp_mentions", "nlp_topics", "nlp_references", "nlp_roles", "nlp_idea
 
 
 def make_ctx(tmp_path) -> RunContext:
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    ctx = RunContext("vid1", settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, "vid1"), settings.tmp_dir / "vid1")
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
+    ctx = RunContext.for_video(settings, "vid1")
     ctx.lake.write("bronze", "audio_turns", "vid1", TURNS)
     return ctx
 
@@ -200,7 +200,7 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     with captured_log() as lines:
         NlpPipeline(ctx.settings.nlp, llm=FakeLLM(ANSWERS))(ctx)
 
-    assert json.loads(ctx.manifest.path.read_text())["steps"]["nlp"]["status"] == "ok"
+    assert ctx.manifest.read()["steps"]["nlp"]["status"] == "ok"
     assert len(ctx.lake.read("bronze", "nlp_mentions", "vid1")) == 3
     assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_references", "vid1")) == 2
@@ -231,14 +231,14 @@ def test_a_failing_task_does_not_stop_the_others(tmp_path):
     answers = {schema: answer for schema, answer in ANSWERS.items() if schema is not Ideas}
     with pytest.raises(KeyError):
         NlpPipeline(ctx.settings.nlp, llm=FakeLLM(answers))(ctx)
-    assert json.loads(ctx.manifest.path.read_text())["steps"]["nlp"]["status"] == "error"
+    assert ctx.manifest.read()["steps"]["nlp"]["status"] == "error"
     for table in TABLES:
-        assert (ctx.lake.table_dir("bronze", table, "vid1") / "part-0.parquet").exists() == (table != "nlp_ideas")
+        assert ctx.lake.exists("bronze", table, "vid1") == (table != "nlp_ideas")
 
 
 def test_nlp_pipeline_needs_the_transcript(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    ctx = RunContext("vid1", settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, "vid1"), settings.tmp_dir / "vid1")
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
+    ctx = RunContext.for_video(settings, "vid1")
     with pytest.raises(FileNotFoundError):
         NlpPipeline(settings.nlp, llm=FakeLLM({}))(ctx)
 

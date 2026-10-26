@@ -70,9 +70,8 @@ def test_fusion_gold_uses_the_silver_threshold():
 
 
 def test_gold_pipeline_writes_the_lake(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    ctx = RunContext("vid1", settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, "vid1"),
-                     settings.tmp_dir / "vid1")
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
+    ctx = RunContext.for_video(settings, "vid1")
     for ref, df in SILVER.items():
         ctx.lake.write(*ref.split("/"), "vid1", df)
     for ref, df in NLP_SILVER.items():
@@ -80,7 +79,7 @@ def test_gold_pipeline_writes_the_lake(tmp_path):
     GoldPipeline(settings)(ctx)
     assert len(ctx.lake.read("gold", "quadrants", "vid1")) > 0 and len(ctx.lake.read("gold", "summary", "vid1")) == 1
     assert set(ctx.lake.read("gold", "kpis", "vid1").kpi) == set(KPIS)
-    assert json.loads(ctx.manifest.path.read_text())["steps"]["gold"]["status"] == "ok"
+    assert ctx.manifest.read()["steps"]["gold"]["status"] == "ok"
 
 
 # KPIs

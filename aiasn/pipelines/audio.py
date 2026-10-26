@@ -22,7 +22,8 @@ class AudioPipeline(Pipeline):
         self.gender_classifier = VoiceGenderClassifier(cfg.voice_gender_classifier, cfg.device)
 
     def run(self, ctx: RunContext) -> None:
-        audio = self._extract(ctx.lake.landing_file(ctx.video_id), ctx.tmp_dir / self.name)
+        work = ctx.tmp_dir / self.name
+        audio = self._extract(ctx.lake.fetch_landing(ctx.video_id, work / "source"), work)
         rate, samples = wavfile.read(audio)
         self._log_step("extract", f"{len(samples) / rate:.0f} s of audio")
 
@@ -48,8 +49,6 @@ class AudioPipeline(Pipeline):
 if __name__ == "__main__":
     # Usage: python -m aiasn.pipelines.audio VIDEO_ID   (the video must be in landing)
     from aiasn.settings import Settings
-    from aiasn.storage.lake import Lake
-    from aiasn.storage.manifest import Manifest
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video_id")
@@ -57,6 +56,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
-    ctx = RunContext(video_id, settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, video_id),
-                     settings.tmp_dir / video_id)
+    ctx = RunContext.for_video(settings, video_id)
     AudioPipeline(settings.audio)(ctx)

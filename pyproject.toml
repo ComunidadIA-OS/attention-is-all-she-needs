@@ -62,7 +62,6 @@ dependencies = [
     "scipy>=1.11",
     "gdown>=5.0",
     "transnetv2-pytorch>=1.0.5",
-    "requests>=2.34.2",
 ]
 
 [project.optional-dependencies]

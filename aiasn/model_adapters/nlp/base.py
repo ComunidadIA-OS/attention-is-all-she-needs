@@ -44,10 +44,10 @@ def transcript(turns: pd.DataFrame) -> str:
 
 def found(fragment: str | None, text: str) -> bool:
     """Whether a fragment quoted by the model is really in the text (ignoring case, accents and punctuation)."""
-    fragment = _normalize(fragment or "")
-    return bool(fragment) and fragment in _normalize(text)
+    fragment = normalize(fragment or "")
+    return bool(fragment) and fragment in normalize(text)
 
 
-def _normalize(text: str) -> str:
+def normalize(text: str) -> str:
     text = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()
-    return " ".join(re.sub(r"[^\w\s]", " ", text).split())
+    return " ".join(re.sub(r"[^\w\s]|_", " ", text).split())   # "_" is a word character, but OCR reads it for spaces

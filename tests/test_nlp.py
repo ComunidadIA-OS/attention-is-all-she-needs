@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
+from aiasn.model_adapters.nlp.captions import Caption, CaptionExtractor, Captions
 from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
@@ -17,6 +18,7 @@ from aiasn.model_adapters.nlp import tone
 from aiasn.model_adapters.nlp.tone import (LlmToneClassifier, Tones, TurnTone, ZeroShotToneClassifier,
                                            make_tone_classifier)
 from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
+from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
 from aiasn.settings import NlpSettings, Settings, ToneSettings
@@ -301,3 +303,45 @@ def test_zero_shot_tone_with_the_real_model():
     })
     t = ZeroShotToneClassifier(FakeLLM({}), NlpSettings(tone=ToneSettings(method="zero_shot"))).extract(turns)
     assert t.tone.tolist() == ["technical_assertive", "collaborative", "dissent"]
+
+
+# Captions
+
+def ocr(frame: int, *lines: tuple[str, float]) -> list[dict]:
+    """bronze video_texts rows of one frame: (text, y1) per box."""
+    return [{"frame": frame, "shot": 0, "text": text, "conf": 0.9, "x1": 10.0, "y1": y, "x2": 200.0, "y2": y + 20}
+            for text, y in lines]
+
+
+TEXTS = pd.DataFrame(
+    ocr(100, ("TOP SECRET ROSIES", 300.0))
+    # The OCR splits name and title, reads them in any order and sometimes "_" for a space
+    + ocr(125, ("Investigador del ICMAT", 213.0), ("David_Ríos Insua", 180.0))
+    + ocr(150, ("David_Ríos Insua", 180.0), ("Investigador del ICMAT", 213.0))
+    + ocr(175, ("David Ríos Insua", 174.0), ("Investigador del ICMAT", 213.0)))
+CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT"),
+                              Caption(block=9, name="Nadie", title=None)])
+
+
+def test_captions_read_each_distinct_block_once():
+    llm = FakeLLM({Captions: CAPTIONS})
+    c = CaptionExtractor(llm).extract(TEXTS)
+    assert llm.calls[0][1] == "[0] TOP SECRET ROSIES\n[1] David_Ríos Insua | Investigador del ICMAT"
+    assert list(c.columns) == ["frame", "shot", "text", "name", "title", "found"]
+    assert c.frame.tolist() == [125, 150, 175]   # every frame showing the caption; not the programme's name
+    assert set(c.name) == {"David Ríos Insua"} and set(c.title) == {"Investigador del ICMAT"}
+    assert c.found.all()                         # "David_Ríos" counts as "David Ríos"
+
+
+def test_captions_without_texts_skip_the_model():
+    llm = FakeLLM({})
+    assert CaptionExtractor(llm).extract(TEXTS.iloc[:0]).empty and not llm.calls
+
+
+def test_captions_pipeline(tmp_path):
+    ctx = make_ctx(tmp_path)
+    ctx.lake.write("bronze", "video_texts", "vid1", TEXTS)
+    with captured_log() as lines:
+        CaptionsPipeline(ctx.settings.nlp, llm=FakeLLM({Captions: CAPTIONS}))(ctx)
+    assert len(ctx.lake.read("bronze", "video_captions", "vid1")) == 3
+    assert "1 people captioned in 3 frames, 0 names not found" in lines[0]

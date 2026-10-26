@@ -8,6 +8,7 @@ from pathlib import Path
 
 from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.base_pipeline import Pipeline
+from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
 from aiasn.pipelines.silver import SilverPipeline
@@ -49,7 +50,8 @@ def upload_to_landing(video: Path, lake: Lake) -> str:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     settings = Settings()
-    # NLP reads the transcript, so it goes after audio; models are loaded once
-    chains = [[AudioPipeline(settings.audio), NlpPipeline(settings.nlp)], [VideoPipeline(settings.video)]]
+    # NLP reads the transcript and captions the OCR texts, so they go after audio and video; models are loaded once
+    chains = [[AudioPipeline(settings.audio), NlpPipeline(settings.nlp)],
+              [VideoPipeline(settings.video), CaptionsPipeline(settings.nlp)]]
     video_id = upload_to_landing(Path(sys.argv[1]), Lake(settings.lake_dir))
     process_video(video_id, settings, chains, then=[SilverPipeline(settings)])

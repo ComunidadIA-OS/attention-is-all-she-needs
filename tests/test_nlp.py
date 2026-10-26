@@ -13,11 +13,13 @@ from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
 from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
-from aiasn.model_adapters.nlp.tone import Tones, ToneClassifier, TurnTone
+from aiasn.model_adapters.nlp import tone
+from aiasn.model_adapters.nlp.tone import (LlmToneClassifier, Tones, TurnTone, ZeroShotToneClassifier,
+                                           make_tone_classifier)
 from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
-from aiasn.settings import NlpSettings, Settings
+from aiasn.settings import NlpSettings, Settings, ToneSettings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
 
@@ -148,8 +150,9 @@ def test_ideas_one_row_per_contributing_speaker():
 
 
 def test_tone_one_row_per_turn():
-    t = ToneClassifier(FakeLLM({Tones: TONES}), NlpSettings()).extract(TURNS)
-    assert list(t.columns) == ["turn", "speaker", "tone", "evidence", "found"]
+    t = LlmToneClassifier(FakeLLM({Tones: TONES}), NlpSettings()).extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "tone", "score", "evidence", "found"]
+    assert t.score.isna().all()   # the LLM gives no score
     assert t.turn.tolist() == [0, 1, 3] and t.speaker.tolist() == [0, 1, 1]   # first answer per turn; turn 12 unknown
     assert t.tone.isna().tolist() == [False, True, False]
     assert t.tone.dropna().tolist() == ["technical_assertive", "collaborative"]
@@ -232,3 +235,68 @@ def test_nlp_pipeline_needs_the_transcript(tmp_path):
     ctx = RunContext("vid1", settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, "vid1"), settings.tmp_dir / "vid1")
     with pytest.raises(FileNotFoundError):
         NlpPipeline(settings.nlp, llm=FakeLLM({}))(ctx)
+
+
+class FakeZeroShot:
+    """Stands in for the NLI pipeline: scores given per premise, highest first, as the real one returns them."""
+
+    def __init__(self, scores: list[dict[str, float]]):
+        self.scores, self.calls = scores, []
+
+    def __call__(self, premises, candidate_labels, hypothesis_template, multi_label):
+        self.calls.append(premises)
+        results = []
+        for score in self.scores[:len(premises)]:
+            ranked = sorted(score.items(), key=lambda kv: -kv[1])
+            results.append({"labels": [tone.HYPOTHESES[t] for t, _ in ranked], "scores": [v for _, v in ranked]})
+        return results[0] if len(results) == 1 else results
+
+
+def zero_shot(monkeypatch, scores, **tone_settings) -> tuple[ZeroShotToneClassifier, FakeZeroShot]:
+    fake = FakeZeroShot(scores)
+    monkeypatch.setattr(tone, "pipeline", lambda *args, **kw: fake)
+    cfg = NlpSettings(tone=ToneSettings(method="zero_shot", **tone_settings))
+    return make_tone_classifier(FakeLLM({}), cfg), fake
+
+
+def test_zero_shot_tone_prefers_a_stance_over_stating_facts(monkeypatch):
+    scores = [{"technical_assertive": 0.95, "collaborative": 0.2, "dissent": 0.1},
+              {"technical_assertive": 0.3, "collaborative": 0.4, "dissent": 0.1},    # none reaches min_score
+              {"technical_assertive": 0.99, "collaborative": 0.2, "dissent": 0.92},  # dissent first, though lower
+              {"technical_assertive": 0.99, "collaborative": 0.95, "dissent": 0.1}]
+    classifier, fake = zero_shot(monkeypatch, scores, min_score=0.9)
+    assert isinstance(classifier, ZeroShotToneClassifier)
+    t = classifier.extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "tone", "score", "evidence", "found"]
+    assert t.tone.isna().tolist() == [False, True, False, False]
+    assert t.tone.dropna().tolist() == ["technical_assertive", "dissent", "collaborative"]
+    assert t.score.tolist() == [0.95, 0.4, 0.92, 0.95] and t.speaker.tolist() == [0, 1, 0, 1]
+    assert t.evidence.isna().all() and t.found.isna().all()   # no quote to check
+    premises = fake.calls[0]
+    assert premises[0] == "Último turno: " + TURNS.text[0]
+    assert premises[1] == f"Turno anterior: {TURNS.text[0]}\nÚltimo turno: {TURNS.text[1]}"
+
+
+def test_zero_shot_tone_without_previous_turn_and_with_one_turn(monkeypatch):
+    classifier, fake = zero_shot(monkeypatch, [{"technical_assertive": 0.9, "collaborative": 0.1, "dissent": 0.1}],
+                                 with_previous_turn=False)
+    t = classifier.extract(TURNS.iloc[1:2])   # the pipeline returns a dict, not a list, for one premise
+    assert t.tone.tolist() == ["technical_assertive"]
+    assert fake.calls[0] == ["Último turno: " + TURNS.text[1]]
+
+
+def test_tone_classifier_defaults_to_the_llm():
+    assert isinstance(make_tone_classifier(FakeLLM({}), NlpSettings()), LlmToneClassifier)
+
+
+def test_zero_shot_tone_with_the_real_model():
+    """Clear-cut turns with the multilingual NLI model (downloaded the first time)."""
+    turns = pd.DataFrame({
+        "turn": [0, 1, 2],
+        "speaker": pd.array([0, 1, 0], dtype="Int64"),
+        "text": ["Según los datos del INE, solo el 22 % de las personas que trabajan en IA en España son mujeres.",
+                 "Exacto, y añadiría que en la universidad la proporción es todavía menor, como bien dices.",
+                 "No estoy de acuerdo, eso que dices es falso: las cifras de este año lo contradicen."],
+    })
+    t = ZeroShotToneClassifier(FakeLLM({}), NlpSettings(tone=ToneSettings(method="zero_shot"))).extract(turns)
+    assert t.tone.tolist() == ["technical_assertive", "collaborative", "dissent"]

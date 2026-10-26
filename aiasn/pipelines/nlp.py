@@ -11,7 +11,7 @@ from aiasn.model_adapters.nlp.ideas import IdeaExtractor
 from aiasn.model_adapters.nlp.mentions import MentionExtractor
 from aiasn.model_adapters.nlp.references import ReferenceExtractor
 from aiasn.model_adapters.nlp.roles import RoleExtractor
-from aiasn.model_adapters.nlp.tone import ToneClassifier
+from aiasn.model_adapters.nlp.tone import make_tone_classifier
 from aiasn.model_adapters.nlp.topics import TopicExtractor
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
@@ -26,7 +26,7 @@ class NlpPipeline(Pipeline):
         self.cfg = cfg
         llm = llm or make_llm_client(cfg.llm)
         self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg), ReferenceExtractor(llm, cfg),
-                      RoleExtractor(llm, cfg), IdeaExtractor(llm, cfg), ToneClassifier(llm, cfg)]
+                      RoleExtractor(llm, cfg), IdeaExtractor(llm, cfg), make_tone_classifier(llm, cfg)]
 
     def run(self, ctx: RunContext) -> None:
         turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)

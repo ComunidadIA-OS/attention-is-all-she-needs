@@ -104,10 +104,19 @@ class LlmSettings(BaseSettings):
     retries: int = Field(2, ge=0)
 
 
+class ToneSettings(BaseModel):
+    method: Literal["llm", "zero_shot"] = "llm"
+    zero_shot_model: str = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"   # multilingual NLI
+    min_score: float = Field(0.9, ge=0, le=1)      # zero-shot: below it in every class, no tone
+    with_previous_turn: bool = True                # zero-shot: collaborating or disagreeing depends on what came before
+
+
 ### SETTINGS FOR NLP PIPELINE
 
 class NlpSettings(BaseModel):
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    tone: ToneSettings = Field(default_factory=ToneSettings)
+    device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
     # Guide for the model, which may add new topics
     topics_guide: list[str] = [

@@ -11,6 +11,7 @@ import pytest
 
 from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob
+from aiasn.core.silver.identity import IdentitySilver
 from aiasn.core.silver.video import VideoSilver
 from aiasn.core.transform import Transform
 from aiasn.pipelines.silver import SilverPipeline
@@ -189,9 +190,10 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
     ctx.lake.write("bronze", "audio_turns", "vid1", AUDIO_TURNS)
     with captured_log() as lines:
         SilverPipeline(ctx.settings)(ctx)
-    for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6}.items():
+    for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6,
+                        "speaker_person": 3}.items():
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
-    assert [line.split()[1] for line in lines] == ["video", "audio", "total"]
+    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "total"]
     assert "3 video_people, 5 video_presence" in lines[0]
 
 
@@ -204,3 +206,61 @@ def test_speaking_flickers_are_smoothed():
     assert smoothed.tiempo_f[0] == pytest.approx(smoothed.tiempo_i[1])   # contiguous spans
     raw = VideoSilver(Settings(silver={"speaking_window_s": 0})).run({"bronze/video_detections": flicker})
     assert raw["video_presence"].hablando.tolist() == [False, True, False, True, False, True]
+
+
+# Identity
+
+def spans(*rows) -> pd.DataFrame:
+    """silver video_presence from (person_id, tiempo_i, tiempo_f, hablando)."""
+    return pd.DataFrame(rows, columns=["person_id", "tiempo_i", "tiempo_f", "hablando"]).astype({"person_id": "Int64"})
+
+
+def turns(*rows) -> pd.DataFrame:
+    """silver audio_turns from (speaker_id, tiempo_i, tiempo_f)."""
+    t = pd.DataFrame(rows, columns=["speaker_id", "tiempo_i", "tiempo_f"]).astype({"speaker_id": "Int64"})
+    return t.assign(turn=range(len(t)), transcripcion="", genero_inferido="no_determinado")
+
+
+def speakers_of(t: pd.DataFrame) -> pd.DataFrame:
+    """silver audio_speakers with the speech time of each speaker in `t`."""
+    seconds = (t.tiempo_f - t.tiempo_i).groupby(t.speaker_id).sum()
+    return pd.DataFrame({"speaker_id": seconds.index.astype("Int64"), "speech_time_s": seconds.values})
+
+
+def link(t, presence, **silver):
+    tables = {"silver/audio_turns": t, "silver/audio_speakers": speakers_of(t), "silver/video_presence": presence}
+    return IdentitySilver(Settings(silver=silver)).run(tables)["speaker_person"].set_index("speaker_id")
+
+
+def test_each_speaker_links_to_the_person_speaking_meanwhile():
+    t = turns((0, 0, 4), (1, 4, 10), (0, 10, 12), (2, 12, 20))
+    presence = spans((1, 0, 4.2, True), (1, 4.2, 12, False), (2, 0, 4, False), (2, 4.5, 10, True),
+                     (1, 10, 12, True), (3, 12, 12.5, True), (3, 12.5, 20, False))
+    links = link(t, presence)
+    assert list(links.reset_index().columns) == ["speaker_id", "person_id", "overlap_s", "share"]
+    assert links.person_id[0] == 1 and links.person_id[1] == 2
+    assert links.overlap_s[0] == pytest.approx(6.0) and links.share[0] == pytest.approx(1.0)
+    # Speaker 2 overlaps person 3 speaking for only 0.5 s: a voice off screen, but the candidate is kept for review
+    assert pd.isna(links.person_id[2]) and links.overlap_s[2] == pytest.approx(0.5)
+
+
+def test_link_needs_a_share_of_the_speech():
+    t = turns((0, 0, 20))
+    presence = spans((1, 0, 3, True))   # 3 s of 20: 15 % < 30 %
+    assert pd.isna(link(t, presence).person_id[0])
+    assert link(t, presence, min_link_share=0.1).person_id[0] == 1
+
+
+def test_a_person_may_have_several_speakers_and_silent_speakers_have_none():
+    # Diarization split one voice in two speakers; speaker 2 talks while nobody speaks on screen
+    t = turns((0, 0, 5), (1, 5, 10), (2, 10, 15))
+    presence = spans((1, 0, 10, True), (1, 10, 15, False))
+    links = link(t, presence)
+    assert links.person_id[0] == links.person_id[1] == 1
+    assert pd.isna(links.person_id[2]) and links.overlap_s[2] == 0 and links.share[2] == 0
+
+
+def test_turns_without_speaker_are_ignored():
+    t = turns((0, 0, 5), (None, 5, 10))
+    links = link(t, spans((1, 0, 10, True)))
+    assert links.index.tolist() == [0] and links.overlap_s[0] == pytest.approx(5.0)

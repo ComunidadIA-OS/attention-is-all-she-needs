@@ -141,6 +141,9 @@ class SilverSettings(BaseModel):
     max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
     speaking_threshold: float = 0.0                        # speaking_score (TalkNet) above it: speaking
     speaking_window_s: float = Field(1.0, ge=0)            # rolling majority of the speaking state; 0: no smoothing
+    # A speaker is a person on screen if both talk at the same time for at least this long and this share of their speech
+    min_link_s: float = Field(1.0, ge=0)
+    min_link_share: float = Field(0.3, ge=0, le=1)
 
 
 ### GENERAL SETTINGS

@@ -269,44 +269,70 @@ def test_compatibilidad_directa_tablas_bronze_rocio():
             {"start": 4.0, "end": 8.0, "speaker": 1, "text": "Gracias, analizamos los datos.", "gender": "F", "gender_prob": 0.91},
         ]
     )
+    # Como en un bronze real: una deteccion cada 4 fotogramas (stride) mientras cada persona esta en pantalla
+    elena = {
+        "shot": 0, "track_id": 1, "person_id": 10,
+        "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
+        "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
+        "gender": "F", "gender_prob": 0.95, "age": 38.0,
+        "frame_width": 640, "frame_height": 360, "speaking_score": 1.2,
+        "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
+    }
+    marta = {
+        "shot": 1, "track_id": 2, "person_id": 20,
+        "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
+        "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
+        "gender": "F", "gender_prob": 0.92, "age": 44.0,
+        "frame_width": 640, "frame_height": 360, "speaking_score": 0.9,
+        "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
+    }
     df_video_bronze = pd.DataFrame(
-        [
-            {
-                "frame": 3, "shot": 0, "track_id": 1, "person_id": 10,
-                "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
-                "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
-                "gender": "F", "gender_prob": 0.95, "age": 38.0,
-                "frame_width": 640, "frame_height": 360, "speaking_score": 1.2,
-                "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
-            },
-            {
-                "frame": 99, "shot": 0, "track_id": 1, "person_id": 10,
-                "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
-                "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
-                "gender": "F", "gender_prob": 0.95, "age": 38.0,
-                "frame_width": 640, "frame_height": 360, "speaking_score": 1.1,
-                "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
-            },
-            {
-                "frame": 103, "shot": 1, "track_id": 2, "person_id": 20,
-                "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
-                "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
-                "gender": "F", "gender_prob": 0.92, "age": 44.0,
-                "frame_width": 640, "frame_height": 360, "speaking_score": 0.9,
-                "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
-            },
-            {
-                "frame": 199, "shot": 1, "track_id": 2, "person_id": 20,
-                "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
-                "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
-                "gender": "F", "gender_prob": 0.92, "age": 44.0,
-                "frame_width": 640, "frame_height": 360, "speaking_score": 0.8,
-                "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
-            },
-        ]
+        [{"frame": f, **elena} for f in range(3, 100, 4)] + [{"frame": f, **marta} for f in range(103, 200, 4)]
     )
     df_ev = cruzar_intervalos_multimodales(df_audio_bronze, df_video_bronze)
     kpis = calcular_kpis_paridad(df_ev, duracion_total_s=8.0)
     assert kpis["pct_voz_mujer"] == 100.0
     assert kpis["test_bechdel_digital"]["supera_bechdel_digital"] is True
     assert kpis["test_bechdel_digital"]["transiciones_mujer_a_mujer"] == 1
+
+
+def _persona(track_id: str, genero: str, inicio: float, fin: float) -> dict:
+    """Fila del contrato de video (silver `fusion_video`)."""
+    return {"tiempo_i": inicio, "tiempo_f": fin, "track_id": track_id, "genero_visual": genero, "prob_genero": 0.95,
+            "rotulo_nombre": None, "rotulo_cargo": None, "area": 0.3, "centrality": 0.8}
+
+
+def test_identidad_de_silver_elige_al_hablante_aunque_haya_dos_del_mismo_genero():
+    """Con la identidad resuelta (`track_id` en el audio) no se adivina por genero: habla la segunda mujer."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 0, "transcripcion": "Hola",
+                              "genero_inferido": "mujer", "track_id": "person_2"}])
+    df_video = pd.DataFrame([_persona("person_1", "mujer", 0.0, 10.0), _persona("person_2", "mujer", 0.0, 10.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    c1 = ev[ev.cuadrante == 1]
+    assert c1.track_id.tolist() == ["person_2"]
+    assert ev[ev.cuadrante == 2].track_id.tolist() == ["person_1"]
+
+
+def test_identidad_de_silver_voz_en_off_mientras_se_ve_a_otras_personas():
+    """Si quien habla no esta en pantalla, su turno es Cuadrante 3 y quienes se ven, Cuadrante 2."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 1, "transcripcion": "Narracion",
+                              "genero_inferido": "hombre", "track_id": None}])
+    df_video = pd.DataFrame([_persona("person_1", "hombre", 0.0, 10.0), _persona("person_2", "mujer", 2.0, 8.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    assert (ev.cuadrante == 1).sum() == 0
+    c3 = ev[ev.cuadrante == 3]
+    assert len(c3) == 1 and c3.duracion_s.iloc[0] == 10.0 and c3.hablante_id.iloc[0] == 1
+    assert sorted(ev[ev.cuadrante == 2].track_id) == ["person_1", "person_2"]
+
+
+def test_bechdel_cuenta_una_vez_a_la_mujer_rotulada_que_habla_y_calla():
+    """Sus eventos C1 llevan hablante_id y los C2 no: sigue siendo una sola mujer con rotulo."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 5.0, "speaker_id": 3, "transcripcion": "Hola",
+                              "genero_inferido": "mujer", "track_id": "person_6"},
+                             {"tiempo_i": 5.0, "tiempo_f": 10.0, "speaker_id": 1, "transcripcion": "Gracias",
+                              "genero_inferido": "hombre", "track_id": "person_5"}])
+    sandra = _persona("person_6", "mujer", 0.0, 10.0) | {"rotulo_nombre": "Sandra Freire", "rotulo_cargo": "Pedagoga"}
+    df_video = pd.DataFrame([sandra, _persona("person_5", "hombre", 0.0, 10.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    assert set(ev[ev.track_id == "person_6"].cuadrante) == {1, 2}   # habla y luego calla
+    assert calcular_kpis_paridad(ev)["test_bechdel_digital"]["mujeres_con_rotulo_identificado"] == 1

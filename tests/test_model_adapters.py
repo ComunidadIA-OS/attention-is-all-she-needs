@@ -11,7 +11,8 @@ import requests
 from pydantic import BaseModel
 from scipy.io import wavfile
 
-from conftest import ASR_RESPONSE, BUS, CAPTION, ZIDANE, text_image
+from conftest import ASR_RESPONSE, CAPTION
+from media import BUS, ZIDANE, text_image
 
 from aiasn.model_adapters.llm_client import LiteLLMClient, OllamaClient, make_llm_client
 from aiasn.model_adapters.transcriber import Transcriber

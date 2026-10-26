@@ -191,11 +191,25 @@ class AfterFailingPipeline(OkPipeline):
     name = "after_failing"
 
 
+class ThenPipeline(OkPipeline):
+    name = "then"
+
+
 def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
     settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
     with pytest.raises(RuntimeError, match="boom"):
-        process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]])
+        process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]],
+                      then=[ThenPipeline()])
     steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
     assert steps["failing"]["status"] == "error"
     assert "after_failing" not in steps                        # a failure stops the rest of its chain...
     assert steps["ok"]["status"] == steps["after_ok"]["status"] == "ok"   # ...but not the other chains
+    assert "then" not in steps                                 # and what comes after the chains does not run
+
+
+def test_process_video_runs_then_after_the_chains(tmp_path):
+    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
+    process_video("vid1", settings, [[OkPipeline()], [AfterOkPipeline()]], then=[ThenPipeline()])
+    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
+    assert steps["then"]["status"] == "ok"
+    assert steps["then"]["started_at"] >= max(steps["ok"]["started_at"], steps["after_ok"]["started_at"])

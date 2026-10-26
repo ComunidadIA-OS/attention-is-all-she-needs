@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from typing import TypeVar
 
-import litellm
 from pydantic import BaseModel
 
 from aiasn.settings import LlmSettings
@@ -27,6 +26,8 @@ class LiteLLMClient(LLMClient):
     def complete(self, system: str, user: str, schema: type[Schema]) -> Schema:
         if not self.token:
             raise RuntimeError("Missing LLM token: set OVH_AI_ENDPOINTS_ACCESS_TOKEN in the environment or .env")
+        import litellm   # optional dependency (ADR-002): only needed when the model is called
+
         response = litellm.completion(
             model=self.cfg.model, api_base=self.cfg.base_url, api_key=self.token, temperature=self.cfg.temperature,
             timeout=self.cfg.timeout, num_retries=self.cfg.retries, response_format=schema,

@@ -1,16 +1,12 @@
+import importlib.util
 import subprocess
 
-import cv2
-import numpy as np
 import pytest
-from ultralytics.utils import ASSETS
 
-from aiasn.model_adapters.voice_gender_classifier import VoiceGenderClassifier
-from aiasn.pipelines.audio import AudioPipeline
-from aiasn.pipelines.video import VideoPipeline
-from aiasn.settings import AudioSettings, VideoSettings, VoiceGenderClassifierSettings
+# Model tests need the model libraries; the CI only installs the light ones, so they are not collected there
+collect_ignore = [] if all(importlib.util.find_spec(m) for m in ("cv2", "torch")) else [
+    "test_model_adapters.py", "test_pipelines.py"]
 
-ZIDANE, BUS = ASSETS / "zidane.jpg", ASSETS / "bus.jpg"   # sample images shipped with Ultralytics: 2 and 4 people
 CAPTION, LOGO = "ENTREVISTA", "LOGO"
 # Shape of an OVHcloud transcription with diarization (verbose_json), for turns within `clip_with_cut`
 ASR_RESPONSE = {
@@ -22,27 +18,25 @@ ASR_RESPONSE = {
 }
 
 
-def text_image(text: str, scale: float) -> np.ndarray:
-    """Black text on a white box."""
-    (w, h), base = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, 2)
-    image = np.full((h + base + 16, w + 16, 3), 255, np.uint8)
-    cv2.putText(image, text, (8, h + 8), cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 2)
-    return image
-
-
 @pytest.fixture(scope="session")
-def video_pipeline() -> VideoPipeline:
+def video_pipeline():
     """Loaded once: the models take seconds to load."""
+    from aiasn.pipelines.video import VideoPipeline
+    from aiasn.settings import VideoSettings
     return VideoPipeline(VideoSettings())
 
 
 @pytest.fixture(scope="session")
-def voice_gender_classifier() -> VoiceGenderClassifier:
+def voice_gender_classifier():
+    from aiasn.model_adapters.voice_gender_classifier import VoiceGenderClassifier
+    from aiasn.settings import VoiceGenderClassifierSettings
     return VoiceGenderClassifier(VoiceGenderClassifierSettings())
 
 
 @pytest.fixture(scope="session")
-def audio_pipeline() -> AudioPipeline:
+def audio_pipeline():
+    from aiasn.pipelines.audio import AudioPipeline
+    from aiasn.settings import AudioSettings
     return AudioPipeline(AudioSettings())
 
 
@@ -52,6 +46,9 @@ def clip_with_cut(tmp_path_factory):
 
     A CAPTION is shown at the bottom centre and a LOGO in the top-left corner all along.
     """
+    import cv2
+    from media import BUS, ZIDANE, text_image
+
     folder = tmp_path_factory.mktemp("clips")
     path, caption, logo = folder / "clip.mp4", folder / "caption.png", folder / "logo.png"
     cv2.imwrite(str(caption), text_image(CAPTION, 1.0))
@@ -70,6 +67,8 @@ def clip_with_cut(tmp_path_factory):
 @pytest.fixture(scope="session")
 def talking_clip(video_pipeline, tmp_path_factory):
     """TalkNet's demo clip (one person talking among several), as 25 fps frames, 16 kHz audio and faces per frame."""
+    import cv2
+
     source = video_pipeline.cfg.active_speaker_detector.repo_dir / "demo" / "001.avi"
     if not source.is_file():
         pytest.skip("TalkNet demo clip not available")

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
+from aiasn.model_adapters.nlp.captions import Caption, CaptionExtractor, Captions
 from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
 from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
@@ -17,6 +18,7 @@ from aiasn.model_adapters.nlp import tone
 from aiasn.model_adapters.nlp.tone import (LlmToneClassifier, Tones, TurnTone, ZeroShotToneClassifier,
                                            make_tone_classifier)
 from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
+from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
 from aiasn.settings import NlpSettings, Settings, ToneSettings
@@ -57,9 +59,9 @@ MENTIONS = Mentions(mentions=[
     Mention(turn=99, literal="Luis", name="Luis", title=None, gender="M", referred_speaker="Speaker_0"),
 ])
 TOPICS = Topics(topics=[
-    Topic(turn=3, topic="science and research", evidence="Empecé gracias a Ada Lovelace"),
-    Topic(turn=0, topic="Diversity and equality ", evidence="mujeres en la ciencia"),
-    Topic(turn=42, topic="history", evidence="Ada Lovelace"),
+    Topic(turn=3, topic="science and research", topic_es="ciencia e investigación", evidence="Empecé gracias a Ada Lovelace"),
+    Topic(turn=0, topic="Diversity and equality ", topic_es="Diversidad e igualdad ", evidence="mujeres en la ciencia"),
+    Topic(turn=42, topic="history", topic_es="historia", evidence="Ada Lovelace"),
 ])
 REFERENCES = References(references=[
     Reference(turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
@@ -67,8 +69,10 @@ REFERENCES = References(references=[
     Reference(turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
 PIECE = Piece(format="interview", roles=[
-    SpeakerRole(speaker="Speaker_0", role="interviewer"), SpeakerRole(speaker="Speaker_1", role="expert "),
-    SpeakerRole(speaker="Speaker_1", role="testimony"), SpeakerRole(speaker="Speaker_5", role="host"),
+    SpeakerRole(speaker="Speaker_0", role="interviewer", role_es="entrevistador/a"),
+    SpeakerRole(speaker="Speaker_1", role="expert ", role_es="experta "),
+    SpeakerRole(speaker="Speaker_1", role="testimony", role_es="testimonio"),
+    SpeakerRole(speaker="Speaker_5", role="host", role_es="presentador/a"),
 ])
 IDEAS = Ideas(ideas=[
     Idea(idea="Ada Lovelace inspired her career", speakers=["Speaker_1"]),
@@ -117,12 +121,13 @@ def test_mentions_keep_only_speakers_of_the_conversation():
 
 def test_topics_take_the_speaker_of_their_turn():
     llm = FakeLLM({Topics: TOPICS})
-    t = TopicExtractor(llm, NlpSettings(topics_guide=["care", "technology"])).extract(TURNS)
-    assert list(t.columns) == ["turn", "speaker", "topic", "evidence", "found"]
+    t = TopicExtractor(llm, NlpSettings(topics_guide={"care": "cuidados", "technology": "tecnología"})).extract(TURNS)
+    assert list(t.columns) == ["turn", "speaker", "topic", "topic_es", "evidence", "found"]
+    assert t.topic_es.tolist() == ["ciencia e investigación", "Diversidad e igualdad"]
     assert t.turn.tolist() == [3, 0] and t.speaker.tolist() == [1, 0]   # turn 42 does not exist
     assert t.topic.tolist() == ["science and research", "Diversity and equality"]
     assert t.found.tolist() == [True, False]
-    assert "care, technology" in llm.calls[0][0]
+    assert "care (cuidados), technology (tecnología)" in llm.calls[0][0]
 
 
 def test_references_take_the_speaker_who_mentions_them():
@@ -134,10 +139,11 @@ def test_references_take_the_speaker_who_mentions_them():
 
 def test_roles_one_per_known_speaker():
     llm = FakeLLM({Piece: PIECE})
-    r = RoleExtractor(llm, NlpSettings(roles_guide=["host", "expert"])).extract(TURNS)
-    assert list(r.columns) == ["speaker", "role"]
+    r = RoleExtractor(llm, NlpSettings(roles_guide={"host": "presentador/a", "expert": "experto/a"})).extract(TURNS)
+    assert list(r.columns) == ["speaker", "role", "role_es"]
+    assert r.role_es.tolist() == ["entrevistador/a", "experta"]
     assert r.speaker.tolist() == [0, 1] and r.role.tolist() == ["interviewer", "expert"]   # first role wins; Speaker_5 unknown
-    assert "host, expert" in llm.calls[0][0]
+    assert "host (presentador/a), expert (experto/a)" in llm.calls[0][0]
 
 
 def test_ideas_one_row_per_contributing_speaker():
@@ -254,7 +260,7 @@ class FakeZeroShot:
 
 def zero_shot(monkeypatch, scores, **tone_settings) -> tuple[ZeroShotToneClassifier, FakeZeroShot]:
     fake = FakeZeroShot(scores)
-    monkeypatch.setattr(tone, "pipeline", lambda *args, **kw: fake)
+    monkeypatch.setattr(tone, "_load_pipeline", lambda *args, **kw: fake)
     cfg = NlpSettings(tone=ToneSettings(method="zero_shot", **tone_settings))
     return make_tone_classifier(FakeLLM({}), cfg), fake
 
@@ -291,6 +297,7 @@ def test_tone_classifier_defaults_to_the_llm():
 
 def test_zero_shot_tone_with_the_real_model():
     """Clear-cut turns with the multilingual NLI model (downloaded the first time)."""
+    pytest.importorskip("transformers")
     turns = pd.DataFrame({
         "turn": [0, 1, 2],
         "speaker": pd.array([0, 1, 0], dtype="Int64"),
@@ -300,3 +307,67 @@ def test_zero_shot_tone_with_the_real_model():
     })
     t = ZeroShotToneClassifier(FakeLLM({}), NlpSettings(tone=ToneSettings(method="zero_shot"))).extract(turns)
     assert t.tone.tolist() == ["technical_assertive", "collaborative", "dissent"]
+
+
+# Captions
+
+def ocr(frame: int, *lines: tuple[str, float]) -> list[dict]:
+    """bronze video_texts rows of one frame: (text, y1) per box."""
+    return [{"frame": frame, "shot": 0, "text": text, "conf": 0.9, "x1": 10.0, "y1": y, "x2": 200.0, "y2": y + 20}
+            for text, y in lines]
+
+
+TEXTS = pd.DataFrame(
+    ocr(100, ("TOP SECRET ROSIES", 300.0))
+    # The OCR splits name and title, reads them in any order and sometimes "_" for a space
+    + ocr(125, ("Investigador del ICMAT", 213.0), ("David_Ríos Insua", 180.0))
+    + ocr(150, ("David_Ríos Insua", 180.0), ("Investigador del ICMAT", 213.0))
+    + ocr(175, ("David Ríos Insua", 174.0), ("Investigador del ICMAT", 213.0)))
+CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT",
+                                      title_en="researcher", title_authority=True),
+                              Caption(block=9, name="Nadie", title=None, title_en=None, title_authority=None)])
+
+
+def test_captions_read_each_distinct_block_once():
+    llm = FakeLLM({Captions: CAPTIONS})
+    c = CaptionExtractor(llm).extract(TEXTS)
+    assert llm.calls[0][1] == "[0] TOP SECRET ROSIES\n[1] David_Ríos Insua | Investigador del ICMAT"
+    assert list(c.columns) == ["frame", "shot", "text", "name", "title", "title_en", "title_authority", "found"]
+    assert set(c.title_en) == {"researcher"}
+    assert c.title_authority.all()
+    assert c.frame.tolist() == [125, 150, 175]   # every frame showing the caption; not the programme's name
+    assert set(c.name) == {"David Ríos Insua"} and set(c.title) == {"Investigador del ICMAT"}
+    assert c.found.all()                         # "David_Ríos" counts as "David Ríos"
+
+
+def test_captions_without_texts_skip_the_model():
+    llm = FakeLLM({})
+    assert CaptionExtractor(llm).extract(TEXTS.iloc[:0]).empty and not llm.calls
+
+
+def test_captions_pipeline(tmp_path):
+    ctx = make_ctx(tmp_path)
+    ctx.lake.write("bronze", "video_texts", "vid1", TEXTS)
+    with captured_log() as lines:
+        CaptionsPipeline(ctx.settings.nlp, llm=FakeLLM({Captions: CAPTIONS}))(ctx)
+    assert len(ctx.lake.read("bronze", "video_captions", "vid1")) == 3
+    assert "1 people captioned in 3 frames, 0 names not found" in lines[0]
+
+
+class CaptionLLM(FakeLLM):
+    """Answers each group of blocks: a caption for the block with David's name, by its number in the group."""
+
+    def complete(self, system, user, schema):
+        self.calls.append((system, user, schema))
+        lines = user.splitlines()
+        return Captions(captions=[Caption(block=i, name="David Ríos Insua", title="Investigador del ICMAT",
+                                          title_en="researcher", title_authority=True)
+                                  for i, line in enumerate(lines) if "David" in line])
+
+
+def test_captions_in_parallel_groups_of_blocks():
+    llm = CaptionLLM({})
+    c = CaptionExtractor(llm, blocks_per_call=1).extract(TEXTS)
+    assert sorted(call[1] for call in llm.calls) == ["[0] David_Ríos Insua | Investigador del ICMAT",
+                                                       "[0] TOP SECRET ROSIES"]   # one call per block
+    assert c.frame.tolist() == [125, 150, 175]   # each answer mapped back to its own block

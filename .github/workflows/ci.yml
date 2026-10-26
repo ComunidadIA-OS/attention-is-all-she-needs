@@ -29,7 +29,7 @@ jobs:
       - name: Install lightweight deterministic core dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "pandas>=2.2.3" "pydantic>=2.0.0" "pytest>=7.0.0"
+          pip install "pandas>=2.2.3" "pydantic>=2.0.0" "pydantic-settings>=2.16.1" "pyarrow>=26.0.0" "pytest>=7.0.0"
 
       - name: Run pytest test suite
         run: |

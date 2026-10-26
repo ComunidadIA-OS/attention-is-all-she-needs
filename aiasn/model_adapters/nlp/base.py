@@ -1,11 +1,11 @@
 '''Shared pieces of the NLP tasks: the transcript the model reads and the checks on what it answers'''
 
 import re
-import unicodedata
 from abc import ABC, abstractmethod
 
 import pandas as pd
 
+from aiasn.core.text import normalize
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.settings import NlpSettings
 
@@ -27,6 +27,11 @@ class NlpTask(ABC):
     def _extract(self, turns: pd.DataFrame) -> pd.DataFrame: ...
 
 
+def guide(labels: dict[str, str]) -> str:
+    """A bilingual guide for a prompt: `english (español), ...`."""
+    return ", ".join(f"{en} ({es})" for en, es in labels.items())
+
+
 def speaker_label(speaker: int) -> str:
     return f"Speaker_{speaker}"
 
@@ -44,10 +49,5 @@ def transcript(turns: pd.DataFrame) -> str:
 
 def found(fragment: str | None, text: str) -> bool:
     """Whether a fragment quoted by the model is really in the text (ignoring case, accents and punctuation)."""
-    fragment = _normalize(fragment or "")
-    return bool(fragment) and fragment in _normalize(text)
-
-
-def _normalize(text: str) -> str:
-    text = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()
-    return " ".join(re.sub(r"[^\w\s]", " ", text).split())
+    fragment = normalize(fragment or "")
+    return bool(fragment) and fragment in normalize(text)

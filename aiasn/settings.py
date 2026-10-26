@@ -118,20 +118,48 @@ class NlpSettings(BaseModel):
     tone: ToneSettings = Field(default_factory=ToneSettings)
     device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
+    caption_blocks_per_call: int = Field(4, gt=0)  # OCR blocks per captions call; the calls go in parallel
     # Guide for the model, which may add new topics
-    topics_guide: list[str] = [
+    # English (key, word2vec) → Spanish (UI). One word per topic, so that word2vec has it; more only when needed
+    topics_guide: dict[str, str] = {
         # stereotyped as "feminine" or centred on the person
-        "care", "family and motherhood", "work-life balance", "love life and relationships", "physical appearance",
-        "being a woman / gender experience", "diversity and equality",
+        "care": "cuidados", "family": "familia", "motherhood": "maternidad",
+        "work-life balance": "conciliación",   # no single word for it: no word2vec bias
+        "relationships": "relaciones y vida sentimental", "appearance": "aspecto físico", "womanhood": "ser mujer",
+        "diversity": "diversidad", "equality": "igualdad",
         # professional or stereotyped as "masculine"
-        "technology", "science and research", "finance and economy", "leadership and management",
-        "their work or field", "politics", "sports",
+        "technology": "tecnología", "science": "ciencia", "economy": "economía", "leadership": "liderazgo",
+        "expertise": "su especialidad", "politics": "política", "sports": "deporte",
         # others
-        "education", "health", "history",
-    ]
-    # Guide for the model, which may add new roles
-    roles_guide: list[str] = ["host", "interviewer", "expert", "voice-over narrator", "testimony", "character", "audience"]
+        "education": "educación", "health": "salud", "history": "historia",
+    }
+    # Guide for the model, which may add new roles; English → Spanish
+    roles_guide: dict[str, str] = {
+        "host": "presentador/a", "interviewer": "entrevistador/a", "expert": "experto/a",
+        "voice-over narrator": "narrador/a en off", "testimony": "testimonio", "character": "personaje",
+        "audience": "público"}
     max_ideas: int = Field(10, gt=0)               # key ideas of the piece
+
+
+### SETTINGS FOR SILVER LAYER
+
+class BiasSettings(BaseModel):
+    """w2vNEWS (Google News word2vec), for the gender bias of topics and titles (Bolukbasi et al. 2016)."""
+    model_path: Path = Path("~/gensim-data/word2vec-google-news-300/word2vec-google-news-300.gz")
+    vocab_limit: int = Field(500_000, gt=0)        # most frequent words loaded; terms outside them get no score
+
+
+class SilverSettings(BaseModel):
+    gender_threshold: float = Field(0.80, ge=0.5, le=1)   # below it, no_determinado (ADR-0005); also used by the fusion
+    max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
+    speaking_threshold: float = 0.0                        # speaking_score (TalkNet) above it: speaking
+    speaking_window_s: float = Field(1.0, ge=0)            # rolling majority of the speaking state; 0: no smoothing
+    # A speaker is a person on screen if both talk at the same time for at least this long and this share of their speech
+    min_link_s: float = Field(1.0, ge=0)
+    min_link_share: float = Field(0.3, ge=0, le=1)
+    name_similarity: float = Field(0.8, ge=0, le=1)        # two spellings of a word count as the same name from here
+    authority_roles: list[str] = ["host", "expert", "voice-over narrator"]   # roles that speak from authority
+    caption_grants_authority: bool = True                  # a caption title showing authority does too, whatever the role
 
 
 ### GENERAL SETTINGS
@@ -144,3 +172,5 @@ class Settings(BaseSettings):
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     nlp: NlpSettings = Field(default_factory=NlpSettings)
+    silver: SilverSettings = Field(default_factory=SilverSettings)
+    bias: BiasSettings = Field(default_factory=BiasSettings)

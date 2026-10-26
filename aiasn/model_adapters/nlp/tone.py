@@ -3,9 +3,7 @@
 from typing import Literal
 
 import pandas as pd
-import torch
 from pydantic import BaseModel, Field
-from transformers import pipeline
 
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.model_adapters.nlp.base import NlpTask, found, transcript
@@ -69,8 +67,7 @@ class ZeroShotToneClassifier(NlpTask):
 
     def __init__(self, llm: LLMClient, cfg: NlpSettings):
         super().__init__(llm, cfg)
-        device = 0 if cfg.device == "cuda" or (cfg.device == "auto" and torch.cuda.is_available()) else -1
-        self.model = pipeline("zero-shot-classification", model=cfg.tone.zero_shot_model, device=device)
+        self.model = _load_pipeline(cfg.tone.zero_shot_model, cfg.device)
 
     def _extract(self, turns: pd.DataFrame) -> pd.DataFrame:
         """One row per turn: the first tone (in priority order) that reaches `min_score`, NA if none does.
@@ -90,6 +87,15 @@ class ZeroShotToneClassifier(NlpTask):
             chosen = next((tone for tone in HYPOTHESES if scores[tone] >= self.cfg.tone.min_score), None)
             rows.append([t.turn, t.speaker, chosen, scores[chosen] if chosen else max(scores.values()), None, None])
         return pd.DataFrame(rows, columns=self.columns).astype(DTYPES)
+
+
+def _load_pipeline(model: str, device: str):
+    """Zero-shot classification pipeline. Optional dependencies (ADR-002): only imported when this method is chosen."""
+    import torch
+    from transformers import pipeline
+
+    gpu = device == "cuda" or (device == "auto" and torch.cuda.is_available())
+    return pipeline("zero-shot-classification", model=model, device=0 if gpu else -1)
 
 
 def make_tone_classifier(llm: LLMClient, cfg: NlpSettings) -> NlpTask:

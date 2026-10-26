@@ -144,6 +144,12 @@ class NlpSettings(BaseModel):
 
 ### SETTINGS FOR SILVER LAYER
 
+class BiasSettings(BaseModel):
+    """w2vNEWS (Google News word2vec), for the gender bias of topics and titles (Bolukbasi et al. 2016)."""
+    model_path: Path = Path("~/gensim-data/word2vec-google-news-300/word2vec-google-news-300.gz")
+    vocab_limit: int = Field(500_000, gt=0)        # most frequent words loaded; terms outside them get no score
+
+
 class SilverSettings(BaseModel):
     gender_threshold: float = Field(0.80, ge=0.5, le=1)   # below it, no_determinado (ADR-0005); also used by the fusion
     max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
@@ -168,3 +174,4 @@ class Settings(BaseSettings):
     audio: AudioSettings = Field(default_factory=AudioSettings)
     nlp: NlpSettings = Field(default_factory=NlpSettings)
     silver: SilverSettings = Field(default_factory=SilverSettings)
+    bias: BiasSettings = Field(default_factory=BiasSettings)

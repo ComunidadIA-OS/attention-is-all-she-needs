@@ -12,8 +12,9 @@ from aiasn.core.silver.identity import participant_of
 from aiasn.core.text import normalize
 from aiasn.core.transform import Transform
 
+# `title_authority`: whether the caption title shows expert or institutional authority (captions only);
 # `said_by` and `turn`: who mentions the participant, and when (mentions only)
-NAMES = ["participant_id", "name", "title", "source", "tiempo_i", "seconds", "said_by", "turn"]
+NAMES = ["participant_id", "name", "title", "title_authority", "source", "tiempo_i", "seconds", "said_by", "turn"]
 CAPTION, MENTION, NONE = "rotulo", "mencion", "ninguna"
 
 
@@ -59,7 +60,9 @@ class NamesSilver(Transform):
         new = (c.key != c.key.shift()) | (c.frame - c.frame.shift() > step)
         spans = c.groupby(new.cumsum()).agg(name=("name", lambda n: n.mode()[0]), first=("frame", "min"),
                                             last=("frame", "max"),
-                                            title=("title", lambda t: max(t.dropna(), key=len, default=None)))
+                                            title=("title", lambda t: max(t.dropna(), key=len, default=None)),
+                                            title_authority=("title_authority", lambda a: a.dropna().any()
+                                                             if a.notna().any() else pd.NA))
         return spans.assign(tiempo_i=spans["first"] / fps, tiempo_f=(spans["last"] + step) / fps)
 
     def _from_captions(self, captions: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
@@ -84,7 +87,8 @@ class NamesSilver(Transform):
                     owners[span] = ranked.index[0]
         participant = spans.span.map({span: f"p{int(person)}" for span, person in owners.items()})
         return pd.DataFrame({"participant_id": participant, "name": spans.name, "title": spans.title,
-                             "source": CAPTION, "tiempo_i": spans.tiempo_i, "seconds": spans.tiempo_f - spans.tiempo_i,
+                             "title_authority": spans.title_authority.astype("boolean"), "source": CAPTION,
+                             "tiempo_i": spans.tiempo_i, "seconds": spans.tiempo_f - spans.tiempo_i,
                              "said_by": None, "turn": pd.array([pd.NA] * len(spans), dtype="Int64")})
 
     @staticmethod
@@ -94,7 +98,8 @@ class NamesSilver(Transform):
         m = mentions[mentions.found & (mentions.name.notna() | mentions.title.notna())]
         of = participant_of(links)
         return pd.DataFrame({"participant_id": [of.get(int(s), f"v{int(s)}") for s in m.referred_speaker],
-                             "name": m.name.values, "title": m.title.values, "source": MENTION,
+                             "name": m.name.values, "title": m.title.values,
+                             "title_authority": pd.array([pd.NA] * len(m), dtype="boolean"), "source": MENTION,
                              "tiempo_i": m.turn.map(turns.set_index("turn").tiempo_i).values, "seconds": np.nan,
                              "said_by": [of.get(int(s)) if pd.notna(s) else None for s in m.speaker],
                              "turn": pd.array(m.turn.values, dtype="Int64")})
@@ -111,12 +116,15 @@ class NamesSilver(Transform):
                 best = captions.seconds.groupby(key).sum().idxmax()
                 chosen = captions[key == best]
                 title = max(chosen.title.dropna(), key=len, default=None)
-                names[participant] = (chosen.name.mode()[0], title, CAPTION)
+                authority = chosen.title_authority.dropna()
+                names[participant] = (chosen.name.mode()[0], title, CAPTION, bool(authority.any()) if len(authority)
+                                      else pd.NA)
             else:
                 named, titled = ev.name.dropna(), ev.title.dropna()
                 names[participant] = (named.mode()[0] if len(named) else None,
-                                      titled.mode()[0] if len(titled) else None, MENTION)
-        people = people.drop(columns=["name", "title", "name_source"], errors="ignore")
-        chosen = [names.get(p, (None, None, NONE)) for p in people.participant_id]
+                                      titled.mode()[0] if len(titled) else None, MENTION, pd.NA)
+        people = people.drop(columns=["name", "title", "name_source", "title_authority"], errors="ignore")
+        chosen = [names.get(p, (None, None, NONE, pd.NA)) for p in people.participant_id]
         return people.assign(name=[c[0] for c in chosen], title=[c[1] for c in chosen],
-                             name_source=[c[2] for c in chosen])
+                             name_source=[c[2] for c in chosen],
+                             title_authority=pd.array([c[3] for c in chosen], dtype="boolean"))

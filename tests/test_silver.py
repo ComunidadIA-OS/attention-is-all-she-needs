@@ -343,17 +343,18 @@ def test_audio_silver_without_turn_ids():
 
 # Names
 
-def captions(name: str, frames, titles) -> list[dict]:
+def captions(name: str, frames, titles, authority=None) -> list[dict]:
     """bronze video_captions rows of one caption read every second (fps 25, ocr_fps 1)."""
-    return [{"frame": f, "shot": 0, "text": "", "name": name, "title": t, "found": True} for f, t in zip(frames, titles)]
+    return [{"frame": f, "shot": 0, "text": "", "name": name, "title": t, "title_authority": authority, "found": True}
+            for f, t in zip(frames, titles)]
 
 
 CAPTIONS = pd.DataFrame(
     # Shown 1-10 s while persons 1 (speaking) and 2 (silent) are on screen; it grows line by line
-    captions("Marta Ruiz", range(25, 250, 25), ["doctora"] * 4 + ["doctora, investigadora del CSIC"] * 5)
+    captions("Marta Ruiz", range(25, 250, 25), ["doctora"] * 4 + ["doctora, investigadora del CSIC"] * 5, True)
     # Shown 21-29 s while only person 3 is on screen; OCR noise in one read
-    + captions("Pere Vila", range(525, 725, 25), ["director"] * 8)
-    + captions("Pere_Vila", [725], ["director"])
+    + captions("Pere Vila", range(525, 725, 25), ["vecino del barrio"] * 8, False)
+    + captions("Pere_Vila", [725], ["vecino del barrio"], False)
     # Shown at 40 s with nobody on screen
     + captions("Anna Puig", [1000], [None]))
 NAMES_PRESENCE = spans((1, 0, 10, True), (2, 0, 10, False), (3, 20, 30, False))
@@ -377,7 +378,8 @@ def names(captions_table=CAPTIONS) -> dict[str, pd.DataFrame]:
 
 def test_person_names_keeps_every_evidence():
     ev = names()["person_names"]
-    assert list(ev.columns) == ["participant_id", "name", "title", "source", "tiempo_i", "seconds", "said_by", "turn"]
+    assert list(ev.columns) == ["participant_id", "name", "title", "title_authority", "source", "tiempo_i", "seconds",
+                                "said_by", "turn"]
     caps = ev[ev.source == "rotulo"].set_index("name")
     assert caps.participant_id["Marta Ruiz"] == "p1"          # two people on screen: the one speaking
     assert caps.title["Marta Ruiz"] == "doctora, investigadora del CSIC"   # the most complete title
@@ -389,12 +391,17 @@ def test_person_names_keeps_every_evidence():
     assert mentions.said_by.tolist() == ["v1", "p1", "p1"] and mentions.turn.tolist() == [0, 1, 1]
     assert mentions.tiempo_i.tolist() == [0.0, 4.0, 4.0]
     assert caps.said_by.isna().all() and caps.turn.isna().all()
+    assert caps.title_authority["Marta Ruiz"] and not caps.title_authority["Pere Vila"]
+    assert pd.isna(caps.title_authority["Anna Puig"]) and mentions.title_authority.isna().all()
 
 
 def test_people_get_the_caption_name_before_the_mention():
     people = names()["people"].set_index("participant_id")
     assert people.name.fillna("").tolist() == ["Marta Ruiz", "", "Pere Vila", "Luis"]
-    assert people.title.fillna("").tolist() == ["doctora, investigadora del CSIC", "", "director", "presentador"]
+    assert people.title.fillna("").tolist() == ["doctora, investigadora del CSIC", "", "vecino del barrio",
+                                                "presentador"]
+    assert people.title_authority.tolist()[0] is True and people.title_authority.tolist()[2] is False
+    assert people.title_authority.isna().tolist() == [False, True, False, True]   # no caption title: unknown
     assert people.name_source.tolist() == ["rotulo", "ninguna", "rotulo", "mencion"]
     assert people.genero.tolist() == ["mujer"] * 4            # the identity columns are kept
 

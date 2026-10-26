@@ -10,13 +10,15 @@ from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.core.text import normalize
 from aiasn.model_adapters.nlp.base import found
 
-COLUMNS = ["frame", "shot", "text", "name", "title", "found"]
+COLUMNS = ["frame", "shot", "text", "name", "title", "title_authority", "found"]
 
 
 class Caption(BaseModel):
     block: int = Field(description="Número del bloque, como en [n]")
     name: str = Field(description="Nombre de la persona tal como aparece, corrigiendo solo errores evidentes del OCR")
     title: str | None = Field(description="Cargo, profesión o institución que acompaña al nombre; null si no hay")
+    title_authority: bool | None = Field(description="true si el cargo indica conocimiento experto o autoridad "
+                                                     "profesional o institucional; false si no; null si no hay cargo")
 
 
 class Captions(BaseModel):
@@ -28,7 +30,11 @@ Cada línea es un bloque: [número de bloque] los textos de un fotograma, de arr
 Indica qué bloques son el rótulo de una persona: su nombre y, si aparece, su cargo, profesión o institución.
 Ignora titulares, nombres de programas o secciones, logotipos, marcas y cualquier otro texto que no presente a una persona.
 Para cada rótulo devuelve: block, name (tal como aparece, corrigiendo solo errores evidentes del OCR como "_" en vez de
-un espacio) y title (null si no hay)."""
+un espacio), title (null si no hay) y title_authority:
+- true si el cargo indica conocimiento experto o autoridad profesional o institucional (catedrática, investigador,
+  directora, médica, ingeniero, pedagoga, ministra, presidenta de una asociación...);
+- false si no (estudiante, vecino, paciente, aficionada, familiar...);
+- null si no hay cargo."""
 
 
 class CaptionExtractor:
@@ -50,6 +56,6 @@ class CaptionExtractor:
         user = "\n".join(f"[{i}] {text}" for i, text in enumerate(blocks.text))
         answer = self.llm.complete(PROMPT, user, Captions)
         by_key = {blocks.key[c.block]: c for c in answer.captions if 0 <= c.block < len(blocks)}
-        rows = [[f.frame, f.shot, f.text, c.name, c.title, found(c.name, f.text)]
+        rows = [[f.frame, f.shot, f.text, c.name, c.title, c.title_authority, found(c.name, f.text)]
                 for f in frames.itertuples() if (c := by_key.get(f.key))]
-        return pd.DataFrame(rows, columns=COLUMNS).astype({"frame": int, "found": bool})
+        return pd.DataFrame(rows, columns=COLUMNS).astype({"frame": int, "title_authority": "boolean", "found": bool})

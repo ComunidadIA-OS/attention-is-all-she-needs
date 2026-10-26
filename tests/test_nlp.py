@@ -319,15 +319,17 @@ TEXTS = pd.DataFrame(
     + ocr(125, ("Investigador del ICMAT", 213.0), ("David_Ríos Insua", 180.0))
     + ocr(150, ("David_Ríos Insua", 180.0), ("Investigador del ICMAT", 213.0))
     + ocr(175, ("David Ríos Insua", 174.0), ("Investigador del ICMAT", 213.0)))
-CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT"),
-                              Caption(block=9, name="Nadie", title=None)])
+CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT",
+                                      title_authority=True),
+                              Caption(block=9, name="Nadie", title=None, title_authority=None)])
 
 
 def test_captions_read_each_distinct_block_once():
     llm = FakeLLM({Captions: CAPTIONS})
     c = CaptionExtractor(llm).extract(TEXTS)
     assert llm.calls[0][1] == "[0] TOP SECRET ROSIES\n[1] David_Ríos Insua | Investigador del ICMAT"
-    assert list(c.columns) == ["frame", "shot", "text", "name", "title", "found"]
+    assert list(c.columns) == ["frame", "shot", "text", "name", "title", "title_authority", "found"]
+    assert c.title_authority.all()
     assert c.frame.tolist() == [125, 150, 175]   # every frame showing the caption; not the programme's name
     assert set(c.name) == {"David Ríos Insua"} and set(c.title) == {"Investigador del ICMAT"}
     assert c.found.all()                         # "David_Ríos" counts as "David Ríos"

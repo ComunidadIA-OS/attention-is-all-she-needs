@@ -89,7 +89,8 @@ PEOPLE = pd.DataFrame({"participant_id": ["p1", "p2", "v1"], "genero": ["mujer",
 NLP_SILVER = {
     "silver/person_names": pd.DataFrame({"participant_id": ["p1", "p1", "p2", "p1"], "name": ["Marta", "Marta", "Luis", "Marta Ruiz"],
                                          "title": ["doctora", None, "director", "Investigadora"],
-                                         "source": ["mencion", "mencion", "mencion", "rotulo"]}),
+                                         "source": ["mencion", "mencion", "mencion", "rotulo"],
+                                         "said_by": ["v1", "v1", "p1", None]}),
     "silver/nlp_roles": pd.DataFrame({"participant_id": ["p1", "v1"], "role": ["testimony", "voice-over narrator"],
                                       "role_es": ["testimonio", "narrador/a en off"],
                                       "authority": [True, True], "authority_source": ["rotulo", "rol"]}),
@@ -183,8 +184,14 @@ GRAPH_PEOPLE = pd.DataFrame({
     "name_source": ["rotulo", "ninguna", "ninguna"], "title_authority": pd.array([True, pd.NA, pd.NA], "boolean")})
 
 
+GRAPH_NAMES = pd.DataFrame({   # silver person_names
+    "participant_id": ["p1", "p1", "p1", "p2"], "name": ["Marta Ruiz", "Marta", "Marta", "Luis"],
+    "title": ["Investigadora", "doctora", None, None], "source": ["rotulo", "mencion", "mencion", "mencion"],
+    "said_by": [None, "v1", "v1", "p2"], "turn": I(pd.NA, 1, 1, 2)})
+
+
 def graph() -> dict[str, pd.DataFrame]:
-    tables = SILVER | NLP_SILVER | {"silver/people": GRAPH_PEOPLE}
+    tables = SILVER | NLP_SILVER | {"silver/people": GRAPH_PEOPLE, "silver/person_names": GRAPH_NAMES}
     return GraphGold(Settings()).run(tables)
 
 
@@ -198,3 +205,27 @@ def test_graph_nodes_participants_and_topics():
     assert nodes.loc["p1", "role_es"] == "testimonio" and nodes.loc["p1", "authority_source"] == "rotulo"
     assert nodes.authority.tolist()[:3] == [True, pd.NA, True]                     # p2 never speaks: no role
     assert "age" not in nodes and "tone" not in nodes
+
+
+def test_graph_edges():
+    edges = graph()["graph_edges"]
+    assert list(edges.columns) == ["source", "target", "tipo", "peso", "peso_extra"]
+    e = edges.set_index(["tipo", "source", "target"])
+    # The narrator names Marta twice, once with a title; Luis naming himself is no edge
+    assert e.loc[("menciona", "v1", "p1")].tolist() == [2.0, 1.0] and ("menciona", "p2", "p2") not in e.index
+    # Marta, the narrator, Marta again
+    assert e.loc[("turno", "p1", "v1"), "peso"] == 1 and e.loc[("turno", "v1", "p1"), "peso"] == 1
+    # On screen together from 0 to 30 s (Marta's two spans and Luis's one)
+    assert e.loc[("comparte_plano", "p1", "p2"), "peso"] == pytest.approx(30.0)
+    # Marta talks about two topics in two turns; the narrator about one: no topic shared
+    assert sorted(e.loc["habla_de"].index.tolist()) == [("p1", "tema:care"), ("p1", "tema:technology"),
+                                                         ("v1", "tema:history")]
+    assert set(edges.peso_extra.dropna().index) <= set(edges.index[edges.tipo == "menciona"])
+
+
+def test_shared_topic_joins_two_participants():
+    topics = NLP_SILVER["silver/nlp_topics"].assign(topic=["technology", "care", "technology"])
+    tables = SILVER | NLP_SILVER | {"silver/people": GRAPH_PEOPLE, "silver/person_names": GRAPH_NAMES,
+                                    "silver/nlp_topics": topics}
+    e = GraphGold(Settings()).run(tables)["graph_edges"]
+    assert set(e[(e.tipo == "habla_de") & (e.target == "tema:technology")].source) == {"p1", "v1"}

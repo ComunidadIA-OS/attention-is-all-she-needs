@@ -3,13 +3,18 @@
 
 """The graph of a video for the front: the participants and the topics they talk about, and how they relate."""
 
+from collections import Counter
+
+import numpy as np
 import pandas as pd
 
+from aiasn.core.silver.identity import participant_of
 from aiasn.core.transform import Transform
 
 PARTICIPANT, TOPIC = "participante", "tema"
 NODES = ["node_id", "tipo", "label", "clave", "size", "genero", "genero_fuente", "role", "role_es", "authority",
          "authority_source", "title", "screen_time_s", "speech_time_s", "area", "centrality"]
+EDGES = ["source", "target", "tipo", "peso", "peso_extra"]   # peso_extra: mentions with a title (menciona only)
 
 
 def topic_node(topic: str) -> str:
@@ -18,13 +23,19 @@ def topic_node(topic: str) -> str:
 
 class GraphGold(Transform):
     name, layer = "graph", "gold"
-    inputs = ["silver/people", "silver/nlp_roles", "silver/nlp_topics"]
-    outputs = ["graph_nodes"]
+    inputs = ["silver/people", "silver/nlp_roles", "silver/nlp_topics", "silver/person_names", "silver/audio_turns",
+              "silver/speaker_person", "silver/video_presence"]
+    outputs = ["graph_nodes", "graph_edges"]
 
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         nodes = pd.concat([self._participants(tables["silver/people"], tables["silver/nlp_roles"]),
                            self._topics(tables["silver/nlp_topics"])], ignore_index=True)
-        return {"graph_nodes": nodes[NODES].astype({"authority": "boolean"})}   # NA: not speaking, no role
+        edges = pd.concat([self._mentions(tables["silver/person_names"]),
+                           self._turns(tables["silver/audio_turns"], tables["silver/speaker_person"]),
+                           self._shared_screen(tables["silver/video_presence"]),
+                           self._talks_about(tables["silver/nlp_topics"])], ignore_index=True)
+        return {"graph_nodes": nodes[NODES].astype({"authority": "boolean"}),   # NA: not speaking, no role
+                "graph_edges": edges[EDGES].astype({"peso": float, "peso_extra": float})}
 
     @staticmethod
     def _participants(people: pd.DataFrame, roles: pd.DataFrame) -> pd.DataFrame:
@@ -46,3 +57,40 @@ class GraphGold(Transform):
         t = topics.groupby("topic").agg(label=("topic_es", "first"), size=("turn", "size")).reset_index()
         return pd.DataFrame({"node_id": t.topic.map(topic_node), "tipo": TOPIC, "label": t.label, "clave": t.topic,
                              "size": t["size"].astype(float)})
+
+    @staticmethod
+    def _mentions(names: pd.DataFrame) -> pd.DataFrame:
+        """A names B: how many times, and how many of them with a title. Introducing oneself is not an edge."""
+        m = names[(names.source == "mencion") & names.said_by.notna() & names.participant_id.notna()]
+        m = m[m.said_by != m.participant_id]
+        g = (m.groupby(["said_by", "participant_id"])
+             .agg(peso=("source", "size"), peso_extra=("title", lambda t: t.notna().sum())).reset_index())
+        return g.rename(columns={"said_by": "source", "participant_id": "target"}).assign(tipo="menciona")
+
+    @staticmethod
+    def _turns(turns: pd.DataFrame, links: pd.DataFrame) -> pd.DataFrame:
+        """B speaks right after A: how many times. Consecutive turns of the same participant are one."""
+        of = participant_of(links)
+        order = [of.get(int(s)) if pd.notna(s) else None for s in turns.sort_values("tiempo_i").speaker_id]
+        passes = Counter((a, b) for a, b in zip(order, order[1:]) if a and b and a != b)
+        return pd.DataFrame([(a, b, "turno", n, np.nan) for (a, b), n in passes.items()], columns=EDGES)
+
+    @staticmethod
+    def _shared_screen(presence: pd.DataFrame) -> pd.DataFrame:
+        """A and B on screen at the same time: for how many seconds. Undirected (source < target)."""
+        pairs = presence.merge(presence, how="cross", suffixes=("_a", "_b"))
+        pairs = pairs[pairs.person_id_a < pairs.person_id_b]
+        seconds = (np.minimum(pairs.tiempo_f_a, pairs.tiempo_f_b) - np.maximum(pairs.tiempo_i_a, pairs.tiempo_i_b))
+        pairs = pairs.assign(peso=seconds.clip(lower=0))
+        g = pairs[pairs.peso > 0].groupby(["person_id_a", "person_id_b"]).peso.sum().reset_index()
+        return pd.DataFrame({"source": "p" + g.person_id_a.astype(int).astype(str),
+                             "target": "p" + g.person_id_b.astype(int).astype(str), "tipo": "comparte_plano",
+                             "peso": g.peso, "peso_extra": np.nan})
+
+    @staticmethod
+    def _talks_about(topics: pd.DataFrame) -> pd.DataFrame:
+        """A participant talks about a topic: in how many turns. Topics shared by two participants join them."""
+        g = (topics.dropna(subset=["participant_id"]).groupby(["participant_id", "topic"]).size()
+             .reset_index(name="peso"))
+        return pd.DataFrame({"source": g.participant_id, "target": g.topic.map(topic_node), "tipo": "habla_de",
+                             "peso": g.peso, "peso_extra": np.nan})

@@ -294,3 +294,32 @@ def test_compatibilidad_directa_tablas_bronze_rocio():
     assert kpis["pct_voz_mujer"] == 100.0
     assert kpis["test_bechdel_digital"]["supera_bechdel_digital"] is True
     assert kpis["test_bechdel_digital"]["transiciones_mujer_a_mujer"] == 1
+
+
+def _persona(track_id: str, genero: str, inicio: float, fin: float) -> dict:
+    """Fila del contrato de video (silver `fusion_video`)."""
+    return {"tiempo_i": inicio, "tiempo_f": fin, "track_id": track_id, "genero_visual": genero, "prob_genero": 0.95,
+            "rotulo_nombre": None, "rotulo_cargo": None, "area": 0.3, "centrality": 0.8}
+
+
+def test_identidad_de_silver_elige_al_hablante_aunque_haya_dos_del_mismo_genero():
+    """Con la identidad resuelta (`track_id` en el audio) no se adivina por genero: habla la segunda mujer."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 0, "transcripcion": "Hola",
+                              "genero_inferido": "mujer", "track_id": "person_2"}])
+    df_video = pd.DataFrame([_persona("person_1", "mujer", 0.0, 10.0), _persona("person_2", "mujer", 0.0, 10.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    c1 = ev[ev.cuadrante == 1]
+    assert c1.track_id.tolist() == ["person_2"]
+    assert ev[ev.cuadrante == 2].track_id.tolist() == ["person_1"]
+
+
+def test_identidad_de_silver_voz_en_off_mientras_se_ve_a_otras_personas():
+    """Si quien habla no esta en pantalla, su turno es Cuadrante 3 y quienes se ven, Cuadrante 2."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 1, "transcripcion": "Narracion",
+                              "genero_inferido": "hombre", "track_id": None}])
+    df_video = pd.DataFrame([_persona("person_1", "hombre", 0.0, 10.0), _persona("person_2", "mujer", 2.0, 8.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    assert (ev.cuadrante == 1).sum() == 0
+    c3 = ev[ev.cuadrante == 3]
+    assert len(c3) == 1 and c3.duracion_s.iloc[0] == 10.0 and c3.hablante_id.iloc[0] == 1
+    assert sorted(ev[ev.cuadrante == 2].track_id) == ["person_1", "person_2"]

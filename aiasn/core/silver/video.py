@@ -76,12 +76,18 @@ class VideoSilver(Transform):
 
 
 def fusion_video(people: pd.DataFrame, presence: pd.DataFrame, names: pd.DataFrame | None = None) -> pd.DataFrame:
-    """Video table in the contract of the fusion (`cruzar_intervalos_multimodales`): one row per span of a person on
-    screen, with the gender, area and centrality of the person and, when known, the name and title of their caption.
+    """Video table in the contract of the fusion (`cruzar_intervalos_multimodales`): one row per stretch of a person
+    on screen, with the gender, area and centrality of the person and, when known, the name and title of their caption.
 
+    The fusion does not tell speaking from silent spans, so contiguous spans are one stretch (`hablando` if any is).
     `names` has `person_id`, `rotulo_nombre` and `rotulo_cargo`. `prob_genero` is the probability of the decided gender,
     so the fusion's own threshold keeps the same decision.
     """
+    spans = presence.sort_values(["person_id", "tiempo_i"])
+    new = ~(spans.person_id.eq(spans.person_id.shift()) & np.isclose(spans.tiempo_i, spans.tiempo_f.shift()))
+    presence = (spans.groupby(new.cumsum()).agg(person_id=("person_id", "first"), tiempo_i=("tiempo_i", "min"),
+                                                tiempo_f=("tiempo_f", "max"), hablando=("hablando", "any"))
+                .reset_index(drop=True).astype({"person_id": "Int64"}))
     by_person = people.set_index("person_id")
     contract = presence.assign(
         track_id="person_" + presence.person_id.astype(str),

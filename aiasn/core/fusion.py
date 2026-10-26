@@ -404,21 +404,45 @@ def cruzar_intervalos_multimodales(
             )
         else:
             # Determinar cual de los tracks solapados es el hablante activo
-            # Prioridad: coincidencia de genero y rotulo o mayor solape
-            track_hablante = None
-            for v, solape in tracks_solapados:
-                v_gen = aplicar_umbral_etico(
-                    v.get("genero_visual", "unknown"),
-                    v.get("prob_genero", 1.0),
-                    umbral_etico,
-                )
-                if v_gen == a_genero or a_genero == "no_determinado":
-                    track_hablante = (v, solape)
-                    break
+            if "track_id" in a:
+                # Identidad resuelta en silver (voz <-> persona): el track de quien habla, o ninguno si no esta en pantalla
+                track_hablante = next(((v, s) for v, s in tracks_solapados if v.get("track_id") == a["track_id"]), None)
+            else:
+                # Sin identidad: prioridad por coincidencia de genero o mayor solape
+                track_hablante = None
+                for v, solape in tracks_solapados:
+                    v_gen = aplicar_umbral_etico(
+                        v.get("genero_visual", "unknown"),
+                        v.get("prob_genero", 1.0),
+                        umbral_etico,
+                    )
+                    if v_gen == a_genero or a_genero == "no_determinado":
+                        track_hablante = (v, solape)
+                        break
 
-            if track_hablante is None:
-                track_hablante = tracks_solapados[0]
+                if track_hablante is None:
+                    track_hablante = tracks_solapados[0]
 
+        if tracks_solapados and track_hablante is None:
+            # Quien habla no esta en pantalla: Cuadrante 3; quienes se ven son Cuadrante 2 (bucle de abajo)
+            registros_eventos.append(
+                {
+                    "tiempo_i": a_ini,
+                    "tiempo_f": a_fin,
+                    "duracion_s": round(a_dur, 2),
+                    "cuadrante": 3,
+                    "tipo_cuadrante": "Voz en off",
+                    "genero": a_genero,
+                    "hablante_id": a_speaker,
+                    "track_id": None,
+                    "rotulo_nombre": None,
+                    "rotulo_cargo": None,
+                    "area": None,
+                    "centrality": None,
+                    "transcripcion": a_texto,
+                }
+            )
+        elif tracks_solapados:
             # Registrar Cuadrante 1 para el hablante activo
             v_act, solape_act = track_hablante
             v_gen_act = aplicar_umbral_etico(
@@ -466,7 +490,9 @@ def cruzar_intervalos_multimodales(
                     }
                 )
 
+        if tracks_solapados:
             # Los demas tracks en pantalla durante este turno son Cuadrante 2 (Presencia muda)
+            v_act = track_hablante[0] if track_hablante else {}
             for v_sil, solape_sil in tracks_solapados:
                 if v_sil.get("track_id") != v_act.get("track_id"):
                     v_sil_gen = aplicar_umbral_etico(

@@ -322,17 +322,20 @@ def test_people_adds_the_speech_of_every_speaker_of_a_person():
 
 # Contract of the fusion
 
-def test_fusion_video_one_row_per_span_with_the_person_attributes():
+def test_fusion_video_one_row_per_stretch_on_screen_with_the_person_attributes():
     out = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS})
     names = pd.DataFrame({"person_id": [1], "rotulo_nombre": ["Marta Ruiz"], "rotulo_cargo": ["Investigadora"]})
     contract = fusion_video(out["video_people"], out["video_presence"], names)
     assert list(contract.columns) == ["tiempo_i", "tiempo_f", "track_id", "person_id", "hablando", "genero_visual",
                                       "prob_genero", "rotulo_nombre", "rotulo_cargo", "area", "centrality"]
-    assert len(contract) == len(out["video_presence"])
-    assert contract.track_id.tolist() == ["person_1", "person_1", "person_2", "person_2", "person_3"]
-    assert contract.genero_visual.tolist() == ["mujer", "mujer", "hombre", "hombre", "no_determinado"]
-    assert contract.prob_genero.tolist() == pytest.approx([0.9, 0.9, 0.95, 0.95, 0.6])
-    assert contract.rotulo_nombre.tolist()[:2] == ["Marta Ruiz"] * 2 and contract.rotulo_nombre[2:].isna().all()
+    # Person 1's silent and speaking spans are contiguous: one stretch; person 2 leaves the frame: two
+    assert contract.track_id.tolist() == ["person_1", "person_2", "person_2", "person_3"]
+    assert contract.tiempo_i.tolist() == pytest.approx([0.0, 0.0, 3.84, 0.0])
+    assert contract.tiempo_f.tolist() == pytest.approx([1.6, 0.48, 4.16, 0.48])
+    assert contract.hablando.tolist() == [True, False, False, False]
+    assert contract.genero_visual.tolist() == ["mujer", "hombre", "hombre", "no_determinado"]
+    assert contract.prob_genero.tolist() == pytest.approx([0.9, 0.95, 0.95, 0.6])
+    assert contract.rotulo_nombre.tolist()[:1] == ["Marta Ruiz"] and contract.rotulo_nombre[1:].isna().all()
     assert contract.area[0] == pytest.approx(0.25)
 
 

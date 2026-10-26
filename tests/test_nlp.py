@@ -254,7 +254,7 @@ class FakeZeroShot:
 
 def zero_shot(monkeypatch, scores, **tone_settings) -> tuple[ZeroShotToneClassifier, FakeZeroShot]:
     fake = FakeZeroShot(scores)
-    monkeypatch.setattr(tone, "pipeline", lambda *args, **kw: fake)
+    monkeypatch.setattr(tone, "_load_pipeline", lambda *args, **kw: fake)
     cfg = NlpSettings(tone=ToneSettings(method="zero_shot", **tone_settings))
     return make_tone_classifier(FakeLLM({}), cfg), fake
 

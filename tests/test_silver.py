@@ -465,11 +465,14 @@ NLP_BRONZE = {   # bronze nlp_* of a speaker 0 on screen (person 1) and a voice 
 
 
 PARTICIPANT_NAMES = pd.DataFrame({"participant_id": ["p1"], "name": ["MARTA RUIZ"], "source": ["rotulo"]})
+NLP_PEOPLE = pd.DataFrame({"participant_id": ["p1", "v1"],
+                           "title_authority": pd.array([pd.NA, pd.NA], dtype="boolean")})
 
 
 def nlp(bronze=NLP_BRONZE, **silver) -> dict[str, pd.DataFrame]:
     tables = {f"bronze/{t}": df for t, df in bronze.items()} | {"silver/speaker_person": LINKS,
-                                                                  "silver/person_names": PARTICIPANT_NAMES}
+                                                                  "silver/person_names": PARTICIPANT_NAMES,
+                                                                  "silver/people": NLP_PEOPLE}
     return NlpSilver(Settings(silver=silver)).run(tables)
 
 
@@ -486,7 +489,20 @@ def test_nlp_tables_by_participant_without_made_up_quotes():
 def test_roles_with_authority_from_settings():
     roles = nlp()["nlp_roles"]
     assert roles.participant_id.tolist() == ["p1", "v1"] and roles.authority.tolist() == [True, True]
+    assert roles.authority_source.tolist() == ["rol", "rol"]
     assert nlp(authority_roles=["host"])["nlp_roles"].authority.tolist() == [False, False]
+
+
+def test_a_caption_title_with_authority_gives_authority_whatever_the_role():
+    # The model calls a professor's account a testimony; her caption says she is a professor
+    roles = pd.DataFrame({"speaker": S(0, 1), "role": ["testimony", "expert"]})
+    people = NLP_PEOPLE.assign(title_authority=pd.array([True, False], dtype="boolean"))
+    tables = {f"bronze/{t}": df for t, df in (NLP_BRONZE | {"nlp_roles": roles}).items()} | {
+        "silver/speaker_person": LINKS, "silver/person_names": PARTICIPANT_NAMES, "silver/people": people}
+    out = NlpSilver(Settings()).run(tables)["nlp_roles"]
+    assert out.authority.tolist() == [True, True] and out.authority_source.tolist() == ["rotulo", "rol"]
+    off = NlpSilver(Settings(silver={"caption_grants_authority": False})).run(tables)["nlp_roles"]
+    assert off.authority.tolist() == [False, True]
 
 
 def test_zero_shot_tone_has_nothing_to_check():

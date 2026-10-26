@@ -13,7 +13,7 @@ from aiasn.core.transform import Transform
 TABLES = {
     "nlp_topics": ["participant_id", "turn", "topic", "evidence"],
     "nlp_references": ["participant_id", "turn", "name", "genero"],   # genero: of the person cited
-    "nlp_roles": ["participant_id", "role", "authority"],
+    "nlp_roles": ["participant_id", "role", "authority", "authority_source"],   # source: rol, rotulo, ambos
     "nlp_ideas": ["idea_id", "idea", "participant_id"],
     "nlp_tone": ["participant_id", "turn", "tone", "score"],          # per turn; only aggregated in gold (ADR-0009)
 }
@@ -21,7 +21,7 @@ TABLES = {
 
 class NlpSilver(Transform):
     name, layer = "nlp", "silver"
-    inputs = [f"bronze/{t}" for t in TABLES] + ["silver/speaker_person", "silver/person_names"]
+    inputs = [f"bronze/{t}" for t in TABLES] + ["silver/speaker_person", "silver/person_names", "silver/people"]
     outputs = list(TABLES)
 
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
@@ -33,15 +33,24 @@ class NlpSilver(Transform):
             if "found" in df:   # NA: nothing quoted to check (zero-shot tone)
                 bronze[t] = bronze[t][bronze[t].found.astype("boolean").fillna(True)]
         topics, references, roles = bronze["nlp_topics"], bronze["nlp_references"], bronze["nlp_roles"]
-        authority = {r.lower() for r in self.settings.silver.authority_roles}
         out = {
             "nlp_topics": topics.assign(topic=topics.topic.str.strip().str.lower()),
             "nlp_references": self._not_participants(references, tables["silver/person_names"]).assign(
                 genero=lambda r: r.gender.map(from_model)),
-            "nlp_roles": roles.assign(authority=roles.role.str.lower().isin(authority)),
+            "nlp_roles": self._authority(roles, tables["silver/people"]),
             "nlp_ideas": bronze["nlp_ideas"], "nlp_tone": bronze["nlp_tone"],
         }
         return {t: out[t][columns].reset_index(drop=True) for t, columns in TABLES.items()}
+
+    def _authority(self, roles: pd.DataFrame, people: pd.DataFrame) -> pd.DataFrame:
+        """Whether each participant speaks from authority: their role is one of `authority_roles`, or the title of
+        their caption shows expert or institutional authority (the declared data prevails over the model's role)."""
+        cfg = self.settings.silver
+        by_role = roles.role.str.lower().isin({r.lower() for r in cfg.authority_roles})
+        captioned = people.set_index("participant_id").title_authority.astype("boolean").fillna(False)
+        by_title = roles.participant_id.map(captioned).astype("boolean").fillna(False) & cfg.caption_grants_authority
+        source = [("ambos" if r and t else "rol" if r else "rotulo" if t else None) for r, t in zip(by_role, by_title)]
+        return roles.assign(authority=(by_role | by_title).astype(bool), authority_source=source)
 
     def _not_participants(self, references: pd.DataFrame, names: pd.DataFrame) -> pd.DataFrame:
         """References that are not someone taking part: the model sometimes cites the guest as a celebrity."""

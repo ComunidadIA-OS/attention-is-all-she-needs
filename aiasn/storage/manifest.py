@@ -14,7 +14,7 @@ QUEUED, RUNNING, OK, ERROR = "en_cola", "procesando", "ok", "error"
 class Manifest:
     def __init__(self, lake: Lake, video_id: str):
         self.lake = lake
-        self.path = f"{lake.root}/runs/video_id={video_id}/manifest.json"
+        self.path = f"{lake.root}/runs/video_id={video_id}/manifest.json"   # as in load()
         self._lock = threading.Lock()   # audio and video write from different threads
         self._started: dict[str, float] = {}
         # Kept across runs: a retry resumes where the last one stopped
@@ -23,6 +23,15 @@ class Manifest:
         else:
             self.data = {"video_id": video_id, "status": None, "error": None, "steps": {}}
             self._save()
+
+    @staticmethod
+    def load(lake: Lake, video_id: str) -> dict | None:
+        """The manifest of `video_id` as stored, None if the video is unknown; unlike Manifest(), creates nothing."""
+        path = f"{lake.root}/runs/video_id={video_id}/manifest.json"
+        if not lake.fs.exists(path):
+            return None
+        with lake.fs.open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
     def read(self) -> dict:
         """The manifest as stored."""

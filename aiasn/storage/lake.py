@@ -1,6 +1,8 @@
 """The data lake: a local folder or an object store (S3, MinIO...), the same for every layer, through fsspec."""
 
+import shutil
 from pathlib import Path
+from typing import BinaryIO
 
 import fsspec
 import pandas as pd
@@ -39,6 +41,14 @@ class Lake:
         target = f"{self.landing_dir(video_id)}/{Path(source).name}"
         self.fs.makedirs(self.landing_dir(video_id), exist_ok=True)
         self.fs.put_file(str(source), target)
+        return target
+
+    def write_landing(self, video_id: str, name: str, data: BinaryIO) -> str:
+        """Writes a video coming as a stream (an upload) into the landing folder of `video_id`."""
+        target = f"{self.landing_dir(video_id)}/{name}"
+        self.fs.makedirs(self.landing_dir(video_id), exist_ok=True)
+        with self.fs.open(target, "wb") as f:
+            shutil.copyfileobj(data, f)
         return target
 
     def fetch_landing(self, video_id: str, folder: Path) -> Path:

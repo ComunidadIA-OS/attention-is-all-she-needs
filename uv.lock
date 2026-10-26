@@ -314,6 +314,7 @@ api = [
     { name = "uvicorn", extra = ["standard"] },
 ]
 dev = [
+    { name = "httpx" },
     { name = "pytest" },
 ]
 notebooks = [
@@ -359,6 +360,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2024.6" },
     { name = "gdown", marker = "extra == 'worker'", specifier = ">=5.0" },
     { name = "gliner", extras = ["all"], marker = "extra == 'notebooks'", specifier = ">=0.2.14" },
+    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "insightface", marker = "extra == 'worker'", specifier = ">=0.7.3" },
     { name = "lap", marker = "extra == 'worker'", specifier = ">=0.5.12" },
     { name = "litellm", marker = "extra == 'worker'", specifier = ">=1.60.2" },

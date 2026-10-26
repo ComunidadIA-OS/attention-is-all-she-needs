@@ -184,6 +184,11 @@ class StorageSettings(BaseModel):
         return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
 
 
+class ApiSettings(BaseModel):
+    cors_origins: list[str] = ["*"]
+    upload_formats: list[str] = [".mp4", ".mov", ".webm", ".mkv", ".avi"]
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_nested_delimiter="__", env_file=".env", extra="ignore")
 
@@ -198,6 +203,7 @@ class Settings(BaseSettings):
     nlp: NlpSettings = Field(default_factory=NlpSettings)
     silver: SilverSettings = Field(default_factory=SilverSettings)
     bias: BiasSettings = Field(default_factory=BiasSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
 
     @model_validator(mode="after")
     def _paths_in_models_dir(self) -> "Settings":

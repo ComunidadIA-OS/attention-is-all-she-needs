@@ -9,6 +9,7 @@ from pathlib import Path
 from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.captions import CaptionsPipeline
+from aiasn.pipelines.gold import GoldPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
 from aiasn.pipelines.silver import SilverPipeline
@@ -54,4 +55,4 @@ if __name__ == "__main__":
     chains = [[AudioPipeline(settings.audio), NlpPipeline(settings.nlp)],
               [VideoPipeline(settings.video), CaptionsPipeline(settings.nlp)]]
     video_id = upload_to_landing(Path(sys.argv[1]), Lake(settings.lake_dir))
-    process_video(video_id, settings, chains, then=[SilverPipeline(settings)])
+    process_video(video_id, settings, chains, then=[SilverPipeline(settings), GoldPipeline(settings)])

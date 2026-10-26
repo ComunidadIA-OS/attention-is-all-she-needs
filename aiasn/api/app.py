@@ -6,6 +6,7 @@
     uvicorn aiasn.api.app:create_app --factory --host 0.0.0.0 --port 8000
 """
 
+import logging
 import re
 import secrets
 import threading
@@ -16,7 +17,7 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from aiasn.api import schemas
-from aiasn.api.jobs import Launcher, ProcessLauncher
+from aiasn.api.jobs import Launcher, make_launcher
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import ERROR, OK, QUEUED, Manifest
@@ -31,8 +32,9 @@ def new_video_id(filename: str) -> str:
 
 
 def create_app(settings: Settings | None = None, launcher: Launcher | None = None) -> FastAPI:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     settings = settings or Settings()
-    launcher = launcher or ProcessLauncher()
+    launcher = launcher or make_launcher(settings.api)
     lake = Lake.from_settings(settings)
     lock = threading.Lock()   # busy() and launch() as one step: two uploads at once start one worker
 

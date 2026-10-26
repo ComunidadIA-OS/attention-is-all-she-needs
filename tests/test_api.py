@@ -135,3 +135,58 @@ def test_process_launcher_is_busy_while_the_worker_runs(monkeypatch):
     assert launcher.busy()
     launcher._process.wait()
     assert not launcher.busy()
+
+
+class FakeContainers:
+    def __init__(self):
+        self.runs, self.removed, self.state = [], [], {}   # name -> running / exited
+
+    def run(self, image, command, **kwargs):
+        self.runs.append((image, command, kwargs))
+        self.state[kwargs["name"]] = "running"
+
+    def list(self, all=False, filters=None):
+        return [FakeContainer(self, name) for name, state in self.state.items() if state == filters["status"]]
+
+
+class FakeContainer:
+    def __init__(self, containers, name):
+        self.containers, self.name = containers, name
+
+    def remove(self):
+        self.containers.removed.append(self.name)
+        del self.containers.state[self.name]
+
+
+def test_docker_launcher_runs_one_worker_container(monkeypatch):
+    pytest.importorskip("docker")
+    monkeypatch.setenv("LAKE_URI", "s3://aiasn")
+    monkeypatch.setenv("OVH_AI_ENDPOINTS_ACCESS_TOKEN", "token")
+    monkeypatch.setenv("HOME", "/root")
+    client = type("Client", (), {"containers": FakeContainers()})()
+    launcher = jobs.DockerLauncher(Settings().api.worker, client)
+    assert not launcher.busy()
+    launcher.launch("vid1")
+    image, command, kwargs = client.containers.runs[0]
+    assert image == "aiasn-worker" and command[-2:] == ["--video-id", "vid1"]
+    assert kwargs["environment"] == {"LAKE_URI": "s3://aiasn", "OVH_AI_ENDPOINTS_ACCESS_TOKEN": "token"}
+    assert kwargs["volumes"] == {"aiasn-models": {"bind": "/models", "mode": "rw"}} and kwargs["device_requests"]
+    assert launcher.busy()
+    client.containers.state["aiasn-worker-vid1"] = "exited"
+    launcher.launch("vid2")   # the finished one is removed first
+    assert client.containers.removed == ["aiasn-worker-vid1"] and launcher.busy()
+
+
+def test_worker_env_by_name_or_prefix():
+    env = {"LAKE_URI": "s3://a", "STORAGE__ENDPOINT_URL": "http://s3", "STORAGE": "x", "PATH": "/bin"}
+    assert jobs.worker_env(["LAKE_URI", "STORAGE__"], env) == {"LAKE_URI": "s3://a", "STORAGE__ENDPOINT_URL": "http://s3"}
+
+
+def test_launcher_choice(monkeypatch):
+    def no_docker(cfg, client=None):
+        raise ConnectionError("no docker")
+    monkeypatch.setattr(jobs.DockerLauncher, "__init__", no_docker)
+    assert isinstance(jobs.make_launcher(Settings().api), jobs.ProcessLauncher)   # auto falls back
+    assert isinstance(jobs.make_launcher(Settings(api={"launcher": "process"}).api), jobs.ProcessLauncher)
+    with pytest.raises(ConnectionError):
+        jobs.make_launcher(Settings(api={"launcher": "docker"}).api)

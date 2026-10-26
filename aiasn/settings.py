@@ -184,9 +184,23 @@ class StorageSettings(BaseModel):
         return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
 
 
+class WorkerContainerSettings(BaseModel):
+    """The worker container the API starts for each video (docker launcher)."""
+    image: str = "aiasn-worker"
+    network: str | None = "aiasn"                  # where the store is reachable
+    volumes: dict[str, str] = {"aiasn-models": "/models"}   # volume (or host folder) -> path in the container
+    gpu: bool = True                               # needs the NVIDIA Container Toolkit
+    # Variables of the API's environment passed on, by name or prefix: the worker reads the same settings
+    env: list[str] = ["LAKE_URI", "STORAGE__", "MODELS_DIR", "HF_HOME", "OVH_", "TMP_DIR",
+                      "VIDEO__", "AUDIO__", "NLP__", "SILVER__", "BIAS__"]
+
+
 class ApiSettings(BaseModel):
     cors_origins: list[str] = ["*"]
     upload_formats: list[str] = [".mp4", ".mov", ".webm", ".mkv", ".avi"]
+    # docker: a worker container per video; process: a child process (no Docker); auto: docker if it is reachable
+    launcher: Literal["auto", "docker", "process"] = "auto"
+    worker: WorkerContainerSettings = Field(default_factory=WorkerContainerSettings)
 
 
 class Settings(BaseSettings):

@@ -2,15 +2,18 @@ import json
 import logging
 import shutil
 import wave
+from contextlib import contextmanager
 
 import cv2
 import pytest
 
-from conftest import CAPTION, LOGO
+from conftest import ASR_RESPONSE, CAPTION, LOGO
 
+from aiasn.model_adapters.transcriber import Transcriber
 from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.video_annotation import annotate
+from aiasn.run_pipelines import process_video
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import Manifest
@@ -24,6 +27,27 @@ def make_ctx(tmp_path, video_id="vid1") -> RunContext:
 
 def manifest_step(ctx, step):
     return json.loads(ctx.manifest.path.read_text())["steps"][step]
+
+
+def to_landing(ctx, video):
+    landing = ctx.lake.landing_dir(ctx.video_id)
+    landing.mkdir(parents=True)
+    shutil.copy(video, landing)
+
+
+@contextmanager
+def captured_log():
+    """Messages logged by the pipelines while inside the block."""
+    lines = []
+    handler = logging.Handler()
+    handler.emit = lambda record: lines.append(record.getMessage())
+    logger = logging.getLogger("aiasn")
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    try:
+        yield lines
+    finally:
+        logger.removeHandler(handler)
 
 
 class OkPipeline(Pipeline):
@@ -60,19 +84,9 @@ def test_pipeline_records_failure_and_reraises(tmp_path):
 def video_run(tmp_path_factory, video_pipeline, clip_with_cut) -> tuple[RunContext, list[str]]:
     """The video pipeline run once on `clip_with_cut`, and the lines it logged."""
     ctx = make_ctx(tmp_path_factory.mktemp("run"))
-    landing = ctx.lake.landing_dir(ctx.video_id)
-    landing.mkdir(parents=True)
-    shutil.copy(clip_with_cut, landing)
-    lines = []
-    handler = logging.Handler()
-    handler.emit = lambda record: lines.append(record.getMessage())
-    logger = logging.getLogger("aiasn")
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    try:
+    to_landing(ctx, clip_with_cut)
+    with captured_log() as lines:
         video_pipeline(ctx)
-    finally:
-        logger.removeHandler(handler)
     return ctx, lines
 
 
@@ -147,3 +161,31 @@ def test_annotate(video_run):
     frames = int(cv2.VideoCapture(str(out)).get(cv2.CAP_PROP_FRAME_COUNT))
     assert frames == len(list((ctx.tmp_dir / "video" / "frames").glob("*.jpg")))
     assert not (ctx.tmp_dir / "video" / "annotated.avi").exists()
+
+
+def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with_cut):
+    ctx = make_ctx(tmp_path)
+    to_landing(ctx, clip_with_cut)
+    monkeypatch.setattr(audio_pipeline.transcriber, "transcribe", lambda audio: Transcriber.parse(ASR_RESPONSE))
+    with captured_log() as lines:
+        audio_pipeline(ctx)
+    assert manifest_step(ctx, "audio")["status"] == "ok"
+
+    # Ephemeral mono audio at 16 kHz
+    with wave.open(str(ctx.tmp_dir / "audio" / "audio.wav")) as wav:
+        assert wav.getframerate() == ctx.settings.audio.sample_rate and wav.getnchannels() == 1
+
+    turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)
+    assert list(turns.columns) == ["start", "end", "speaker", "text", "gender", "gender_prob"]
+    assert len(turns) == 3 and turns.speaker.tolist() == [0, 0, 1]
+    assert turns.gender.isna().tolist() == [True, False, False]   # the first turn is too short
+    assert [line.split()[1] for line in lines] == ["extract", "asr", "gender", "total"]
+    assert "3 turns, 2 speakers" in lines[1]
+
+
+def test_process_video_runs_pipelines_in_parallel_and_reraises(tmp_path):
+    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
+    with pytest.raises(RuntimeError, match="boom"):
+        process_video("vid1", settings, [FailingPipeline(), OkPipeline()])
+    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
+    assert steps["failing"]["status"] == "error" and steps["ok"]["status"] == "ok"   # one failure does not stop the other

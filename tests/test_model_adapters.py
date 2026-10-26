@@ -1,8 +1,17 @@
+import json
+from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
+import pytest
+import requests
+from scipy.io import wavfile
 
-from conftest import BUS, CAPTION, ZIDANE, text_image
+from conftest import ASR_RESPONSE, BUS, CAPTION, ZIDANE, text_image
+
+from aiasn.model_adapters.transcriber import Transcriber
+from aiasn.settings import TranscriberSettings
 
 COLUMNS = ["track_id", "x1", "y1", "x2", "y2", "head"]
 
@@ -134,3 +143,80 @@ def test_gender_estimator_output(video_pipeline):
     no_face = people.assign(face_x1=np.nan, face_y1=np.nan, face_x2=np.nan, face_y2=np.nan)
     assert video_pipeline.gender_estimator.estimate(image, no_face).gender.isin(["F", "M"]).all()   # body only
     assert video_pipeline.gender_estimator.estimate(image, people.iloc[:0]).empty
+
+
+def test_transcriber_parses_diarized_turns():
+    turns = Transcriber.parse(ASR_RESPONSE)
+    assert list(turns.columns) == ["start", "end", "speaker", "text"]
+    assert turns.speaker.tolist() == [0, 0, 1]
+    assert turns.text.tolist() == ["Hola.", "Bienvenidas", "al programa."]
+    assert turns.end.tolist() == [0.3, 3.0, 5.5]
+
+
+def test_transcriber_without_diarization_falls_back_to_segments():
+    turns = Transcriber.parse({"segments": ASR_RESPONSE["segments"]})
+    assert len(turns) == 1 and turns.speaker.isna().all()
+    assert Transcriber.parse({}).empty
+
+
+class FakeResponse:
+    def __init__(self, status=200, body=None):
+        self.status_code, self.ok, self.body, self.text = status, status < 400, body, "quota exceeded"
+
+    def json(self):
+        return self.body
+
+
+def test_transcriber_request(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(requests, "post", lambda url, **kw: calls.append((url, kw)) or FakeResponse(body=ASR_RESPONSE))
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"RIFF")
+
+    turns = Transcriber(TranscriberSettings(token=" abc\n123 ")).transcribe(audio)
+    url, kw = calls[0]
+    assert url.endswith("/audio/transcriptions")
+    assert kw["headers"]["Authorization"] == "Bearer abc123"   # whitespace removed from the token
+    assert kw["data"]["diarize"] == "true" and "language" not in kw["data"]
+    assert len(turns) == 3
+
+    Transcriber(TranscriberSettings(token="abc", language="ca")).transcribe(audio)
+    assert calls[1][1]["data"]["language"] == "ca"
+
+
+def test_transcriber_errors(monkeypatch, tmp_path):
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"RIFF")
+    with pytest.raises(RuntimeError, match="token"):
+        Transcriber(TranscriberSettings(token="")).transcribe(audio)
+    monkeypatch.setattr(requests, "post", lambda url, **kw: FakeResponse(status=429))
+    with pytest.raises(RuntimeError, match="429"):
+        Transcriber(TranscriberSettings(token="abc")).transcribe(audio)
+
+
+def test_voice_gender_classifier_output(voice_gender_classifier):
+    rate = 16_000
+    audio = (0.3 * np.sin(2 * np.pi * 180 * np.arange(3 * rate) / rate)).astype(np.float32)
+    turns = pd.DataFrame({"start": [0.0, 0.5], "end": [0.3, 2.5]}, index=[7, 9])
+    out = voice_gender_classifier.classify(audio, rate, turns)
+    assert list(out.columns) == ["gender", "gender_prob"]
+    assert out.index.equals(turns.index)
+    assert pd.isna(out.gender[7]) and np.isnan(out.gender_prob[7])   # too short
+    assert out.gender[9] in ("F", "M") and 0.5 <= out.gender_prob[9] <= 1
+
+
+def test_voice_gender_classifier_matches_notebook(voice_gender_classifier):
+    """Same per-speaker labels as the audio notebook on the CSIC video (mean female probability, 0.80 threshold)."""
+    notebooks = Path("notebooks")
+    audio, response = notebooks / "audios" / "robot_social_CSIC.wav", notebooks / "robot_social_CSIC.json"
+    expected = notebooks / "dataframes" / "robot_social_CSIC.csv"
+    if not (audio.is_file() and response.is_file() and expected.is_file()):
+        pytest.skip("CSIC audio, transcription or notebook output not available")
+    rate, samples = wavfile.read(audio)
+    turns = Transcriber.parse(json.loads(response.read_text()))
+    out = turns.join(voice_gender_classifier.classify(samples.astype(np.float32) / 32768, rate, turns))
+    female = out.gender_prob.where(out.gender == "F", 1 - out.gender_prob)
+    mean = female.groupby(out.speaker).mean()
+    label = mean.map(lambda p: "F" if p >= 0.8 else "M" if p <= 0.2 else "Unknown")
+    nb = pd.read_csv(expected).groupby("speaker").genero_inferido.first()
+    assert {f"Hablante_{s}": g for s, g in label.items()} == nb.to_dict()

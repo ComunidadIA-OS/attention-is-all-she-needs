@@ -5,11 +5,21 @@ import numpy as np
 import pytest
 from ultralytics.utils import ASSETS
 
+from aiasn.model_adapters.voice_gender_classifier import VoiceGenderClassifier
+from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.video import VideoPipeline
-from aiasn.settings import VideoSettings
+from aiasn.settings import AudioSettings, VideoSettings, VoiceGenderClassifierSettings
 
 ZIDANE, BUS = ASSETS / "zidane.jpg", ASSETS / "bus.jpg"   # sample images shipped with Ultralytics: 2 and 4 people
 CAPTION, LOGO = "ENTREVISTA", "LOGO"
+# Shape of an OVHcloud transcription with diarization (verbose_json), for turns within `clip_with_cut`
+ASR_RESPONSE = {
+    "language": "es",
+    "segments": [{"id": 1, "start": 0.0, "end": 5.5, "text": " Hola. Bienvenidas al programa."}],
+    "diarization": [{"speaker": 0, "text": "Hola.", "start": 0.0, "end": 0.3},
+                    {"speaker": 0, "text": "Bienvenidas", "start": 0.5, "end": 3.0},
+                    {"speaker": 1, "text": " al programa. ", "start": 3.0, "end": 5.5}],
+}
 
 
 def text_image(text: str, scale: float) -> np.ndarray:
@@ -24,6 +34,16 @@ def text_image(text: str, scale: float) -> np.ndarray:
 def video_pipeline() -> VideoPipeline:
     """Loaded once: the models take seconds to load."""
     return VideoPipeline(VideoSettings())
+
+
+@pytest.fixture(scope="session")
+def voice_gender_classifier() -> VoiceGenderClassifier:
+    return VoiceGenderClassifier(VoiceGenderClassifierSettings())
+
+
+@pytest.fixture(scope="session")
+def audio_pipeline() -> AudioPipeline:
+    return AudioPipeline(AudioSettings())
 
 
 @pytest.fixture(scope="session")

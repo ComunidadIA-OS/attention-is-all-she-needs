@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +60,35 @@ class VideoSettings(BaseModel):
     gender_estimator: GenderEstimatorSettings = Field(default_factory=GenderEstimatorSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
 
+
+### SETTINGS FOR AUDIO PIPELINE COMPONENTS
+
+class TranscriberSettings(BaseSettings):
+    """Whisper with diarization on OVHcloud AI Endpoints. The token comes from the environment or .env."""
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    base_url: str = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+    model: str = "whisper-large-v3"
+    token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
+    language: str | None = None                    # ca, es, en...; None lets Whisper detect it
+    timeout: float = Field(600, gt=0)              # seconds
+
+
+class VoiceGenderClassifierSettings(BaseModel):
+    model: str = "prithivMLmods/Common-Voice-Gender-Detection"
+    min_seconds: float = Field(0.5, ge=0)          # shorter turns have too little voice to decide
+    max_seconds: float = Field(15.0, gt=0)         # only the start of longer turns is used: enough, and faster
+
+
+### SETTINGS FOR AUDIO PIPELINE
+
+class AudioSettings(BaseModel):
+    sample_rate: int = Field(16_000, gt=0)         # what Whisper and the voice classifier expect
+    device: Literal["auto", "cuda", "cpu"] = "auto"
+    transcriber: TranscriberSettings = Field(default_factory=TranscriberSettings)
+    voice_gender_classifier: VoiceGenderClassifierSettings = Field(default_factory=VoiceGenderClassifierSettings)
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):
@@ -68,3 +97,4 @@ class Settings(BaseSettings):
     lake_dir: Path = Path("data")
     tmp_dir: Path = Path("tmp")
     video: VideoSettings = Field(default_factory=VideoSettings)
+    audio: AudioSettings = Field(default_factory=AudioSettings)

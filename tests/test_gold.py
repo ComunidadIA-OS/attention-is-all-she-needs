@@ -8,6 +8,7 @@ import pytest
 
 from aiasn.core.gold import kpis as kpis_module
 from aiasn.core.gold.fusion import FusionGold, fusion_inputs
+from aiasn.core.gold.graph import GraphGold
 from aiasn.core.gold.kpis import KPIS, KpisGold, kpi
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.gold import GoldPipeline
@@ -35,7 +36,9 @@ SILVER = {
     "silver/people": pd.DataFrame({"participant_id": ["p1", "p2", "v1"], "person_id": I(1, 2, pd.NA),
                                    "name": ["Marta Ruiz", "Luis", None], "title": ["Investigadora", None, None],
                                    "name_source": ["rotulo", "mencion", "ninguna"],
-                                   "genero": ["mujer", "hombre", "hombre"], "speech_time_s": [20.0, 0.0, 10.0]}),
+                                   "genero": ["mujer", "hombre", "hombre"], "speech_time_s": [20.0, 0.0, 10.0],
+                                   "genero_fuente": ["ambos", "video", "audio"], "screen_time_s": [30.0, 30.0, 0.0],
+                                   "area": [0.3, 0.2, None], "centrality": [0.9, 0.5, None]}),
 }
 
 
@@ -88,6 +91,7 @@ NLP_SILVER = {
                                          "title": ["doctora", None, "director", "Investigadora"],
                                          "source": ["mencion", "mencion", "mencion", "rotulo"]}),
     "silver/nlp_roles": pd.DataFrame({"participant_id": ["p1", "v1"], "role": ["testimony", "voice-over narrator"],
+                                      "role_es": ["testimonio", "narrador/a en off"],
                                       "authority": [True, True], "authority_source": ["rotulo", "rol"]}),
     "silver/nlp_topics": pd.DataFrame({"participant_id": ["p1", "p1", "v1"], "turn": [0, 2, 1],
                                        "topic": ["technology", "care", "history"],
@@ -166,3 +170,31 @@ def test_kpis_registry(monkeypatch):
                                     "gold/quadrants": FusionGold(Settings()).run(SILVER)["quadrants"]}
     out = KpisGold(Settings()).run(tables)["kpis"]
     assert set(out.kpi) == set(KPIS) | {"constant"} and out.valor.dtype == float
+
+
+# Graph
+
+GRAPH_PEOPLE = pd.DataFrame({
+    "participant_id": ["p1", "p2", "v1"], "person_id": I(1, 2, pd.NA), "speaker_id": I(0, pd.NA, 1),
+    "genero": ["mujer", "hombre", "hombre"], "genero_fuente": ["ambos", "video", "audio"],
+    "screen_time_s": [30.0, 30.0, 0.0], "speaking_time_s": [10.0, 0.0, 0.0], "speech_time_s": [20.0, 0.0, 10.0],
+    "area": [0.3, 0.2, None], "centrality": [0.9, 0.5, None],
+    "name": ["Marta Ruiz", None, None], "title": ["Investigadora", None, None],
+    "name_source": ["rotulo", "ninguna", "ninguna"], "title_authority": pd.array([True, pd.NA, pd.NA], "boolean")})
+
+
+def graph() -> dict[str, pd.DataFrame]:
+    tables = SILVER | NLP_SILVER | {"silver/people": GRAPH_PEOPLE}
+    return GraphGold(Settings()).run(tables)
+
+
+def test_graph_nodes_participants_and_topics():
+    nodes = graph()["graph_nodes"].set_index("node_id")
+    assert nodes.index.tolist() == ["p1", "p2", "v1", "tema:care", "tema:history", "tema:technology"]
+    assert nodes.tipo.tolist() == ["participante"] * 3 + ["tema"] * 3
+    assert nodes.label.tolist() == ["Marta Ruiz", "Persona 2", "Voz 1", "cuidados", "historia", "tecnología"]
+    assert nodes.loc[["p1", "p2", "v1"], "size"].tolist() == [20.0, 30.0, 10.0]   # speech, else screen time
+    assert nodes.loc["tema:technology", "clave"] == "technology" and nodes.loc["tema:care", "size"] == 1
+    assert nodes.loc["p1", "role_es"] == "testimonio" and nodes.loc["p1", "authority_source"] == "rotulo"
+    assert nodes.authority.tolist()[:3] == [True, pd.NA, True]                     # p2 never speaks: no role
+    assert "age" not in nodes and "tone" not in nodes

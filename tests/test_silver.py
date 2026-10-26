@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 from aiasn.core.silver.gender import decide_gender, female_prob
+from aiasn.core.silver.video import VideoSilver
 from aiasn.core.transform import Transform
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.transform_pipeline import TransformPipeline
@@ -90,3 +91,55 @@ def test_transform_pipeline_fails_without_its_inputs(tmp_path):
     with pytest.raises(FileNotFoundError):
         Silver([Doubler(ctx.settings)])(ctx)
     assert json.loads(ctx.manifest.path.read_text())["steps"]["silver"]["status"] == "error"
+
+
+# Video
+
+def detections(person: int, frames, gender: str, prob: float, speaking=None, box=(160, 90, 480, 270)) -> pd.DataFrame:
+    """bronze video_detections of one person (fps 25, stride 4: each detection stands for 0.16 s), on a 640x360 frame."""
+    n = len(frames)
+    return pd.DataFrame({"frame": frames, "person_id": pd.array([person] * n, dtype="Int64"),
+                         "x1": box[0], "y1": box[1], "x2": box[2], "y2": box[3], "frame_width": 640, "frame_height": 360,
+                         "gender": gender, "gender_prob": prob, "age": 30.0,
+                         "speaking_score": speaking if speaking is not None else [np.nan] * n})
+
+
+DETECTIONS = pd.concat([
+    # Person 1: a woman, centred on a quarter of the frame, silent and then speaking
+    detections(1, range(3, 40, 4), "F", 0.9, speaking=[-1.0] * 5 + [2.0] * 5),
+    # Person 2: a man in a corner, no face for TalkNet; leaves the frame for 3.5 s
+    detections(2, [3, 7, 11, 99, 103], "M", 0.95, box=(0, 0, 64, 36)),
+    # Person 3: unsure gender; one detection missing (shorter than max_gap_s)
+    detections(3, [3, 11], "F", 0.6),
+], ignore_index=True)
+
+
+def test_video_people():
+    people = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS})["video_people"].set_index("person_id")
+    assert people.genero.tolist() == ["mujer", "hombre", "no_determinado"]
+    assert people.prob_mujer.tolist() == pytest.approx([0.9, 0.05, 0.6])
+    assert people.screen_time_s.tolist() == pytest.approx([1.6, 0.8, 0.32])
+    assert people.speaking_time_s.tolist() == pytest.approx([0.8, 0, 0])
+    assert people.area[1] == pytest.approx(0.25) and people.centrality[1] == pytest.approx(1.0)
+    assert people.area[2] == pytest.approx(0.01) and people.centrality[2] < 0.2
+    assert people.age.tolist() == [30, 30, 30]
+
+
+def test_video_presence_splits_on_speaking_and_long_absences():
+    presence = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS})["video_presence"]
+    assert list(presence.columns) == ["person_id", "tiempo_i", "tiempo_f", "hablando"]
+    assert presence.person_id.tolist() == [1, 1, 2, 2, 3]
+    assert presence.hablando.tolist() == [False, True, False, False, False]
+    assert presence.tiempo_i.tolist() == pytest.approx([0.0, 0.8, 0.0, 3.84, 0.0])
+    assert presence.tiempo_f.tolist() == pytest.approx([0.8, 1.6, 0.48, 4.16, 0.48])
+
+
+def test_video_presence_max_gap_is_configurable():
+    settings = Settings(silver={"max_gap_s": 5.0})
+    presence = VideoSilver(settings).run({"bronze/video_detections": DETECTIONS})["video_presence"]
+    assert presence.person_id.tolist() == [1, 1, 2, 3]   # person 2's absence no longer splits the span
+
+
+def test_video_silver_without_detections():
+    out = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS.iloc[:0]})
+    assert out["video_people"].empty and out["video_presence"].empty

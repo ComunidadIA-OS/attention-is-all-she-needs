@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+from contextlib import contextmanager
 
 import pandas as pd
 import pytest
@@ -160,10 +162,18 @@ def test_tasks_skip_the_model_without_turns():
     assert not llm.calls
 
 
-def test_nlp_pipeline_writes_bronze_tables(tmp_path):
+TABLES = ["nlp_mentions", "nlp_topics", "nlp_references", "nlp_roles", "nlp_ideas", "nlp_tone"]
+
+
+def make_ctx(tmp_path) -> RunContext:
     settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
     ctx = RunContext("vid1", settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, "vid1"), settings.tmp_dir / "vid1")
     ctx.lake.write("bronze", "audio_turns", "vid1", TURNS)
+    return ctx
+
+
+@contextmanager
+def captured_log():
     lines = []
     handler = logging.Handler()
     handler.emit = lambda record: lines.append(record.getMessage())
@@ -171,9 +181,15 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
     try:
-        NlpPipeline(settings.nlp, llm=FakeLLM(ANSWERS))(ctx)
+        yield lines
     finally:
         logger.removeHandler(handler)
+
+
+def test_nlp_pipeline_writes_bronze_tables(tmp_path):
+    ctx = make_ctx(tmp_path)
+    with captured_log() as lines:
+        NlpPipeline(ctx.settings.nlp, llm=FakeLLM(ANSWERS))(ctx)
 
     assert json.loads(ctx.manifest.path.read_text())["steps"]["nlp"]["status"] == "ok"
     assert len(ctx.lake.read("bronze", "nlp_mentions", "vid1")) == 3
@@ -182,9 +198,33 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
     assert len(ctx.lake.read("bronze", "nlp_roles", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_ideas", "vid1")) == 3
     assert len(ctx.lake.read("bronze", "nlp_tone", "vid1")) == 3
-    assert [line.split()[1] for line in lines] == ["load", "mentions", "topics", "references", "roles", "ideas", "tone",
-                                                   "total"]
-    assert "3 rows, 1 not found" in lines[1]
+    steps = [line.split()[1] for line in lines]
+    assert steps[0] == "load" and steps[-1] == "total"   # tasks in any order: they run in parallel
+    assert sorted(steps[1:-1]) == sorted(t.removeprefix("nlp_") for t in TABLES)
+    assert any(line.split()[1] == "mentions" and "3 rows, 1 not found" in line for line in lines)
+
+
+class SlowLLM(FakeLLM):
+    def complete(self, system, user, schema):
+        time.sleep(0.3)
+        return super().complete(system, user, schema)
+
+
+def test_nlp_tasks_run_in_parallel(tmp_path):
+    ctx = make_ctx(tmp_path)
+    start = time.perf_counter()
+    NlpPipeline(ctx.settings.nlp, llm=SlowLLM(ANSWERS))(ctx)
+    assert time.perf_counter() - start < 1.0   # one after the other it would take 6 × 0.3 s
+
+
+def test_a_failing_task_does_not_stop_the_others(tmp_path):
+    ctx = make_ctx(tmp_path)
+    answers = {schema: answer for schema, answer in ANSWERS.items() if schema is not Ideas}
+    with pytest.raises(KeyError):
+        NlpPipeline(ctx.settings.nlp, llm=FakeLLM(answers))(ctx)
+    assert json.loads(ctx.manifest.path.read_text())["steps"]["nlp"]["status"] == "error"
+    for table in TABLES:
+        assert (ctx.lake.table_dir("bronze", table, "vid1") / "part-0.parquet").exists() == (table != "nlp_ideas")
 
 
 def test_nlp_pipeline_needs_the_transcript(tmp_path):

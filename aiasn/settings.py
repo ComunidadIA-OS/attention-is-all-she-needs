@@ -108,6 +108,7 @@ class LlmSettings(BaseSettings):
 
 class NlpSettings(BaseModel):
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
     # Guide for the model, which may add new topics
     topics_guide: list[str] = [
         # stereotyped as "feminine" or centred on the person

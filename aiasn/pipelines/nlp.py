@@ -1,7 +1,12 @@
 import argparse
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+import pandas as pd
 
 from aiasn.model_adapters.llm_client import LLMClient, make_llm_client
+from aiasn.model_adapters.nlp.base import NlpTask
 from aiasn.model_adapters.nlp.ideas import IdeaExtractor
 from aiasn.model_adapters.nlp.mentions import MentionExtractor
 from aiasn.model_adapters.nlp.references import ReferenceExtractor
@@ -26,11 +31,18 @@ class NlpPipeline(Pipeline):
     def run(self, ctx: RunContext) -> None:
         turns = ctx.lake.read("bronze", "audio_turns", ctx.video_id)
         self._log_step("load", f"{len(turns)} turns, {turns.speaker.nunique()} speakers")
-        for task in self.tasks:
-            table = task.extract(turns)
-            ctx.lake.write("bronze", task.table, ctx.video_id, table)
-            unchecked = f", {(~table.found).sum()} not found in the transcript" if "found" in table else ""
-            self._log_step(task.table.removeprefix("nlp_"), f"{len(table)} rows{unchecked}")
+        # The tasks are independent and mostly wait for the model: all at once, up to `max_parallel` calls
+        with ThreadPoolExecutor(self.cfg.max_parallel) as pool:
+            runs = [pool.submit(self._run_task, task, turns, ctx) for task in self.tasks]
+        for run in runs:
+            run.result()   # re-raises the first failure, once every task has finished
+
+    def _run_task(self, task: NlpTask, turns: pd.DataFrame, ctx: RunContext) -> None:
+        start = time.perf_counter()
+        table = task.extract(turns)
+        ctx.lake.write("bronze", task.table, ctx.video_id, table)
+        unchecked = f", {(~table.found).sum()} not found in the transcript" if "found" in table else ""
+        self._log_step(task.table.removeprefix("nlp_"), f"{len(table)} rows{unchecked}", time.perf_counter() - start)
 
 
 if __name__ == "__main__":

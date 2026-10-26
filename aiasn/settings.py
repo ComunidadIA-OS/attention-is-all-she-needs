@@ -120,17 +120,16 @@ class NlpSettings(BaseModel):
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
     caption_blocks_per_call: int = Field(4, gt=0)  # OCR blocks per captions call; the calls go in parallel
     # Guide for the model, which may add new topics
-    # English (key, word2vec) → Spanish (UI)
+    # English (key, word2vec) → Spanish (UI). One word per topic, so that word2vec has it; more only when needed
     topics_guide: dict[str, str] = {
         # stereotyped as "feminine" or centred on the person
-        "care": "cuidados", "family and motherhood": "familia y maternidad", "work-life balance": "conciliación",
-        "love life and relationships": "vida sentimental y relaciones", "physical appearance": "aspecto físico",
-        "being a woman / gender experience": "ser mujer / experiencia de género",
-        "diversity and equality": "diversidad e igualdad",
+        "care": "cuidados", "family": "familia", "motherhood": "maternidad",
+        "work-life balance": "conciliación",   # no single word for it: no word2vec bias
+        "relationships": "relaciones y vida sentimental", "appearance": "aspecto físico", "womanhood": "ser mujer",
+        "diversity": "diversidad", "equality": "igualdad",
         # professional or stereotyped as "masculine"
-        "technology": "tecnología", "science and research": "ciencia e investigación",
-        "finance and economy": "finanzas y economía", "leadership and management": "liderazgo y gestión",
-        "their work or field": "su trabajo o especialidad", "politics": "política", "sports": "deporte",
+        "technology": "tecnología", "science": "ciencia", "economy": "economía", "leadership": "liderazgo",
+        "expertise": "su especialidad", "politics": "política", "sports": "deporte",
         # others
         "education": "educación", "health": "salud", "history": "historia",
     }

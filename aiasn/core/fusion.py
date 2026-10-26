@@ -282,9 +282,19 @@ def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
 def normalizar_tabla_audio(df_audio: pd.DataFrame, umbral_etico: float = 0.80) -> pd.DataFrame:
     """Normaliza transparentemente tanto el contrato CSV canonico como la tabla Parquet
     `bronze/audio_turns` de Rocio (`start`, `end`, `speaker`, `text`, `gender`, `gender_prob`).
+
+    La tabla bronze se convierte con la capa silver (`aiasn.core.silver.audio`), la misma que usa el lake:
+    el genero se decide por hablante (voto ponderado por duracion) con `umbral_etico`.
     """
     if df_audio.empty:
         return df_audio
+    if "tiempo_i" not in df_audio.columns and "start" in df_audio.columns:
+        # Import diferido: silver usa `aplicar_umbral_etico` de este modulo
+        from aiasn.core.silver.audio import AudioSilver
+        from aiasn.settings import Settings
+
+        settings = Settings(silver={"gender_threshold": umbral_etico})
+        return AudioSilver(settings).run({"bronze/audio_turns": df_audio})["audio_turns"]
     df = df_audio.copy()
     if "tiempo_i" not in df.columns and "start" in df.columns:
         df["tiempo_i"] = df["start"].astype(float)
@@ -318,60 +328,23 @@ def normalizar_tabla_video(
 ) -> pd.DataFrame:
     """Normaliza transparentemente tanto el contrato CSV canonico como la tabla Parquet
     `bronze/video_detections` de Rocio (`frame`, `shot`, `track_id`, `person_id`, `x1..y2`, `gender`, `gender_prob`).
+
+    La tabla bronze se convierte con la capa silver (`aiasn.core.silver.video`), la misma que usa el lake: una fila
+    por tramo continuo de cada persona en pantalla, con su genero por voto, area y centralidad. Si la tabla trae
+    `rotulo_nombre` / `rotulo_cargo`, se conservan por persona.
     """
     if df_video.empty or "tiempo_i" in df_video.columns:
         return df_video
 
-    df = df_video.copy()
-    mapa_gen = {"f": "mujer", "female": "mujer", "mujer": "mujer", "m": "hombre", "male": "hombre", "hombre": "hombre"}
-    dt = float(stride) / float(fps)
+    # Import diferido: silver usa `aplicar_umbral_etico` de este modulo
+    from aiasn.core.silver.video import VideoSilver, fusion_video
+    from aiasn.settings import Settings
 
-    # Identificador de persona (prioriza person_id reidentificado entre planos sobre track_id local)
-    id_col = "person_id" if "person_id" in df.columns and df["person_id"].notna().any() else "track_id"
-    group_cols = ["shot", id_col] if "shot" in df.columns else [id_col]
-
-    filas = []
-    for _, grp in df.groupby(group_cols, dropna=False):
-        grp = grp.sort_values("frame")
-        t_ini = max(0.0, (float(grp["frame"].min()) - stride + 1) / float(fps))
-        t_fin = (float(grp["frame"].max()) + 1) / float(fps)
-        if t_fin <= t_ini:
-            t_fin = t_ini + dt
-
-        pid = grp[id_col].iloc[0]
-        track_val = f"person_{int(pid)}" if pd.notna(pid) else f"track_{grp['track_id'].iloc[0]}"
-
-        raw_g = grp["gender"].mode().iloc[0] if "gender" in grp.columns and not grp["gender"].dropna().empty else "unknown"
-        gen_vis = mapa_gen.get(str(raw_g).strip().lower(), str(raw_g).strip().lower())
-        prob_vis = float(grp["gender_prob"].dropna().mean()) if "gender_prob" in grp.columns and not grp["gender_prob"].dropna().empty else 1.0
-
-        area_val = None
-        centrality_val = None
-        if {"x1", "y1", "x2", "y2", "frame_width", "frame_height"}.issubset(grp.columns):
-            w = grp["frame_width"].astype(float).replace(0, 1.0)
-            h = grp["frame_height"].astype(float).replace(0, 1.0)
-            box_w = (grp["x2"].astype(float) - grp["x1"].astype(float)).clip(lower=0.0)
-            box_h = (grp["y2"].astype(float) - grp["y1"].astype(float)).clip(lower=0.0)
-            area_val = round(float(((box_w * box_h) / (w * h)).mean()), 4)
-            cx = (grp["x1"].astype(float) + grp["x2"].astype(float)) / (2.0 * w)
-            cy = (grp["y1"].astype(float) + grp["y2"].astype(float)) / (2.0 * h)
-            dist = (((cx - 0.5) ** 2 + (cy - 0.5) ** 2) ** 0.5) / (0.5 ** 0.5)
-            centrality_val = round(float((1.0 - dist).clip(lower=0.0, upper=1.0).mean()), 4)
-
-        filas.append(
-            {
-                "tiempo_i": round(t_ini, 2),
-                "tiempo_f": round(t_fin, 2),
-                "track_id": track_val,
-                "genero_visual": gen_vis,
-                "prob_genero": round(prob_vis, 4),
-                "rotulo_nombre": grp["rotulo_nombre"].iloc[0] if "rotulo_nombre" in grp.columns else None,
-                "rotulo_cargo": grp["rotulo_cargo"].iloc[0] if "rotulo_cargo" in grp.columns else None,
-                "area": area_val,
-                "centrality": centrality_val,
-            }
-        )
-    return pd.DataFrame(filas)
+    df = df_video if "person_id" in df_video.columns else df_video.assign(person_id=df_video["track_id"])
+    silver = VideoSilver(Settings(video={"fps": int(fps), "stride": int(stride)})).run({"bronze/video_detections": df})
+    rotulos = ["rotulo_nombre", "rotulo_cargo"]
+    names = df.groupby("person_id")[rotulos].first().reset_index() if set(rotulos) <= set(df.columns) else None
+    return fusion_video(silver["video_people"], silver["video_presence"], names)
 
 
 def cruzar_intervalos_multimodales(

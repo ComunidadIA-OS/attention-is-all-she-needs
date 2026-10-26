@@ -134,6 +134,14 @@ class NlpSettings(BaseModel):
     max_ideas: int = Field(10, gt=0)               # key ideas of the piece
 
 
+### SETTINGS FOR SILVER LAYER
+
+class SilverSettings(BaseModel):
+    gender_threshold: float = Field(0.80, ge=0.5, le=1)   # below it, no_determinado (ADR-0005); also used by the fusion
+    max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
+    speaking_threshold: float = 0.0                        # speaking_score (TalkNet) above it: speaking
+
+
 ### GENERAL SETTINGS
 
 class Settings(BaseSettings):
@@ -144,3 +152,4 @@ class Settings(BaseSettings):
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     nlp: NlpSettings = Field(default_factory=NlpSettings)
+    silver: SilverSettings = Field(default_factory=SilverSettings)

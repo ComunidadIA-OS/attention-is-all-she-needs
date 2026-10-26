@@ -22,7 +22,12 @@ const DEMO_PAYLOAD = {
       motivo_alerta: "Presencia en pantalla y voz activa equilibradas. No se detecta presencia ornamental en plano silente.",
       bechdel: {
         puntuacion_0_3: 3,
-        diagnostico: "Supera el Test de Bechdel Conversacional: al menos una mujer con cargo profesional acreditado en rótulo OCR, intervención activa en temas de tecnología y educación, y diálogo directo sin sesgo."
+        criterios: [
+          { label: "Mujer con cargo profesional acreditado (OCR)", cumple: true },
+          { label: "Intervención activa en ciencia o tecnología", cumple: true },
+          { label: "Diálogo directo sin mediación de sesgo", cumple: true }
+        ],
+        diagnostico: "Supera el Test de Bechdel Conversacional."
       },
       salvaguarda_paridad: {
         cumple: true,
@@ -137,10 +142,28 @@ const state = {
   currentVideoId: "clip_quanta-3f9a",
   currentData: null,
   supervisionAsumida: true,
+  anonymized: false, // Pseudonimización conforme a Art. 4.5 RGPD
   citizenVotes: { yes: 89, partial: 12, no: 3 },
   userHasVoted: false,
   networkInstance: null
 };
+
+// Generador de nombres pseudonimizados (Art. 4.5 y 25 RGPD: Privacidad por Diseño)
+function getDisplayName(person, anonymize) {
+  if (!person) return "Participante";
+  if (!anonymize) {
+    return person.nombre || person.label || "Persona sin rótulo";
+  }
+  const idStr = person.id || "";
+  const roleStr = person.cargo ? ` [${person.cargo}]` : "";
+  if (person.genero === "mujer") {
+    return `Experta ${idStr}${roleStr}`;
+  } else if (person.genero === "hombre") {
+    return `Experto ${idStr}${roleStr}`;
+  } else {
+    return `Participante ${idStr}${roleStr}`;
+  }
+}
 
 // Inicialización al cargar el DOM
 document.addEventListener("DOMContentLoaded", () => {
@@ -165,6 +188,17 @@ function initUI() {
     });
   }
 
+  // Interruptor de Anonimización / Pseudonimización (Art. 4.5 RGPD)
+  const anonToggle = document.getElementById("anonymize-toggle");
+  if (anonToggle) {
+    anonToggle.addEventListener("change", (e) => {
+      state.anonymized = e.target.checked;
+      if (state.currentData) {
+        loadData(state.currentData);
+      }
+    });
+  }
+
   // Interruptor de Supervisión Humana (Human-in-the-Loop)
   const hitlToggle = document.getElementById("hitl-toggle");
   if (hitlToggle) {
@@ -174,8 +208,70 @@ function initUI() {
     });
   }
 
+  // Soporte de clic para el popover del Test de Bechdel
+  const bechdelBtn = document.getElementById("bechdel-info-btn");
+  const bechdelTooltip = document.getElementById("bechdel-tooltip");
+  if (bechdelBtn && bechdelTooltip) {
+    bechdelBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      bechdelTooltip.classList.toggle("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!bechdelTooltip.contains(e.target) && e.target !== bechdelBtn) {
+        bechdelTooltip.classList.add("hidden");
+      }
+    });
+  }
+
+  // Inicialización del Modo Oscuro Sostenible (Detección SO + Selector Manual)
+  initTheme();
+
   // Micro-encuesta de Soberanía Ciudadana (Vote with your feet)
   setupCitizenVoting();
+}
+
+// Gestión del Tema (Detección del Sistema Operativo y Control Manual)
+function initTheme() {
+  const savedTheme = localStorage.getItem("aiasn-theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = savedTheme === "dark" || (!savedTheme && prefersDark);
+
+  applyTheme(isDark);
+
+  const themeBtn = document.getElementById("theme-toggle-btn");
+  if (themeBtn) {
+    themeBtn.addEventListener("click", () => {
+      const currentlyDark = document.documentElement.classList.contains("dark");
+      const nextDark = !currentlyDark;
+      localStorage.setItem("aiasn-theme", nextDark ? "dark" : "light");
+      applyTheme(nextDark);
+    });
+  }
+
+  // Si el usuario cambia el tema del sistema operativo y no hay forzado manual:
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      if (!localStorage.getItem("aiasn-theme")) {
+        applyTheme(e.matches);
+      }
+    });
+  }
+}
+
+function applyTheme(isDark) {
+  if (isDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+  const icon = document.getElementById("theme-toggle-icon");
+  if (icon) {
+    icon.textContent = isDark ? "☀️" : "🌙";
+  }
+  // Si la red ya está dibujada, refrescar colores del lienzo
+  if (state.currentData && state.networkInstance) {
+    renderConstellation(state.currentData.resultado.constelacion);
+  }
 }
 
 async function checkApiHealth() {
@@ -226,8 +322,15 @@ function loadData(payload) {
 }
 
 function renderVerdict(veredicto) {
-  // Lectura Fácil
-  document.getElementById("lectura-facil-text").textContent = veredicto.resumen_lectura_facil;
+  // Lectura Fácil (con soporte para modo anonimizado)
+  let textoLectura = veredicto.resumen_lectura_facil;
+  if (state.anonymized) {
+    textoLectura = textoLectura
+      .replace(/Sandra Freire/g, "la experta invitada")
+      .replace(/Carles Sierra/g, "el participante 1")
+      .replace(/Marc Torrens/g, "el participante 2");
+  }
+  document.getElementById("lectura-facil-text").textContent = textoLectura;
 
   // Alerta Equality-Washing
   const alertContainer = document.getElementById("equality-washing-card");
@@ -246,11 +349,26 @@ function renderVerdict(veredicto) {
     alertDesc.textContent = veredicto.motivo_alerta || "Presencia en pantalla y voz experta equilibradas.";
   }
 
-  // Bechdel Digital
+  // Bechdel Digital esquemático (3 líneas con checks Sí/No)
   const bechdelScore = document.getElementById("bechdel-score");
-  const bechdelDesc = document.getElementById("bechdel-desc");
-  bechdelScore.textContent = `${veredicto.bechdel.puntuacion_0_3} / 3 Criterios`;
-  bechdelDesc.textContent = veredicto.bechdel.diagnostico;
+  const bechdelChecklist = document.getElementById("bechdel-checklist");
+  if (bechdelScore) bechdelScore.textContent = `${veredicto.bechdel.puntuacion_0_3} / 3 Criterios`;
+
+  if (bechdelChecklist) {
+    const criterios = veredicto.bechdel.criterios || [
+      { label: "Mujer con cargo profesional acreditado (OCR)", cumple: veredicto.bechdel.puntuacion_0_3 >= 1 },
+      { label: "Intervención activa en ciencia o tecnología", cumple: veredicto.bechdel.puntuacion_0_3 >= 2 },
+      { label: "Diálogo directo sin mediación de sesgo", cumple: veredicto.bechdel.puntuacion_0_3 >= 3 }
+    ];
+    bechdelChecklist.innerHTML = criterios.map(c => `
+      <div class="flex items-center justify-between py-1 border-b border-slate-100 last:border-0">
+        <span class="text-[11px] leading-tight ${c.cumple ? 'text-slate-800 font-medium' : 'text-slate-400'}">${c.label}</span>
+        <span class="inline-flex items-center justify-center w-5 h-5 rounded text-xs font-mono font-bold ${c.cumple ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-400'}">
+          ${c.cumple ? '✓' : '✗'}
+        </span>
+      </div>
+    `).join("");
+  }
 
   // Salvaguarda de Paridad (ADR-0006)
   const safeguardBadge = document.getElementById("safeguard-badge");
@@ -296,6 +414,11 @@ function renderConstellation(data) {
   const container = document.getElementById("constellation-network");
   if (!container || !window.vis) return;
 
+  const isDark = document.documentElement.classList.contains("dark");
+  const nodeFontColor = isDark ? "#f8fafc" : "#1e293b";
+  const nodeStrokeColor = isDark ? "#0f172a" : "#ffffff";
+  const defaultEdgeColor = isDark ? "#334155" : "#cbd5e1";
+
   // Mapeo riguroso de nodos con colores institucionales
   const visNodes = data.nodos.map(n => {
     let color = "#64748b"; // Gris neutro
@@ -316,28 +439,32 @@ function renderConstellation(data) {
       size = 18;
     }
 
+    const displayName = n.tipo === "participante" 
+      ? getDisplayName({ nombre: n.label, id: n.id, genero: n.genero, cargo: n.cargo }, state.anonymized)
+      : n.label;
+
     return {
       id: n.id,
-      label: n.label,
-      title: `${n.label}${n.cargo ? ' (' + n.cargo + ')' : ''}`,
+      label: displayName,
+      title: `${displayName}${n.cargo && !state.anonymized ? ' (' + n.cargo + ')' : ''}`,
       color: color,
       shape: shape,
       size: size,
-      font: { face: "Inter", size: 12, color: "#1e293b", strokeWidth: 2, strokeColor: "#ffffff" }
+      font: { face: "Inter", size: 12, color: nodeFontColor, strokeWidth: 2, strokeColor: nodeStrokeColor }
     };
   });
 
   // Mapeo de aristas
   const visEdges = data.aristas.map(e => {
     let dashes = false;
-    let edgeColor = "#cbd5e1";
+    let edgeColor = defaultEdgeColor;
     let width = Math.min(4, Math.max(1, e.peso || 1));
 
     if (e.tipo === "menciona") {
       edgeColor = "#818cf8";
       dashes = [4, 4];
     } else if (e.tipo === "comparte_plano") {
-      edgeColor = "#cbd5e1";
+      edgeColor = defaultEdgeColor;
     } else if (e.tipo === "habla_de") {
       edgeColor = "#fcd34d";
     }
@@ -359,9 +486,9 @@ function renderConstellation(data) {
     },
     interaction: {
       hover: true,
-      zoomView: true,
-      dragView: true,
-      navigationButtons: true
+      zoomView: false, // BLOQUEADO: El scroll con rueda no secuestra la página
+      dragView: true,  // Permite arrastrar el lienzo libremente con el ratón
+      dragNodes: true
     }
   };
 
@@ -370,6 +497,57 @@ function renderConstellation(data) {
   }
 
   state.networkInstance = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+  // Inicialización de controles de zoom externos (solo una vez)
+  setupGraphControls(container);
+}
+
+// Vinculación de botones de zoom y soporte opcional de Ctrl + Rueda
+let graphControlsConfigured = false;
+function setupGraphControls(container) {
+  if (graphControlsConfigured) return;
+  graphControlsConfigured = true;
+
+  const btnIn = document.getElementById("graph-zoom-in");
+  const btnOut = document.getElementById("graph-zoom-out");
+  const btnFit = document.getElementById("graph-zoom-fit");
+
+  if (btnIn) {
+    btnIn.addEventListener("click", () => {
+      if (!state.networkInstance) return;
+      const scale = state.networkInstance.getScale();
+      state.networkInstance.moveTo({ scale: scale * 1.3, animation: { duration: 200 } });
+    });
+  }
+
+  if (btnOut) {
+    btnOut.addEventListener("click", () => {
+      if (!state.networkInstance) return;
+      const scale = state.networkInstance.getScale();
+      state.networkInstance.moveTo({ scale: scale * 0.77, animation: { duration: 200 } });
+    });
+  }
+
+  if (btnFit) {
+    btnFit.addEventListener("click", () => {
+      if (!state.networkInstance) return;
+      state.networkInstance.fit({ animation: { duration: 300 } });
+    });
+  }
+
+  // Si el usuario mantiene pulsada la tecla Ctrl, permite zoom intencionado con la rueda
+  if (container) {
+    container.addEventListener("wheel", (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (!state.networkInstance) return;
+        const scale = state.networkInstance.getScale();
+        const factor = e.deltaY < 0 ? 1.15 : 0.85;
+        state.networkInstance.moveTo({ scale: scale * factor });
+      }
+      // Sin Ctrl, la rueda hace scroll normal por toda la página web sin interrupción
+    }, { passive: false });
+  }
 }
 
 function renderPersonsTable(personas) {
@@ -393,9 +571,12 @@ function renderPersonsTable(personas) {
       ? `<span class="text-xs px-1.5 py-0.5 rounded font-mono bg-emerald-100 text-emerald-800 font-semibold" title="Rótulo OCR de Autoridad Institucional">Acreditada</span>`
       : `<span class="text-xs px-1.5 py-0.5 rounded font-mono bg-slate-100 text-slate-500">Testimonio</span>`;
 
+    const displayName = getDisplayName(p, state.anonymized);
+    const displayCargo = state.anonymized && p.cargo ? "Acreditado (Rótulo OCR)" : (p.cargo || "—");
+
     tr.innerHTML = `
-      <td class="font-medium text-slate-900">${p.nombre || "Persona sin rótulo"}</td>
-      <td class="text-slate-600">${p.cargo || "—"}</td>
+      <td class="font-medium text-slate-900">${displayName}</td>
+      <td class="text-slate-600">${displayCargo}</td>
       <td>${gBadge}</td>
       <td>${authIcon}</td>
       <td class="font-mono text-right">${p.pantalla_s ? p.pantalla_s.toFixed(1) + ' s' : '0.0 s'}</td>
@@ -474,3 +655,4 @@ function setupCitizenVoting() {
   if (btnPartial) btnPartial.addEventListener("click", () => handleVote("partial"));
   if (btnNo) btnNo.addEventListener("click", () => handleVote("no"));
 }
+

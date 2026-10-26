@@ -4,7 +4,7 @@
 /* 
  * Attention Is All She Needs (AIASN) — Frontend Stylesheet
  * Diseño Editorial, Institucional y Pericial para Auditoría Audiovisual
- * Evita clichés genéricos de IA (gradientes morados, neones y brillos).
+ * Cumplimiento estricto de WCAG 2.2 AA (Accesibilidad), Green AI, Responsive y REUSE.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
@@ -13,28 +13,47 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   
-  /* Paleta cromática pericial / institucional */
+  /* Paleta cromática pericial / institucional de alto contraste (WCAG 2.2 AA) */
   --bg-canvas: #f8fafc;
   --bg-surface: #ffffff;
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
   --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-faint: #94a3b8;
+  --text-muted: #334155;
+  --text-faint: #64748b;
   
   /* Semántica de paridad institucional */
-  --color-woman: #7c3aed;       /* Violeta institucional sobrio */
+  --color-woman: #6b21a8;       /* Violeta institucional profundo (contraste 7:1) */
   --color-woman-bg: #f5f3ff;
-  --color-man: #0284c7;         /* Azul acerado */
+  --color-man: #0369a1;         /* Azul acerado accesible */
   --color-man-bg: #f0f9ff;
-  --color-neutral: #64748b;     /* Pizarra neutro / no binario */
-  --color-topic: #d97706;       /* Ámbar para temas */
+  --color-neutral: #475569;     /* Pizarra neutro */
+  --color-topic: #b45309;       /* Ámbar accesible */
   --color-topic-bg: #fffbeb;
   
   /* Alertas y estados regulatorios */
   --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
+  --color-warning: #92400e;
+  --color-danger: #991b1b;
+}
+
+/* Modo Oscuro Sostenible (OLED Energy Saving · Ergonomía Visual) */
+html.dark {
+  --bg-canvas: #090d16;
+  --bg-surface: #0f172a;
+  --border-subtle: #1e293b;
+  --border-strong: #334155;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+
+  --color-woman: #c084fc;
+  --color-woman-bg: #2e1065;
+  --color-man: #38bdf8;
+  --color-man-bg: #082f49;
+  --color-neutral: #94a3b8;
+  --color-topic: #f59e0b;
+  --color-topic-bg: #451a03;
 }
 
 body {
@@ -44,8 +63,214 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html.dark body {
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+}
+
+html.dark header, html.dark footer {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+html.dark .audit-card {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+html.dark .audit-table th {
+  background-color: #0b1120 !important;
+  border-bottom-color: var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+}
+
+html.dark .audit-table td {
+  border-bottom-color: #1e293b !important;
+  color: #cbd5e1 !important;
+}
+
+html.dark .audit-table tr:hover {
+  background-color: #162033 !important;
+}
+
+html.dark .lectura-facil-box {
+  background-color: #111827 !important;
+  border-left-color: #c084fc !important;
+}
+
+html.dark .lectura-facil-box p, html.dark #lectura-facil-text {
+  color: #f8fafc !important;
+}
+
+/* Corrección integral de contraste en Modo Oscuro (WCAG 2.2 AA) */
+html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-purple-950, html.dark .text-purple-900 {
+  color: #e9d5ff !important;
+}
+
+html.dark .text-purple-800, html.dark .text-purple-700 {
+  color: #d8b4fe !important;
+}
+
+html.dark .text-sky-950, html.dark .text-sky-900 {
+  color: #bae6fd !important;
+}
+
+html.dark .text-sky-800 {
+  color: #7dd3fc !important;
+}
+
+html.dark .bg-purple-50 {
+  background-color: #2e1065 !important;
+  border-color: #581c87 !important;
+}
+
+html.dark .bg-sky-50 {
+  background-color: #082f49 !important;
+  border-color: #0369a1 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark .bg-purple-100 {
+  background-color: #3b0764 !important;
+  color: #f3e8ff !important;
+  border-color: #6b21a8 !important;
+}
+
+html.dark .bg-emerald-50 {
+  background-color: #022c22 !important;
+  border-color: #065f46 !important;
+  color: #a7f3d0 !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: #451a03 !important;
+  border-color: #78350f !important;
+  color: #fef3c7 !important;
+}
+
+html.dark .bg-amber-100 {
+  background-color: #451a03 !important;
+  color: #fde68a !important;
+}
+
+/* Botonera de navegación del Grafo (Vis.js Zoom) */
+.graph-zoom-controls {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.graph-zoom-controls button {
+  user-select: none;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: #0f172a;
+  background-color: transparent;
+}
+
+.graph-zoom-controls button:hover {
+  background-color: #f1f5f9;
+  color: #6b21a8;
+}
+
+.graph-zoom-controls .divider {
+  background-color: #e2e8f0;
+}
+
+.graph-nav-hint {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+html.dark .graph-zoom-controls {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .graph-zoom-controls button {
+  color: #f8fafc !important;
+  background-color: transparent !important;
+}
+
+html.dark .graph-zoom-controls button:hover {
+  background-color: #334155 !important;
+  color: #c084fc !important;
+}
+
+html.dark .graph-zoom-controls .divider {
+  background-color: #334155 !important;
+}
+
+html.dark .graph-nav-hint {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+
+html.dark #constellation-network {
+  background-color: #090d16 !important;
+}
+
+html.dark .badge-certified {
+  background-color: #022c22 !important;
+  color: #6ee7b7 !important;
+  border-color: #065f46 !important;
+}
+
+html.dark .badge-review {
+  background-color: #451a03 !important;
+  color: #fcd34d !important;
+  border-color: #78350f !important;
+}
+
+html.dark .badge-alert {
+  background-color: #450a0a !important;
+  color: #fca5a5 !important;
+  border-color: #7f1d1d !important;
+}
+
 code, kbd, samp, pre, .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Foco visible accesible para navegación por teclado (WCAG 2.2 AA) */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-woman);
+  outline-offset: 2px;
 }
 
 /* Tarjetas sobrias con borde nítido */
@@ -60,23 +285,23 @@ code, kbd, samp, pre, .font-mono {
   border-color: var(--border-strong);
 }
 
-/* Píldoras de estado institucional */
+/* Píldoras de estado institucional con contraste verificado */
 .badge-certified {
   background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+  color: #064e3b;
+  border: 1px solid #6ee7b7;
 }
 
 .badge-review {
   background-color: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  color: #78350f;
+  border: 1px solid #fcd34d;
 }
 
 .badge-alert {
   background-color: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  color: #7f1d1d;
+  border: 1px solid #fca5a5;
 }
 
 /* Contenedor del Grafo / Constelación */
@@ -84,8 +309,6 @@ code, kbd, samp, pre, .font-mono {
   width: 100%;
   height: 520px;
   background-color: #ffffff;
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.5rem;
   position: relative;
 }
 
@@ -97,7 +320,7 @@ code, kbd, samp, pre, .font-mono {
   line-height: 1.6;
 }
 
-/* Tablas densas de auditoría */
+/* Tablas densas de auditoría con contraste accesible */
 .audit-table th {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -117,4 +340,19 @@ code, kbd, samp, pre, .font-mono {
 
 .audit-table tr:hover {
   background-color: #f8fafc;
+}
+
+/* Estilos de impresión para informes oficiales en PDF */
+@media print {
+  body {
+    background-color: #ffffff;
+  }
+  header, footer, #mode-select, #anonymize-toggle, #hitl-toggle, button {
+    display: none !important;
+  }
+  .audit-card {
+    border: 1px solid #cbd5e1;
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
 }

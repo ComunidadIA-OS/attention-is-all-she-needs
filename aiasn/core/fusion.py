@@ -15,6 +15,8 @@ Principios Arquitectonicos:
    por Diseno (Art. 49 CE, CDPD ONU, Ley 15/2022 Art. 23, WCAG 2.2 AA y Lectura Facil UNE 153101 EX).
 6. Seeing and Hearing (Veronica Vilaplana, Diap. 92): Matriz de 4 cuadrantes.
 7. Regla anti-equality-washing determinista basada en el Ratio Voz/Pantalla.
+8. Test de Bechdel Digital / Conversacional determinista: Pluralidad femenina (>=2 mujeres),
+   identidad/rotulo propio e interlocucion horizontal directa (Mujer_A -> Mujer_B).
 """
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -164,6 +166,214 @@ def generar_resumen_lectura_facil(
     )
 
 
+def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Evalua deterministamente el Test de Bechdel Digital / Conversacional (Bechdel-Wallace 1985
+    adaptado a medios digitales y audiovisuales de no-ficcion):
+    1. Regla 1 (Pluralidad femenina): Intervienen con voz activa al menos 2 mujeres distintas
+       (rompiendo el 'Efecto Token' o sindrome de la mujer unica de Kanter, 1977).
+    2. Regla 2 (Identidad y autoridad propia): Al menos 2 mujeres estan acreditadas con nombre
+       propio, cargo o identificador diferenciado (rotulo OCR o hablante nominal).
+    3. Regla 3 (Interlocucion horizontal directa Mujer_A -> Mujer_B): Existe al menos una
+       transicion directa de turno de palabra entre dos mujeres distintas sin intermediacion
+       masculina como eje obligatorio del debate.
+    """
+    if df_eventos.empty:
+        return {
+            "mujeres_distintas_hablando": 0,
+            "mujeres_con_rotulo_identificado": 0,
+            "transiciones_mujer_a_mujer": 0,
+            "regla_1_pluralidad_femenina": False,
+            "regla_2_identidad_propia": False,
+            "regla_3_dialogo_horizontal": False,
+            "puntuacion_bechdel_0_3": 0,
+            "supera_bechdel_digital": False,
+            "diagnostico_bechdel": "SIN_DATOS: DataFrame de eventos vacio.",
+        }
+
+    # Filtrar turnos con voz activa (Cuadrantes 1 y 3) ordenados cronologicamente
+    if "cuadrante" in df_eventos.columns:
+        df_voz = df_eventos[df_eventos["cuadrante"].isin([1, 3])].sort_values(by="tiempo_i")
+    else:
+        df_voz = df_eventos.sort_values(by="tiempo_i")
+
+    def _id_participante(row: Any) -> str:
+        for col in ("hablante_id", "rotulo_nombre", "track_id"):
+            val = row.get(col)
+            if pd.notna(val) and str(val).strip() not in ("", "None", "nan", "hablante_anonimo"):
+                return str(val).strip()
+        return f"anon_{row.get('tiempo_i', 0)}"
+
+    df_voz_mujeres = df_voz[df_voz["genero"] == "mujer"]
+    ids_mujeres_hablando = set()
+    for _, row in df_voz_mujeres.iterrows():
+        ids_mujeres_hablando.add(_id_participante(row))
+
+    mujeres_distintas_hablando = len(ids_mujeres_hablando)
+
+    # Identidad / rotulo acreditado (OCR nombre/cargo o identificador nominal)
+    df_todas_mujeres = df_eventos[df_eventos["genero"] == "mujer"]
+    ids_mujeres_rotuladas = set()
+    for _, row in df_todas_mujeres.iterrows():
+        nom = row.get("rotulo_nombre")
+        car = row.get("rotulo_cargo")
+        if (pd.notna(nom) and str(nom).strip() not in ("", "None", "nan")) or (
+            pd.notna(car) and str(car).strip() not in ("", "None", "nan")
+        ):
+            ids_mujeres_rotuladas.add(_id_participante(row))
+
+    mujeres_con_rotulo = len(ids_mujeres_rotuladas)
+
+    # Transiciones consecutivas de turno de voz activa Mujer_A -> Mujer_B (con A != B)
+    transiciones_m_a_m = 0
+    turnos_voz = df_voz.to_dict("records")
+    for idx in range(len(turnos_voz) - 1):
+        actual = turnos_voz[idx]
+        siguiente = turnos_voz[idx + 1]
+        if (
+            str(actual.get("genero", "")).lower() == "mujer"
+            and str(siguiente.get("genero", "")).lower() == "mujer"
+        ):
+            id_a = _id_participante(actual)
+            id_b = _id_participante(siguiente)
+            if id_a != id_b:
+                transiciones_m_a_m += 1
+
+    regla_1 = mujeres_distintas_hablando >= 2
+    regla_2 = mujeres_con_rotulo >= 2
+    regla_3 = transiciones_m_a_m >= 1
+    puntuacion = int(regla_1) + int(regla_2) + int(regla_3)
+    supera = bool(puntuacion == 3)
+
+    if supera:
+        diagnostico = (
+            "SUPERA BECHDEL DIGITAL (3/3): Pluralidad femenina acreditada e interlocucion "
+            f"horizontal directa ({transiciones_m_a_m} transicion(es) Mujer-Mujer sin intermediacion masculina)."
+        )
+    elif not regla_1:
+        diagnostico = (
+            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Efecto Token / mujer unica "
+            f"(solo {mujeres_distintas_hablando} mujer(es) con voz activa en la pieza)."
+        )
+    elif not regla_3:
+        diagnostico = (
+            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Aislamiento relacional "
+            "(participan >=2 mujeres pero todos sus turnos estan mediados por hombres)."
+        )
+    else:
+        diagnostico = (
+            f"CUMPLIMIENTO PARCIAL BECHDEL DIGITAL ({puntuacion}/3): Interlocucion directa "
+            "detectada pero falta rotulacion nominal/cargo completa en pantalla."
+        )
+
+    return {
+        "mujeres_distintas_hablando": mujeres_distintas_hablando,
+        "mujeres_con_rotulo_identificado": mujeres_con_rotulo,
+        "transiciones_mujer_a_mujer": transiciones_m_a_m,
+        "regla_1_pluralidad_femenina": regla_1,
+        "regla_2_identidad_propia": regla_2,
+        "regla_3_dialogo_horizontal": regla_3,
+        "puntuacion_bechdel_0_3": puntuacion,
+        "supera_bechdel_digital": supera,
+        "diagnostico_bechdel": diagnostico,
+    }
+
+
+def normalizar_tabla_audio(df_audio: pd.DataFrame, umbral_etico: float = 0.80) -> pd.DataFrame:
+    """Normaliza transparentemente tanto el contrato CSV canonico como la tabla Parquet
+    `bronze/audio_turns` de Rocio (`start`, `end`, `speaker`, `text`, `gender`, `gender_prob`).
+    """
+    if df_audio.empty:
+        return df_audio
+    df = df_audio.copy()
+    if "tiempo_i" not in df.columns and "start" in df.columns:
+        df["tiempo_i"] = df["start"].astype(float)
+    if "tiempo_f" not in df.columns and "end" in df.columns:
+        df["tiempo_f"] = df["end"].astype(float)
+    if "speaker_id" not in df.columns and "speaker" in df.columns:
+        df["speaker_id"] = df["speaker"].apply(
+            lambda x: f"spk_{int(x)}" if pd.notna(x) and str(x).strip() not in ("", "None", "<NA>") else "hablante_anonimo"
+        )
+    if "transcripcion" not in df.columns and "text" in df.columns:
+        df["transcripcion"] = df["text"].fillna("").astype(str)
+    if "genero_inferido" not in df.columns and "gender" in df.columns:
+        mapa_gen = {"f": "mujer", "female": "mujer", "mujer": "mujer", "m": "hombre", "male": "hombre", "hombre": "hombre"}
+        generos_norm = []
+        for _, row in df.iterrows():
+            raw_g = row.get("gender")
+            prob_g = row.get("gender_prob", 1.0)
+            if pd.isna(raw_g) or str(raw_g).strip() == "":
+                generos_norm.append("no_determinado")
+            else:
+                g_mapped = mapa_gen.get(str(raw_g).strip().lower(), str(raw_g).strip().lower())
+                if pd.notna(prob_g):
+                    g_mapped = aplicar_umbral_etico(g_mapped, float(prob_g), umbral_etico)
+                generos_norm.append(g_mapped)
+        df["genero_inferido"] = generos_norm
+    return df
+
+
+def normalizar_tabla_video(
+    df_video: pd.DataFrame, fps: float = 25.0, stride: int = 4
+) -> pd.DataFrame:
+    """Normaliza transparentemente tanto el contrato CSV canonico como la tabla Parquet
+    `bronze/video_detections` de Rocio (`frame`, `shot`, `track_id`, `person_id`, `x1..y2`, `gender`, `gender_prob`).
+    """
+    if df_video.empty or "tiempo_i" in df_video.columns:
+        return df_video
+
+    df = df_video.copy()
+    mapa_gen = {"f": "mujer", "female": "mujer", "mujer": "mujer", "m": "hombre", "male": "hombre", "hombre": "hombre"}
+    dt = float(stride) / float(fps)
+
+    # Identificador de persona (prioriza person_id reidentificado entre planos sobre track_id local)
+    id_col = "person_id" if "person_id" in df.columns and df["person_id"].notna().any() else "track_id"
+    group_cols = ["shot", id_col] if "shot" in df.columns else [id_col]
+
+    filas = []
+    for _, grp in df.groupby(group_cols, dropna=False):
+        grp = grp.sort_values("frame")
+        t_ini = max(0.0, (float(grp["frame"].min()) - stride + 1) / float(fps))
+        t_fin = (float(grp["frame"].max()) + 1) / float(fps)
+        if t_fin <= t_ini:
+            t_fin = t_ini + dt
+
+        pid = grp[id_col].iloc[0]
+        track_val = f"person_{int(pid)}" if pd.notna(pid) else f"track_{grp['track_id'].iloc[0]}"
+
+        raw_g = grp["gender"].mode().iloc[0] if "gender" in grp.columns and not grp["gender"].dropna().empty else "unknown"
+        gen_vis = mapa_gen.get(str(raw_g).strip().lower(), str(raw_g).strip().lower())
+        prob_vis = float(grp["gender_prob"].dropna().mean()) if "gender_prob" in grp.columns and not grp["gender_prob"].dropna().empty else 1.0
+
+        area_val = None
+        centrality_val = None
+        if {"x1", "y1", "x2", "y2", "frame_width", "frame_height"}.issubset(grp.columns):
+            w = grp["frame_width"].astype(float).replace(0, 1.0)
+            h = grp["frame_height"].astype(float).replace(0, 1.0)
+            box_w = (grp["x2"].astype(float) - grp["x1"].astype(float)).clip(lower=0.0)
+            box_h = (grp["y2"].astype(float) - grp["y1"].astype(float)).clip(lower=0.0)
+            area_val = round(float(((box_w * box_h) / (w * h)).mean()), 4)
+            cx = (grp["x1"].astype(float) + grp["x2"].astype(float)) / (2.0 * w)
+            cy = (grp["y1"].astype(float) + grp["y2"].astype(float)) / (2.0 * h)
+            dist = (((cx - 0.5) ** 2 + (cy - 0.5) ** 2) ** 0.5) / (0.5 ** 0.5)
+            centrality_val = round(float((1.0 - dist).clip(lower=0.0, upper=1.0).mean()), 4)
+
+        filas.append(
+            {
+                "tiempo_i": round(t_ini, 2),
+                "tiempo_f": round(t_fin, 2),
+                "track_id": track_val,
+                "genero_visual": gen_vis,
+                "prob_genero": round(prob_vis, 4),
+                "rotulo_nombre": grp["rotulo_nombre"].iloc[0] if "rotulo_nombre" in grp.columns else None,
+                "rotulo_cargo": grp["rotulo_cargo"].iloc[0] if "rotulo_cargo" in grp.columns else None,
+                "area": area_val,
+                "centrality": centrality_val,
+            }
+        )
+    return pd.DataFrame(filas)
+
+
 def cruzar_intervalos_multimodales(
     df_audio: pd.DataFrame,
     df_video: pd.DataFrame,
@@ -176,9 +386,11 @@ def cruzar_intervalos_multimodales(
     """
     registros_eventos: List[Dict[str, Any]] = []
 
-    # Normalizar columnas de audio
-    audio_records = df_audio.to_dict("records") if not df_audio.empty else []
-    video_records = df_video.to_dict("records") if not df_video.empty else []
+    # Normalizar transparentemente contratos CSV o tablas Parquet bronze (audio_turns / video_detections)
+    df_audio_norm = normalizar_tabla_audio(df_audio, umbral_etico=umbral_etico)
+    df_video_norm = normalizar_tabla_video(df_video)
+    audio_records = df_audio_norm.to_dict("records") if not df_audio_norm.empty else []
+    video_records = df_video_norm.to_dict("records") if not df_video_norm.empty else []
 
     # 1. Analizar cada intervencion de audio
     for a in audio_records:
@@ -427,6 +639,8 @@ def calcular_kpis_paridad(
             f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {kpis_genero['mujer']['ratio_voz_pantalla']:.2f})."
         )
 
+    test_bechdel = evaluar_bechdel_conversacional(df_eventos)
+
     resumen_lectura_facil = generar_resumen_lectura_facil(
         pct_voz_mujer=pct_voz_mujer,
         pct_pantalla_mujer=pct_pantalla_mujer,
@@ -443,6 +657,7 @@ def calcular_kpis_paridad(
         "alerta_equality_washing": alerta_equality_washing,
         "motivo_alerta": motivo_alerta,
         "salvaguarda_paridad": salvaguarda_paridad,
+        "test_bechdel_digital": test_bechdel,
         "resumen_lectura_facil": resumen_lectura_facil,
         "idiomas_soportados": list(LENGUAS_COOFICIALES_SOPORTADAS),
         "por_genero": kpis_genero,
@@ -464,6 +679,8 @@ def exportar_reportes_fusion(
         fila = {"genero": gen, **datos}
         fila["alerta_equality_washing"] = kpis.get("alerta_equality_washing", False)
         fila["motivo_alerta"] = kpis.get("motivo_alerta", "")
+        fila["supera_bechdel_digital"] = kpis.get("test_bechdel_digital", {}).get("supera_bechdel_digital", False)
+        fila["puntuacion_bechdel_0_3"] = kpis.get("test_bechdel_digital", {}).get("puntuacion_bechdel_0_3", 0)
         filas_kpis.append(fila)
 
     df_kpis = pd.DataFrame(filas_kpis)

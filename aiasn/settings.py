@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,11 +19,13 @@ class PersonTrackerSettings(BaseModel):
 
 class FaceDetectorSettings(BaseModel):
     model_pack: str = "buffalo_l"
+    root: Path = Path("~/.insightface")            # where InsightFace keeps its model packs
     det_size: int = Field(640, gt=0)
 
 
 class ReidentificatorSettings(BaseModel):
     model_pack: str = "buffalo_l"
+    root: Path = Path("~/.insightface")
     max_distance: float = Field(0.6, gt=0)   # cosine distance between tracks of the same person
 
 
@@ -38,6 +40,7 @@ class GenderEstimatorSettings(BaseModel):
 
 class OcrSettings(BaseModel):
     languages: list[str] = ["es", "en"]
+    model_dir: Path = Path("~/.EasyOCR/model")
     min_conf: float = Field(0.4, ge=0, le=1)
 
 
@@ -185,8 +188,22 @@ class Settings(BaseSettings):
     lake_uri: str = "data"                         # a local folder, or s3://bucket (see storage)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     tmp_dir: Path = Path("tmp")
+    # One folder for every local model (Docker: a volume); None keeps each library's own default place.
+    # Hugging Face models go where HF_HOME says.
+    models_dir: Path | None = None
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     nlp: NlpSettings = Field(default_factory=NlpSettings)
     silver: SilverSettings = Field(default_factory=SilverSettings)
     bias: BiasSettings = Field(default_factory=BiasSettings)
+
+    @model_validator(mode="after")
+    def _paths_in_models_dir(self) -> "Settings":
+        if self.models_dir:
+            root, video = self.models_dir, self.video
+            video.person_tracker.model = str(root / Path(video.person_tracker.model).name)
+            video.face_detector.root = video.reidentificator.root = root / "insightface"
+            video.active_speaker_detector.repo_dir = root / "TalkNet-ASD"
+            video.ocr.model_dir = root / "easyocr"
+            self.bias.model_path = root / Path(self.bias.model_path).name
+        return self

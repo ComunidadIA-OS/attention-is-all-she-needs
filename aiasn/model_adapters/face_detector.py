@@ -12,7 +12,8 @@ COLUMNS = ["x1", "y1", "x2", "y2", "score"]
 class FaceDetector:
     def __init__(self, cfg: FaceDetectorSettings, device: str = "auto"):
         providers = ["CPUExecutionProvider"] if device == "cpu" else ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        self.model = FaceAnalysis(name=cfg.model_pack, allowed_modules=["detection"], providers=providers)
+        self.model = FaceAnalysis(name=cfg.model_pack, root=str(cfg.root.expanduser()), allowed_modules=["detection"],
+                                  providers=providers)
         self.model.prepare(ctx_id=-1 if device == "cpu" else 0, det_size=(cfg.det_size, cfg.det_size))
 
     def detect(self, image: np.ndarray) -> pd.DataFrame:

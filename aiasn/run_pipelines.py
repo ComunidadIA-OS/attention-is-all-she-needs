@@ -9,6 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from aiasn.models import ensure_models
 from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.gold import GoldPipeline
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
+    ensure_models(settings)
     video_id = args.video_id
     if args.file:
         video_id = args.file.stem

@@ -16,7 +16,7 @@ class Reidentificator:
     def __init__(self, cfg: ReidentificatorSettings, device: str = "auto"):
         self.cfg = cfg
         providers = ["CPUExecutionProvider"] if device == "cpu" else ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        model_dir = ensure_available("models", cfg.model_pack, root="~/.insightface")
+        model_dir = ensure_available("models", cfg.model_pack, root=str(cfg.root.expanduser()))
         models = (get_model(f, providers=providers) for f in sorted(glob.glob(os.path.join(model_dir, "*.onnx"))))
         self.model = next(m for m in models if m is not None and m.taskname == "recognition")
         self.model.prepare(ctx_id=-1 if device == "cpu" else 0)

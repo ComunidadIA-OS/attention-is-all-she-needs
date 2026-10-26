@@ -12,7 +12,8 @@ COLUMNS = ["text", "conf", "x1", "y1", "x2", "y2"]
 class OcrModel:
     def __init__(self, cfg: OcrSettings, device: str = "auto"):
         self.cfg = cfg
-        self.reader = easyocr.Reader(cfg.languages, gpu=device != "cpu", verbose=False)   # falls back to CPU
+        self.reader = easyocr.Reader(cfg.languages, gpu=device != "cpu", verbose=False,   # falls back to CPU
+                                     model_storage_directory=str(cfg.model_dir.expanduser()))
 
     def read(self, image: np.ndarray) -> pd.DataFrame:
         """One row per text read with enough confidence: text, confidence and the box around it (x1, y1, x2, y2)."""

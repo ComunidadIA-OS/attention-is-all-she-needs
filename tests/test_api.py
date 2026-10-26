@@ -137,6 +137,14 @@ def test_process_launcher_is_busy_while_the_worker_runs(monkeypatch):
     assert not launcher.busy()
 
 
+class FakeClient:
+    def __init__(self, runtimes=("runc", "nvidia")):
+        self.containers, self.runtimes = FakeContainers(), runtimes
+
+    def info(self):
+        return {"Runtimes": {r: {} for r in self.runtimes}}
+
+
 class FakeContainers:
     def __init__(self):
         self.runs, self.removed, self.state = [], [], {}   # name -> running / exited
@@ -163,7 +171,7 @@ def test_docker_launcher_runs_one_worker_container(monkeypatch):
     monkeypatch.setenv("LAKE_URI", "s3://aiasn")
     monkeypatch.setenv("OVH_AI_ENDPOINTS_ACCESS_TOKEN", "token")
     monkeypatch.setenv("HOME", "/root")
-    client = type("Client", (), {"containers": FakeContainers()})()
+    client = FakeClient()
     launcher = jobs.DockerLauncher(Settings().api.worker, client)
     assert not launcher.busy()
     launcher.launch("vid1")
@@ -175,6 +183,13 @@ def test_docker_launcher_runs_one_worker_container(monkeypatch):
     client.containers.state["aiasn-worker-vid1"] = "exited"
     launcher.launch("vid2")   # the finished one is removed first
     assert client.containers.removed == ["aiasn-worker-vid1"] and launcher.busy()
+
+
+def test_docker_launcher_without_gpu_runs_on_the_cpu(caplog):
+    pytest.importorskip("docker")
+    client = FakeClient(runtimes=("runc",))
+    jobs.DockerLauncher(Settings().api.worker, client).launch("vid1")
+    assert client.containers.runs[0][2]["device_requests"] is None and "CPU" in caplog.text
 
 
 def test_worker_env_by_name_or_prefix():

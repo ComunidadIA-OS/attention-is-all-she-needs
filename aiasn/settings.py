@@ -189,7 +189,7 @@ class WorkerContainerSettings(BaseModel):
     image: str = "aiasn-worker"
     network: str | None = "aiasn"                  # where the store is reachable
     volumes: dict[str, str] = {"aiasn-models": "/models"}   # volume (or host folder) -> path in the container
-    gpu: bool = True                               # needs the NVIDIA Container Toolkit
+    gpu: bool = True                               # when Docker has it (NVIDIA Container Toolkit); else the CPU
     # Variables of the API's environment passed on, by name or prefix: the worker reads the same settings
     env: list[str] = ["LAKE_URI", "STORAGE__", "MODELS_DIR", "HF_HOME", "OVH_", "TMP_DIR",
                       "VIDEO__", "AUDIO__", "NLP__", "SILVER__", "BIAS__"]

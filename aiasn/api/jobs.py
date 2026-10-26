@@ -42,6 +42,10 @@ class DockerLauncher:
     def __init__(self, cfg: WorkerContainerSettings, client=None):
         import docker
         self.cfg, self.client = cfg, client or docker.from_env()
+        self.gpu = cfg.gpu and "nvidia" in self.client.info().get("Runtimes", {})
+        if cfg.gpu and not self.gpu:
+            log.warning("Docker has no NVIDIA runtime: the worker runs on the CPU, several times slower. "
+                        "Install the NVIDIA Container Toolkit to use the GPU (see the README)")
 
     def launch(self, video_id: str) -> None:
         from docker.types import DeviceRequest
@@ -52,7 +56,7 @@ class DockerLauncher:
             name=f"aiasn-worker-{video_id}", labels={LABEL: video_id}, detach=True,
             environment=worker_env(self.cfg.env, os.environ), network=self.cfg.network,
             volumes={src: {"bind": dst, "mode": "rw"} for src, dst in self.cfg.volumes.items()},
-            device_requests=[DeviceRequest(count=-1, capabilities=[["gpu"]])] if self.cfg.gpu else None)
+            device_requests=[DeviceRequest(count=-1, capabilities=[["gpu"]])] if self.gpu else None)
 
     def busy(self) -> bool:
         return bool(self.client.containers.list(filters={"label": LABEL, "status": "running"}))

@@ -55,5 +55,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
-    ctx = RunContext.for_video(settings, video_id)
+    ctx = RunContext.for_video(settings, video_id, force=True)   # run by hand: redo it
     NlpPipeline(settings.nlp)(ctx)

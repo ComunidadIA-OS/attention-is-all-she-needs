@@ -7,6 +7,9 @@ from datetime import datetime, timezone
 
 from aiasn.storage.lake import Lake
 
+# Status of the whole video, besides each step's
+QUEUED, RUNNING, OK, ERROR = "en_cola", "procesando", "ok", "error"
+
 
 class Manifest:
     def __init__(self, lake: Lake, video_id: str):
@@ -14,13 +17,26 @@ class Manifest:
         self.path = f"{lake.root}/runs/video_id={video_id}/manifest.json"
         self._lock = threading.Lock()   # audio and video write from different threads
         self._started: dict[str, float] = {}
-        self.data = {"video_id": video_id, "steps": {}}
-        self._save()
+        # Kept across runs: a retry resumes where the last one stopped
+        if lake.fs.exists(self.path):
+            self.data = self.read()
+        else:
+            self.data = {"video_id": video_id, "status": None, "error": None, "steps": {}}
+            self._save()
 
     def read(self) -> dict:
         """The manifest as stored."""
         with self.lake.fs.open(self.path, "r", encoding="utf-8") as f:
             return json.load(f)
+
+    def set_status(self, status: str, error: Exception | None = None) -> None:
+        """Status of the whole video: QUEUED, RUNNING, OK or ERROR (with the error)."""
+        with self._lock:
+            self.data |= {"status": status, "error": repr(error) if error else None}
+            self._save()
+
+    def step_done(self, step: str) -> bool:
+        return self.data["steps"].get(step, {}).get("status") == "ok"
 
     def start(self, step: str) -> None:
         self._started[step] = time.perf_counter()

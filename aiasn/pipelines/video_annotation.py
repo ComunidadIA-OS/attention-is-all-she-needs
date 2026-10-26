@@ -85,5 +85,5 @@ if __name__ == "__main__":
     parser.add_argument("video_id")
     video_id = parser.parse_args().video_id
     settings = Settings()
-    ctx = RunContext.for_video(settings, video_id)
+    ctx = RunContext.for_video(settings, video_id, force=True)   # run by hand: redo it
     print(annotate(ctx))

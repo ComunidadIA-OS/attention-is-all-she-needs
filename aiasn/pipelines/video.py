@@ -180,7 +180,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
-    ctx = RunContext.for_video(settings, args.video_id)
+    ctx = RunContext.for_video(settings, args.video_id, force=True)   # run by hand: redo it
     VideoPipeline(settings.video)(ctx)
     if args.annotate:
         logging.getLogger("aiasn").info("annotated video: %s", annotate(ctx))

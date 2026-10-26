@@ -1,0 +1,56 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
+# The demo: an S3 store, the API and the worker image.
+#   docker compose --profile jobs build    # both images (the worker one takes a while)
+#   docker compose up -d                   # store and API on http://localhost:8000
+# The worker is not a running service: the API starts a container of its image for each video.
+name: aiasn
+
+services:
+  store:
+    image: chrislusf/seaweedfs:4.50   # S3-compatible, Apache-2.0
+    command: server -s3 -dir=/data
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-aiasn}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+    volumes:
+      - store:/data
+    restart: unless-stopped
+
+  api:
+    build: { context: ., dockerfile: docker/api.Dockerfile }
+    image: aiasn-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - path: .env   # OVHcloud token and any other setting
+        required: false
+    environment:   # how the containers are wired; the API passes these on to each worker
+      LAKE_URI: s3://aiasn
+      STORAGE__ENDPOINT_URL: http://store:8333
+      STORAGE__ACCESS_KEY: ${S3_ACCESS_KEY:-aiasn}
+      STORAGE__SECRET_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+      MODELS_DIR: /models
+      HF_HOME: /models/huggingface
+      API__LAUNCHER: docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # to start the worker containers
+    depends_on:
+      - store
+    restart: unless-stopped   # also retries until the store is up
+
+  worker:
+    build: { context: ., dockerfile: docker/worker.Dockerfile }
+    image: aiasn-worker
+    profiles: [jobs]   # only built here; the API runs it with the models volume
+
+volumes:
+  store:
+    name: aiasn-store
+  models:
+    name: aiasn-models   # the name the API mounts in the worker (api.worker.volumes)
+
+networks:
+  default:
+    name: aiasn   # the network the API puts the worker in (api.worker.network)

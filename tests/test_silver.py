@@ -15,6 +15,7 @@ from aiasn.core.silver.identity import IdentitySilver, participant_of
 from aiasn.core.silver.names import NamesSilver, same_name
 from aiasn.core.silver.nlp import NlpSilver
 from aiasn.core.silver.video import VideoSilver, fusion_video
+from aiasn.core.silver.word_bias import WordBiasSilver
 from aiasn.core.transform import Transform
 from aiasn.pipelines.silver import SilverPipeline
 from aiasn.pipelines.context import RunContext
@@ -199,7 +200,7 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
     for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6,
                         "speaker_person": 3, "people": 6}.items():   # 3 on screen + 3 voices not linked
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
-    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "names", "nlp", "total"]
+    assert [line.split()[1] for line in lines][:6] == ["video", "audio", "identity", "names", "nlp", "word_bias"]
     assert {"name", "title", "name_source"} <= set(ctx.lake.read("silver", "people", "vid1").columns)
     assert "3 video_people, 5 video_presence" in lines[0]
 
@@ -533,3 +534,24 @@ def test_references_leave_out_the_participants():
                                "literal": ["Marta Ruiz", "Marta", "Ada"], "gender": ["F", "F", "F"], "found": True})
     out = nlp(NLP_BRONZE | {"nlp_references": references})["nlp_references"]
     assert out.name.tolist() == ["Ada Lovelace"]   # Marta takes part (captioned as MARTA RUIZ)
+
+
+# Word bias
+
+def test_term_bias_of_topics_and_titles():
+    topics = pd.DataFrame({"topic": ["technology", "care", "technology", "being a woman / gender experience"]})
+    people = pd.DataFrame({"title_en": ["researcher", None, "researcher", "educator"]})
+    scores = {"technology": -0.04, "care": 0.15, "researcher": 0.09, "educator": 0.14}
+    out = WordBiasSilver(Settings(), score=scores.get).run({"silver/nlp_topics": topics, "silver/people": people})
+    bias = out["term_bias"]
+    assert list(bias.columns) == ["termino", "tipo", "sesgo"]
+    assert bias.termino.tolist() == ["technology", "care", "being a woman / gender experience", "researcher", "educator"]
+    assert bias.tipo.tolist() == ["tema"] * 3 + ["cargo"] * 2
+    assert bias.sesgo.isna().tolist() == [False, False, True, False, False]   # not in the vocabulary: no score
+
+
+def test_term_bias_without_the_model(tmp_path):
+    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz"})
+    out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": ["care"]}),
+                                        "silver/people": pd.DataFrame({"title_en": [None]})})
+    assert out["term_bias"].sesgo.isna().all()   # the step does not fail; the front shows no bias

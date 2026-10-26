@@ -9,6 +9,7 @@ from aiasn.core.silver.identity import IdentitySilver
 from aiasn.core.silver.names import NamesSilver
 from aiasn.core.silver.nlp import NlpSilver
 from aiasn.core.silver.video import VideoSilver
+from aiasn.core.silver.word_bias import WordBiasSilver
 from aiasn.pipelines.transform_pipeline import TransformPipeline
 from aiasn.settings import Settings
 
@@ -19,7 +20,7 @@ class SilverPipeline(TransformPipeline):
 
     def __init__(self, settings: Settings):
         super().__init__([VideoSilver(settings), AudioSilver(settings), IdentitySilver(settings), NamesSilver(settings),
-                          NlpSilver(settings)])
+                          NlpSilver(settings), WordBiasSilver(settings)])
 
 
 if __name__ == "__main__":

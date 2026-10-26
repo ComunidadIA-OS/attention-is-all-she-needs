@@ -1,9 +1,15 @@
+<!--
+SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Attention Is All She Needs (AIASN)
 
 > **Auditoría de paridad, protagonismo y perspectiva de género en medios audiovisuales mediante Inteligencia Artificial Abierta.**  
 > Proyecto desarrollado para el **Reto «Mujeres por la IA Abierta»** convocado por la **Secretaría de Estado de Digitalización e Inteligencia Artificial (SEDIA)**, la **Comunidad IA de Código Abierto (`ComunidadIA-OS`)**, el **IDEAI-UPC**, **donesCOEINF** y **OVHcloud**.
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![REUSE status](https://api.reuse.software/badge/github.com/ComunidadIA-OS/attention-is-all-she-needs)](https://api.reuse.software/info/github.com/ComunidadIA-OS/attention-is-all-she-needs)
 [![Python: 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](./pyproject.toml)
 [![Open Source AI](https://img.shields.io/badge/Open%20Source%20AI-Compliant-brightgreen.svg)](https://opensource.org/ai)
 [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Art.%2050%20Compliant-success.svg)](./ETHICS_CHECKLIST.md)
@@ -12,7 +18,7 @@
 
 ## 👥 Equipo 1: «Attention Is All She Needs»
 * **Rocío Jiménez Villén** ([@rjvillen](https://github.com/rjvillen)) — Procesamiento de texto, embeddings semánticos, grafos de conocimiento y visión por computador.
-* **Pilar de la Fuente Diez** ([@pilarfuente1992](https://github.com/pilarfuente1992)) — Interlocución oficial, estrategia de producto, modelo de negocio B2B (EIPs / Ley 2/2024) y presentación presencial.
+* **Pilar de la Fuente Diez** ([@pilarvolatixia-cloud](https://github.com/pilarvolatixia-cloud)) — Interlocución oficial, estrategia de producto, modelo de negocio B2B (EIPs / Ley 2/2024) y presentación presencial.
 * **Alba Camiña García** ([@ewigkeitt-cloud](https://github.com/ewigkeitt-cloud)) — Marco conceptual, gobernanza ética y regulatoria (RIA / Sandbox), arquitectura desacoplada y Algoritmos Verdes (*Green AI*).
 
 ---
@@ -76,9 +82,10 @@ flowchart TD
    * **Cuadrante 2 (Presencia Muda):** En pantalla y en silencio $\rightarrow$ Alerta de figuración / lavado de imagen.
    * **Cuadrante 3 (Voz en Off):** Fuera de pantalla y hablando $\rightarrow$ Narración o locución.
    * **Cuadrante 4 (Pasivo):** Solo mencionado en el texto o subtítulo.
-5. **Supervisión Humana (*Human-in-the-Loop*):** Conforme a las recomendaciones de Karina Gibert y Ángela Gasch (SEDIA), el sistema incluye una pantalla operativa con el botón **«Asumo / No asumo»** previa a la emisión de cualquier informe o certificado de paridad.
+5. **Test de Bechdel Digital (*Autoridad Relacional*):** Evalúa de forma 100 % determinista (`evaluar_bechdel_conversacional` en `aiasn/core/fusion.py`, 0 W GPU) tres condiciones sobre la pieza audiovisual: (1) pluralidad femenina ($\ge 2$ mujeres distintas con voz activa, superando el *Efecto Token*), (2) identidad y autoridad propia ($\ge 2$ mujeres acreditadas con nombre o cargo vía OCR/diarización), y (3) interlocución horizontal directa ($\ge 1$ transición consecutiva $\text{Mujer}_A \to \text{Mujer}_B$ sin mediación masculina).
+6. **Supervisión Humana (*Human-in-the-Loop*):** Conforme a las recomendaciones de Karina Gibert y Ángela Gasch (SEDIA), el sistema incluye una pantalla operativa con el botón **«Asumo / No asumo»** previa a la emisión de cualquier informe o certificado de paridad (especificada en [`docs/especificacion_alertas_dashboard_y_hitl.md`](./docs/especificacion_alertas_dashboard_y_hitl.md)).
 
-> 🏛️ **Registro Formal de Decisiones de Arquitectura (ADRs):** Todas las decisiones técnicas y éticas del proyecto están formalizadas bajo el estándar de código abierto de Michael Nygard en el catálogo [`docs/adr/`](docs/adr/README.md) (ADR-0001 a ADR-0009).
+> 🏛️ **Registro Formal de Decisiones de Arquitectura (ADRs):** Todas las decisiones técnicas y éticas del proyecto están formalizadas bajo el estándar de Michael Nygard en el catálogo [`docs/adr/`](./docs/adr/README.md).
 
 ---
 
@@ -86,34 +93,96 @@ flowchart TD
 
 * **Muestreo Temporal `STRIDE`:** Se procesan entre 1 y 5 fotogramas por segundo (`STRIDE = 3` a `6`), reduciendo el consumo de GPU y la huella de carbono en más de un **80 %** frente al procesado continuo a 25/30 fps, sin pérdida de precisión estadística.
 * **Optimización Hardware:** Diseñado para ejecutarse en las instancias $2 \times \text{NVIDIA V100}$ de OVHcloud con precisión de coma flotante media **`torch.float16`**.
+* **Arquitectura *Split Edge-to-Cloud* (99,99 % de ahorro en red y almacenamiento):** El vídeo pesado (.mp4 de varios GB) se procesa de forma efímera en local; hacia la nube (AI Endpoints de OVHcloud) o el repositorio solo viajan kilobytes de texto y tablas anónimas (.csv/.tsv), reduciendo drásticamente la huella de carbono de transmisión y almacenamiento.
 * **Coste de Sostenibilidad:** Inferencia auditada por debajo de **0,30 € por hora de vídeo analizada**.
+
+### 🔄 Del «Círculo Vicioso» al «Círculo Virtuoso» de Referentes (`Top Rosies Talent` + `WikiMujeres`)
+> **Nombre estratégico/comercial:** *Círculo Virtuoso de Referentes Femeninos (Green AI Flywheel)*  
+> **Nombres técnicos de ingeniería:** *Retroalimentación Incremental sin Reentrenamiento (`Zero-Retraining Feedback Loop`)* / *Enriquecimiento Autónomo del Diccionario de Referentes*
+
+1. **Más auditoría $\rightarrow$ Más expertas en pantalla:** Las empresas y medios usan AIASN (y la extensión en caliente en edición) para cumplir la paridad real (Cuadrante 1), invitando y rotulando a más mujeres profesionales.
+2. **Más expertas en pantalla $\rightarrow$ Extracción automática ($p \ge 0{,}80$):** AIASN lee de forma autónoma sus rótulos (`rol_ocr`) y sus intervenciones mediante consenso multimodal (`EasyOCR` + `Whisper` + `GLiNER`).
+3. **Extracción $\rightarrow$ Diccionario más rico (`Top Rosies Talent` / `ReDivIAcat` / `WikiMujeres`):** Esos nombres y cargos verificados se añaden solos al diccionario ligero (`.csv`/`.json`), tanto en local desconectado (*offline/batch*) como sincronizado.
+4. **Diccionario más rico $\rightarrow$ Algoritmo más inteligente sin reentrenar GPU (*Green AI*):** En el siguiente vídeo que se audite, el detector ya conoce a esas profesionales cuando alguien las cita en una conversación (Cuadrante 4), **sin gastar un solo euro ni vatio de GPU en reentrenar la red neuronal**.
+5. **Más visibilidad $\rightarrow$ Más invitaciones:** Al quedar registradas con evidencias de vídeo en **`Top Rosies Talent`** (IDEAI-UPC / donesCOEINF) y **`WikiMujeres`**, más organizadores las encuentran y las llaman para nuevos debates (vuelta al punto 1, multiplicando el efecto).
+
+```mermaid
+flowchart LR
+    A1["1. Más auditoría AIASN<br>→ Más expertas en pantalla"] --> A2["2. Extracción automática<br>(p ≥ 0.80, rol_ocr)"]
+    A2 --> A3["3. Diccionario enriquecido<br>(Top Rosies Talent / WikiMujeres)"]
+    A3 --> A4["4. Algoritmo más preciso (Cuad. 4)<br>SIN REENTRENAR GPU (0 W)"]
+    A4 --> A5["5. Más visibilidad pública<br>y fuentes en Wikipedia"]
+    A5 ==>|"Multiplica invitaciones"| A1
+```
 
 ---
 
-## 🚀 Instalación y Reproducción
+## 🚀 Instalación, Configuración y Reproducción
 
-### 1. Clonar el Repositorio
+El proyecto está diseñado bajo una arquitectura modular agnóstica que ofrece **tres vías de prueba inmediata** según los recursos disponibles:
+
+### 1. Clonar el Repositorio y Crear el Entorno
 ```bash
 git clone https://github.com/ComunidadIA-OS/attention-is-all-she-needs.git
 cd attention-is-all-she-needs
-```
 
-### 2. Entorno con `uv` (Recomendado) o `pip`
-```bash
-# Con uv (rápido y reproducible)
+# Con uv (Recomendado — instalación ultra-rápida y reproducible):
 uv venv
-source .venv/bin/activate  # En Linux/Mac
-# o en Windows: .venv\Scripts\activate
-uv pip install -e ".[audio,video,analysis]"
+source .venv/bin/activate       # En Linux / macOS
+# o en Windows PowerShell:      .venv\Scripts\Activate.ps1
 
-# Con pip clásico
-pip install -e ".[audio,video,analysis]"
+uv pip install -e ".[dev]"
+
+# (Alternativa con pip estándar):
+# python -m venv .venv && source .venv/bin/activate
+# pip install -e ".[dev]"
 ```
 
-### 3. Ejecutar la Suite de Pruebas Automatizadas
+---
+
+### 2. Modos de Verificación para el Tribunal Evaluador
+
+#### 🟢 Modo A: Verificación Inmediata y Determinista (Zero Setup — <3 segundos)
+> **Recomendado para evaluación técnica rápida sin requerir GPUs ni credenciales en la nube.**  
+Ejecuta la suite completa de pruebas unitarias sobre datos reales preprocesados del corpus *Àgora* y trazas de vídeo:
 ```bash
 python -m pytest tests/ -v
 ```
+
+### 4. Despliegue con Docker (Opcional)
+Para levantar la demo completa o los servicios contenerizados en local sin configurar dependencias manualmente:
+```bash
+docker compose up --build
+```
+* **Qué valida:**
+  * **Suite de pruebas unitarias y contratos éticos (10 tests en esta rama + 5 tests del motor determinista en PR de fusión):**
+    * `tests/test_contracts.py` (6 tests): Contratos de audio, solape temporal, matriz de 4 cuadrantes *Seeing and Hearing* (Verónica Vilaplana), regla anti-*equality-washing* (Kanter 1977 / Tuchman 1978) y abstención ética ($p < 0{,}80 \rightarrow \text{no\_determinado}$).
+    * `tests/test_compliance_adapters.py` (4 tests): Purga biométrica en RAM (*Zero Facial Retention*), denegación de Sello Oficial ante sanciones LISOS o *cherry-picking* (Art. 6 Apache-2.0), rehabilitación corporativa activa (*Self-Cleaning* con ventana de 3 años e informes históricos) e inmutabilidad criptográfica `SHA-256` con ID de supervisión pseudonimizado (`operador_supervision_id`).
+
+#### ☁️ Modo B: Inferencia Cloud con AI Endpoints de OVHcloud (Infraestructura Oficial)
+> **Aprovecha el catálogo de modelos servidos en Europa por OVHcloud con aceleración GPU.**
+1. Copiar la plantilla de configuración:
+   ```bash
+   cp .env.example .env
+   ```
+2. Configurar en `.env` tu token de acceso proporcionado por OVHcloud:
+   ```env
+   OVH_BASE_URL="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+   OVH_AI_ENDPOINTS_ACCESS_TOKEN="tu_token_aqui"
+   OVH_ASR_MODEL="whisper-large-v3"
+   ```
+3. Ejecutar el pipeline de audio sobre una muestra de prueba:
+   ```bash
+   python scripts/test_audio_ovh.py tests/fixtures/muestra_audio.wav ca
+   ```
+   *Genera de forma automática el archivo tabular estructurado con turnos de palabra, diarización y marcas de tiempo.*
+
+#### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)
+> **Para todas las Administraciones Públicas del Estado (RTVE, 3Cat/TV3, EITB, CRTVG, universidades, ministerios, diputaciones y ayuntamientos) sujetas al Esquema Nacional de Seguridad (ENS), al Art. 157 de la Ley 40/2015 (reutilización de sistemas) y a la Directiva UE 2019/882 de Accesibilidad.**  
+* **Soberanía Lingüística Cooficial e Inclusividad por Diseño (`ADR-0010`):** Soporte nativo sin traducción intermedia para todas las **lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) + `en`**, e inclusión automática de resumen en **Lectura Fácil (Norma UNE 153101 / WCAG 2.2 AA)** (`resumen_lectura_facil`) compatible con lectores de pantalla (`NVDA`/`JAWS`).
+* **Aislamiento de Licencias (`aiasn/model_adapters/vision_adapter.py`):** Permite ingerir trazas precomputadas vía archivo plano (`.csv` / `.tsv` mediante `CSVPrecomputedAdapter`, doctrina de separación de procesos de la FSF) o ejecutar inferencia local 100 % permisiva (`PermissiveYOLOXAdapter` con **YOLOX Apache-2.0**, **InsightFace MIT** e **EasyOCR Apache-2.0**), sin contaminar entornos B2B o públicos con licencias copyleft (AGPL-3.0).
+* **Círculo Virtuoso de Referentes Femeninos sin Reentrenamiento (*Green AI Flywheel*):** Los rótulos y menciones extraídos por consenso de alta confianza ($p \ge 0{,}80$) enriquecen un diccionario ligero local (`.csv`/`.json`) interoperable con **`Top Rosies Talent`**, **`ReDivIAcat`** y **`tFemTIC`** (`IDEAI-UPC` / `donesCOEINF`) y con **`WikiMujeres` / `Wikidata`**, mejorando el reconocimiento futuro (Cuadrante 4) tanto *offline/batch* como sincronizado sin coste de GPU en reentrenamiento.
+* **Extensión en Caliente para las 4 Modalidades (*Shift-Left Parity*):** Diseñado para inyectarse como asistente preventivo en herramientas de **Vídeo** (`OBS Studio`, `DaVinci Resolve`, `Premiere`), **Audio/Podcasts** (`Audacity`, `Audition`), **Imagen/Cartelería** (`Canva`, `Figma`) y **Texto/Prensa** (`WordPress`, `Docs`), y emitir certificados con huella inmutable **`SHA-256`** (`emitir_sello_auditoria`).
 
 ---
 
@@ -129,11 +198,30 @@ En cumplimiento del **Reglamento (UE) 2024/1689 (Reglamento Europeo de IA)** y d
 
 ## 📚 Documentación de Gobernanza y Enlaces Canónicos
 
+* 🖥️ [**docs/especificacion_alertas_dashboard_y_hitl.md**](./docs/especificacion_alertas_dashboard_y_hitl.md): Especificación funcional de las 3 vistas por rol, alertas anti-*equality-washing*, Test de Bechdel Digital y pantalla *«Asumo / No asumo»* (#6).
+* 📖 [**GLOSSARY.md**](./GLOSSARY.md): Glosario maestro de los 25 términos, elementos clave de la solución y diagrama del Círculo Virtuoso (*Retroalimentación Incremental sin Reentrenamiento*).
 * 📋 [**ETHICS_CHECKLIST.md**](./ETHICS_CHECKLIST.md): Autoevaluación formal bajo los 7 principios de ALTAI y el Sandbox de la SEDIA / AESIA.
 * 🧪 [**TESTING.md**](./TESTING.md): Protocolo de pruebas con *Ground Truth*, tests unitarios y pruebas de usabilidad humana.
 * 🤖 [**MODEL_CARD.md**](./MODEL_CARD.md): Ficha técnica de modelos abiertos, umbrales y limitaciones conocidas.
 * 📊 [**DATASET_CARD.md**](./DATASET_CARD.md): Ficha de procedencia de datos, perfil poblacional y régimen legal de fuentes.
-* 🔒 [**SECURITY.md**](./SECURITY.md): Política de seguridad y principio de *Zero Facial Retention*.
+* 🔒 [**SECURITY.md**](./SECURITY.md): Modelo de amenazas frente a ataques adversarios (Art. 15 RIA y OWASP ML/LLM), *Zero Facial Retention* y reporte responsable.
+* 🤖 [**AGENTS.md**](./AGENTS.md): Guardarraíles vinculantes de seguridad, aislamiento de licencias y ética para agentes de código (*AI Coding Guardrails*).
 * 🤝 [**CONTRIBUTING.md**](./CONTRIBUTING.md): Guía de contribución comunitaria y flujo de ramas.
-* 📜 [**CODE_OF_CONDUCT.md**](./CODE_OF_CONDUCT.md): Código de conducta (Contributor Covenant 2.1).
+* 📜 [**CODE_OF_CONDUCT.md**](./CODE_OF_CONDUCT.md): Código Ético a medida, Estatuto de Propósito Social, Cláusula Anti-Lavado de Cara (Art. 6 Apache-2.0), Política de Uso Responsable y Código de Conducta.
 * 📝 [**CHANGELOG.md**](./CHANGELOG.md): Historial de versiones y evolución del prototipo.
+
+---
+
+## 📄 Licencia y Conformidad REUSE
+
+Este proyecto está licenciado bajo los términos de la **Licencia Apache 2.0**, cumpliendo estrictamente las directrices formativas de la Oficina Técnica de `ComunidadIA-OS` (Jorge Teixeira) y el estándar [REUSE Software](https://reuse.software/) de la *Free Software Foundation Europe* (FSFE):
+
+* **Identificador SPDX:** `SPDX-License-Identifier: Apache-2.0`
+* **Directorio de Licencias:** El texto íntegro y canónico se aloja en [`LICENSES/Apache-2.0.txt`](./LICENSES/Apache-2.0.txt) y en el archivo raíz [`LICENSE`](./LICENSE).
+* **Aviso Formal de Copyright:**
+  ```text
+  SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs
+  (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+  SPDX-License-Identifier: Apache-2.0
+  ```
+* **Aislamiento y Compatibilidad de Dependencias:** El núcleo determinista (`[core]`) y los adaptadores locales (`[local-ai]` vía YOLOX e InsightFace) operan bajo licencias permisivas (Apache-2.0 / MIT). Cualquier uso de modelos bajo licencias copyleft de red (como Ultralytics AGPL-3.0) queda aislado en adaptadores opcionales independientes o mediante consumo remoto vía API HTTP REST en los AI Endpoints de OVHcloud, impidiendo cualquier contaminación de código privativo en clientes y corporaciones B2B.

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Autoevaluación Ética y Regulatoria (ETHICS_CHECKLIST)
 ## Proyecto: «Attention Is All She Needs» (AIASN) — Reto «Mujeres por la IA Abierta»
 
@@ -74,8 +79,6 @@
   * **Imagen/Vídeo:** Episodios de divulgación científica (*«Quanta, quanta IA!»*, IDEAI-UPC) y mesas redondas de debate.
 - [x] **4.3. Explicabilidad Abierta de las Métricas:**  
   *Justificación:* Las fórmulas de los ratios (tiempo de palabra, tiempo de pantalla, área ocupada y centralidad) se documentan en código abierto en lenguaje natural para que cualquier ciudadana o auditor pueda auditarlas sin conocimientos de programación.
-- [x] **4.4. Declaración de Uso de Asistentes y Copilotos de IA en el Desarrollo:**  
-  *Justificación:* Conforme al estándar de transparencia de Jorge Teixeira y el Art. 50 del RIA, se declara abiertamente el uso de asistentes inteligentes de código como herramientas de aceleración y soporte metodológico, auditadas y validadas por el equipo humano.
 
 ---
 
@@ -87,8 +90,10 @@
   *Justificación:* Basado en el hallazgo empírico de la Diapositiva 91 de Verónica Vilaplana (donde el 50 % de las mujeres caen en `"unknown"` por ángulos de cámara difíciles o inclinación de cabeza), **la herramienta jamás descarta la categoría `"unknown"`**, visibilizándola y asignándole un estado de `⚠️ Cobertura Parcial` para revisión.
 - [x] **5.3. Mitigación de Sesgos Acústicos de Género y Edad:**  
   *Justificación:* Calibración adaptada a frecuencias fundamentales femeninas e infantiles (evitando el sesgo histórico de clasificadores entrenados exclusivamente con voces masculinas adultas).
-- [x] **5.4. Respeto a Identidades No Binarias:**  
-  *Justificación:* El esquema de datos no impone un binarismo forzado; acepta categorías de género autoidentificadas y declaradas en actas oficiales.
+- [x] **5.4. Respeto a Identidades No Binarias (ADR-0006):**  
+  *Justificación:* El esquema de datos no impone un binarismo forzado; acepta categorías de género autoidentificadas y declaradas en actas oficiales sin detraer del suelo del 40 % femenino.
+- [x] **5.5. Soberanía Lingüística Cooficial, Inclusividad y Accesibilidad Universal por Diseño (ADR-0010 / Pilar 5 ALTAI):**  
+  *Justificación:* Soporte nativo sin traducción intermedia para todas las lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) más inglés (`en`), cumpliendo el **Art. 157 de la Ley 40/2015 (LRJSP)** y el **Esquema Nacional de Interoperabilidad (ENI)** para su reutilización en todas las Administraciones Públicas, junto con **Accesibilidad Universal** (**Directiva UE 2019/882**, **RD 1112/2018**, **WCAG 2.2 AA** con paleta Okabe-Ito, **Lectura Fácil UNE 153101** en `resumen_lectura_facil` para lectores de pantalla y subtitulado **UNE 153010**).
 
 ---
 
@@ -100,24 +105,23 @@
   *Justificación:* Todo el pipeline se depura en local sobre muestras mínimas de audio y vídeo de pocos segundos antes de desplegarse en las instancias GPU de OVHcloud, evitando el gasto superfluo de cómputo en la nube.
 - [x] **6.3. Optimización para Arquitectura NVIDIA Volta (V100):**  
   *Justificación:* Uso estricto de precisión en coma flotante media **`torch.float16`** adaptado al hardware cedido por OVHcloud (sin exigir `bfloat16` ni *FlashAttention-2* no soportados).
-- [x] **6.4. Sostenibilidad Financiera del MVP:**  
-  *Justificación:* Coste de mantenimiento e inferencia auditado por debajo de **0,30 € por hora de vídeo analizada**, garantizando la viabilidad de adopción para pymes y medios modestos.
+- [x] **6.4. Sostenibilidad Financiera del MVP y Arquitectura *Split Edge-to-Cloud* (ENS):**  
+  *Justificación:* Procesamiento efímero del vídeo pesado en local y transmisión exclusiva de kilobytes de texto y tablas anónimas (`.csv`/`.tsv`), logrando un **99,99 % de reducción de tráfico de red y almacenamiento cloud**, adecuación al **Esquema Nacional de Seguridad (ENS)** para el sector público y un coste auditado inferior a **0,30 € por hora de vídeo analizada**, además del enriquecimiento del diccionario de referentes (`Top Rosies Talent` / `ReDivIAcat` / `WikiMujeres`) sin reentrenar GPU.
 
 ---
 
 ## 7. Rendición de Cuentas y Software Libre (*Accountability & Open Source*)
 
-- [x] **7.1. Licencia Abierta y Estándar *Open Source AI* (OSI):**  
-  *Justificación:* Todo el código se publica bajo licencias abiertas estándar compatibles (`Apache 2.0` / `MIT`), cumpliendo el Art. 10 de las bases y las pautas de Jorge Teixeira (Oficina Técnica de ComunidadIA-OS).
+- [x] **7.1. Licencia Abierta, Estándar REUSE (FSFE) y Protección del Sello Oficial (Art. 6 Apache-2.0):**  
+  *Justificación:* Todo el código se publica bajo `Apache-2.0` cumpliendo el estándar [`reuse.software`](https://reuse.software/) de la FSFE y reservando el Sello Oficial («AIASN Trust Verified») mediante firma criptográfica `SHA-256`, ventana de 3 años contra lavado de cara (*No-Wash Policy*), vía de rehabilitación activa (*Self-Cleaning*) e identificador pseudonimizado en el botón «Asumo» (`operador_supervision_id`).
 - [x] **7.2. Arquitectura Agnóstica al Modelo:**  
-  *Justificación:* El núcleo del sistema desacopla los adaptadores de inferencia mediante interfaces `Pydantic`. Cualquier modelo (`Whisper`, `miVOLO`, `Qwen`, `Llama`) puede sustituirse por otra alternativa abierta sin reescribir la lógica de cálculo ni generar dependencias de un único proveedor.
+  *Justificación:* El núcleo del sistema desacopla los adaptadores de inferencia mediante interfaces `Pydantic`. Cualquier modelo (`Whisper`, `miVOLO`, `YOLOX`, `Qwen`, `Llama`) puede sustituirse por otra alternativa abierta sin reescribir la lógica de cálculo ni generar dependencias de un único proveedor.
 - [x] **7.3. Registro Canónico de Decisiones de Arquitectura (ADRs):**  
-  *Justificación:* Trazabilidad técnica exhaustiva documentada en 8 ADRs (`ADR-001` a `ADR-008`), explicando el contexto, alternativas descartadas y consecuencias ético-técnicas de cada decisión.
+  *Justificación:* Trazabilidad técnica exhaustiva documentada en **10 ADRs (`ADR-001` a `ADR-010`, incluyendo exclusión de emociones biométricas Art. 5.1.f RIA y soberanía lingüística/reutilización en AAPP Art. 157 LRJSP)**, explicando el contexto, alternativas descartadas y consecuencias ético-técnicas de cada decisión.
 - [x] **7.4. Gobernanza Comunitaria Completa:**  
-  *Justificación:* Inclusión en el repositorio de los 7 archivos canónicos: `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `MODEL_CARD.md`, `DATASET_CARD.md` y `pyproject.toml`.
+  *Justificación:* Inclusión en el repositorio de los archivos canónicos: `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `MODEL_CARD.md`, `DATASET_CARD.md` y `pyproject.toml`.
 
 ---
 
 > **Conclusión de la Autoevaluación:**  
 > El sistema cumple satisfactoriamente con los requerimientos éticos, normativos y algorítmicos formulados en el marco del reto, quedando listo para su auditoría por parte del tribunal y de las autoridades competentes.
-

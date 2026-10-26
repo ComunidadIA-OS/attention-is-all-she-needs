@@ -117,6 +117,7 @@ def test_calculo_kpis_y_alerta_equality_washing():
     assert "hombre" in kpis["por_genero"]
     assert "alerta_equality_washing" in kpis
     assert "salvaguarda_paridad" in kpis
+    assert "test_bechdel_digital" in kpis
     assert "resumen_lectura_facil" in kpis
     assert "Lectura Facil (UNE 153101)" in kpis["resumen_lectura_facil"]
     assert set(["es", "ca", "gl", "eu"]).issubset(set(kpis["idiomas_soportados"]))
@@ -171,3 +172,141 @@ def test_salvaguarda_matematica_paridad_no_binaria_adr0006():
         == "FASE_3_MESA_MONOGRAFICA_DIVERSIDAD_LGTBIQ"
     )
     assert mesa_lgtbiq["cumple_salvaguarda_paridad"] is True
+
+
+def test_bechdel_conversacional_determinista():
+    """
+    Verifica el Test de Bechdel Digital / Conversacional:
+    1. Falla ante Efecto Token (1 sola mujer hablando) o aislamiento relacional (turnos mediados por hombre).
+    2. Supera (3/3) cuando participan >=2 mujeres acreditadas con rotulo propio y dialogan directamente (Mujer_A -> Mujer_B).
+    """
+    from aiasn.core.fusion import evaluar_bechdel_conversacional
+
+    # Caso 1: Aislamiento relacional (2 mujeres pero mediadas por un hombre: M1 -> H1 -> M2)
+    df_mediado = pd.DataFrame(
+        [
+            {
+                "tiempo_i": 0.0,
+                "tiempo_f": 10.0,
+                "duracion_s": 10.0,
+                "cuadrante": 1,
+                "genero": "mujer",
+                "hablante_id": "spk_m1",
+                "rotulo_nombre": "Dra. Elena Valls",
+                "rotulo_cargo": "Catedratica IA",
+            },
+            {
+                "tiempo_i": 10.0,
+                "tiempo_f": 25.0,
+                "duracion_s": 15.0,
+                "cuadrante": 1,
+                "genero": "hombre",
+                "hablante_id": "spk_h1",
+                "rotulo_nombre": "Marc Puig",
+                "rotulo_cargo": "Moderador",
+            },
+            {
+                "tiempo_i": 25.0,
+                "tiempo_f": 40.0,
+                "duracion_s": 15.0,
+                "cuadrante": 1,
+                "genero": "mujer",
+                "hablante_id": "spk_m2",
+                "rotulo_nombre": "Dra. Clara Roig",
+                "rotulo_cargo": "Investigadora",
+            },
+        ]
+    )
+    res_mediado = evaluar_bechdel_conversacional(df_mediado)
+    assert res_mediado["regla_1_pluralidad_femenina"] is True
+    assert res_mediado["regla_2_identidad_propia"] is True
+    assert res_mediado["regla_3_dialogo_horizontal"] is False
+    assert res_mediado["transiciones_mujer_a_mujer"] == 0
+    assert res_mediado["puntuacion_bechdel_0_3"] == 2
+    assert res_mediado["supera_bechdel_digital"] is False
+
+    # Caso 2: Dialogo horizontal directo Mujer_A -> Mujer_B con identidad acreditada (3/3)
+    df_directo = pd.DataFrame(
+        [
+            {
+                "tiempo_i": 0.0,
+                "tiempo_f": 15.0,
+                "duracion_s": 15.0,
+                "cuadrante": 1,
+                "genero": "mujer",
+                "hablante_id": "spk_m1",
+                "rotulo_nombre": "Dra. Elena Valls",
+                "rotulo_cargo": "Catedratica IA",
+            },
+            {
+                "tiempo_i": 15.0,
+                "tiempo_f": 32.0,
+                "duracion_s": 17.0,
+                "cuadrante": 1,
+                "genero": "mujer",
+                "hablante_id": "spk_m2",
+                "rotulo_nombre": "Dra. Clara Roig",
+                "rotulo_cargo": "Investigadora",
+            },
+        ]
+    )
+    res_directo = evaluar_bechdel_conversacional(df_directo)
+    assert res_directo["regla_1_pluralidad_femenina"] is True
+    assert res_directo["regla_2_identidad_propia"] is True
+    assert res_directo["regla_3_dialogo_horizontal"] is True
+    assert res_directo["transiciones_mujer_a_mujer"] == 1
+    assert res_directo["puntuacion_bechdel_0_3"] == 3
+    assert res_directo["supera_bechdel_digital"] is True
+
+
+def test_compatibilidad_directa_tablas_bronze_rocio():
+    """Verifica que cruzar_intervalos_multimodales acepte sin cambios los DataFrames
+    Parquet de la capa bronze de Rocio (`audio_turns` y `video_detections`).
+    """
+    df_audio_bronze = pd.DataFrame(
+        [
+            {"start": 0.0, "end": 4.0, "speaker": 0, "text": "Bienvenidas al debate.", "gender": "F", "gender_prob": 0.94},
+            {"start": 4.0, "end": 8.0, "speaker": 1, "text": "Gracias, analizamos los datos.", "gender": "F", "gender_prob": 0.91},
+        ]
+    )
+    df_video_bronze = pd.DataFrame(
+        [
+            {
+                "frame": 3, "shot": 0, "track_id": 1, "person_id": 10,
+                "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
+                "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
+                "gender": "F", "gender_prob": 0.95, "age": 38.0,
+                "frame_width": 640, "frame_height": 360, "speaking_score": 1.2,
+                "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
+            },
+            {
+                "frame": 99, "shot": 0, "track_id": 1, "person_id": 10,
+                "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
+                "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
+                "gender": "F", "gender_prob": 0.95, "age": 38.0,
+                "frame_width": 640, "frame_height": 360, "speaking_score": 1.1,
+                "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
+            },
+            {
+                "frame": 103, "shot": 1, "track_id": 2, "person_id": 20,
+                "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
+                "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
+                "gender": "F", "gender_prob": 0.92, "age": 44.0,
+                "frame_width": 640, "frame_height": 360, "speaking_score": 0.9,
+                "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
+            },
+            {
+                "frame": 199, "shot": 1, "track_id": 2, "person_id": 20,
+                "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
+                "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
+                "gender": "F", "gender_prob": 0.92, "age": 44.0,
+                "frame_width": 640, "frame_height": 360, "speaking_score": 0.8,
+                "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
+            },
+        ]
+    )
+    df_ev = cruzar_intervalos_multimodales(df_audio_bronze, df_video_bronze)
+    kpis = calcular_kpis_paridad(df_ev, duracion_total_s=8.0)
+    assert kpis["pct_voz_mujer"] == 100.0
+    assert kpis["test_bechdel_digital"]["supera_bechdel_digital"] is True
+    assert kpis["test_bechdel_digital"]["transiciones_mujer_a_mujer"] == 1

@@ -52,7 +52,6 @@ dev = [
 ]
 # The worker: models and audio/video processing (GPU)
 worker = [
-    "accelerate>=1.11.0",
     "easyocr>=1.7.2",
     "gdown>=5.0",
     "insightface>=0.7.3",
@@ -112,6 +111,10 @@ override-dependencies = [
     "onnxruntime; sys_platform == 'never'",
     # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
     "lapx; sys_platform == 'never'",
+    # Same cv2 module as opencv-python-headless (easyocr), plus GUI libraries we do not use: keep only the headless one
+    "opencv-python; sys_platform == 'never'",
+    # ultralytics only imports polars for results summaries we do not use (~180 MB)
+    "polars; sys_platform == 'never'",
 ]
 # mivolo's setup.py uses pkg_resources (gone in setuptools 81); the project itself needs setuptools>=61
 build-constraint-dependencies = ["setuptools>=61,<81"]

@@ -16,7 +16,7 @@ from aiasn.core.fusion import calcular_kpis_paridad
 from aiasn.core.transform import Transform
 from aiasn.settings import Settings
 
-COLUMNS = ["kpi", "genero", "categoria", "valor", "base"]
+COLUMNS = ["kpi", "genero", "categoria", "categoria_es", "valor", "base"]   # categoria_es: Spanish label, for the UI
 Tables = dict[str, pd.DataFrame]
 KPIS: dict[str, Callable[[Tables, Settings], pd.DataFrame]] = {}
 
@@ -29,9 +29,11 @@ def kpi(name: str):
     return register
 
 
-def rows(name: str, records: list[tuple]) -> pd.DataFrame:
-    """gold/kpis rows of a KPI from (genero, categoria, valor, base) tuples."""
-    return pd.DataFrame([(name, *r) for r in records], columns=COLUMNS)
+def rows(name: str, records: list[tuple], labels: dict[str, str] | None = None) -> pd.DataFrame:
+    """gold/kpis rows of a KPI from (genero, categoria, valor, base) tuples; `labels`: Spanish of each categoria."""
+    df = pd.DataFrame([(name, g, c, v, b) for g, c, v, b in records],
+                      columns=["kpi", "genero", "categoria", "valor", "base"])
+    return df.assign(categoria_es=df.categoria.map(labels or {}))[COLUMNS]
 
 
 def with_gender(df: pd.DataFrame, people: pd.DataFrame, column: str = "participant_id") -> pd.DataFrame:
@@ -83,7 +85,8 @@ def topics(tables: Tables, settings: Settings) -> pd.DataFrame:
     t = with_gender(tables["silver/nlp_topics"], tables["silver/people"])
     counts = t.groupby(["genero", "topic"]).size()
     totals = t.groupby("genero").size()
-    return rows("topics", [(gender, topic, n, totals[gender]) for (gender, topic), n in counts.items()])
+    labels = dict(zip(t.topic, t.topic_es))
+    return rows("topics", [(gender, topic, n, totals[gender]) for (gender, topic), n in counts.items()], labels)
 
 
 @kpi("references")
@@ -124,7 +127,8 @@ def tone(tables: Tables, settings: Settings) -> pd.DataFrame:
     t = with_gender(tables["silver/nlp_tone"].dropna(subset=["tone"]), tables["silver/people"])
     counts = t.groupby(["genero", "tone"]).size()
     totals = t.groupby("genero").size()
-    return rows("tone", [(gender, tone_, n, totals[gender]) for (gender, tone_), n in counts.items()])
+    labels = dict(zip(t.tone, t.tone_es))
+    return rows("tone", [(gender, tone_, n, totals[gender]) for (gender, tone_), n in counts.items()], labels)
 
 
 class KpisGold(Transform):

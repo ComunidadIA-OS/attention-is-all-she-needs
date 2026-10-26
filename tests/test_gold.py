@@ -90,23 +90,25 @@ NLP_SILVER = {
     "silver/nlp_roles": pd.DataFrame({"participant_id": ["p1", "v1"], "role": ["testimony", "voice-over narrator"],
                                       "authority": [True, True], "authority_source": ["rotulo", "rol"]}),
     "silver/nlp_topics": pd.DataFrame({"participant_id": ["p1", "p1", "v1"], "turn": [0, 2, 1],
-                                       "topic": ["technology", "care", "history"], "evidence": ["", "", ""]}),
+                                       "topic": ["technology", "care", "history"],
+                                       "topic_es": ["tecnología", "cuidados", "historia"], "evidence": ["", "", ""]}),
     "silver/nlp_references": pd.DataFrame({"participant_id": ["p1", "v1", "v1"], "turn": [0, 1, 1],
                                            "name": ["Ada Lovelace", "Ada Lovelace", "Alan Turing"],
                                            "genero": ["mujer", "mujer", "hombre"]}),
     "silver/nlp_ideas": pd.DataFrame({"idea_id": [0, 0, 1, 2], "idea": ["a", "a", "b", "c"],
                                       "participant_id": ["p1", "v1", "p1", "v1"]}),
     "silver/nlp_tone": pd.DataFrame({"participant_id": ["p1", "v1", "p1"], "turn": [0, 1, 2],
-                                     "tone": ["technical_assertive", "dissent", None], "score": [None] * 3}),
+                                     "tone": ["technical_assertive", "dissent", None],
+                                     "tone_es": ["técnico/asertivo", "disenso", None], "score": [None] * 3}),
 }
 
 
-def kpi_rows(name: str) -> pd.DataFrame:
+def kpi_rows(name: str, labels: bool = False) -> pd.DataFrame:
     tables = SILVER | NLP_SILVER | {"silver/people": PEOPLE,
                                     "gold/quadrants": FusionGold(Settings()).run(SILVER)["quadrants"]}
     out = KPIS[name](tables, Settings())
-    assert list(out.columns) == ["kpi", "genero", "categoria", "valor", "base"] and (out.kpi == name).all()
-    return out.set_index(["genero", "categoria"])[["valor", "base"]]
+    assert list(out.columns) == ["kpi", "genero", "categoria", "categoria_es", "valor", "base"] and (out.kpi == name).all()
+    return out.set_index(["genero", "categoria"])[["valor", "base"] + (["categoria_es"] if labels else [])]
 
 
 def test_parity_seconds_and_shares():
@@ -124,8 +126,9 @@ def test_authority_share_of_speech():
 
 
 def test_topics_by_gender_of_who_speaks():
-    t = kpi_rows("topics")
-    assert t.loc[("mujer", "care")].tolist() == [1.0, 2.0] and t.loc[("hombre", "history")].tolist() == [1.0, 1.0]
+    t = kpi_rows("topics", labels=True)
+    assert t.loc[("mujer", "care")].tolist() == [1.0, 2.0, "cuidados"]
+    assert t.loc[("hombre", "history")].tolist() == [1.0, 1.0, "historia"]
 
 
 def test_references_count_each_person_cited_once():
@@ -146,9 +149,9 @@ def test_ideas_with_and_only_by_each_gender():
 
 
 def test_tone_aggregated_by_gender():
-    t = kpi_rows("tone")
-    assert t.loc[("mujer", "technical_assertive")].tolist() == [1.0, 1.0]   # the turn without tone is not counted
-    assert t.loc[("hombre", "dissent")].tolist() == [1.0, 1.0]
+    t = kpi_rows("tone", labels=True)
+    assert t.loc[("mujer", "technical_assertive")].tolist() == [1.0, 1.0, "técnico/asertivo"]   # untoned turn left out
+    assert t.loc[("hombre", "dissent")].tolist() == [1.0, 1.0, "disenso"]
 
 
 def test_kpis_registry(monkeypatch):

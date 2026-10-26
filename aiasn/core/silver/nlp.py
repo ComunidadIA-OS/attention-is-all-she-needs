@@ -10,13 +10,22 @@ from aiasn.core.silver.identity import participant_of
 from aiasn.core.silver.names import same_name
 from aiasn.core.transform import Transform
 
+# English keys (stable, word2vec) and their Spanish labels (`_es`, for the UI)
 TABLES = {
-    "nlp_topics": ["participant_id", "turn", "topic", "evidence"],
+    "nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"],
     "nlp_references": ["participant_id", "turn", "name", "genero"],   # genero: of the person cited
-    "nlp_roles": ["participant_id", "role", "authority", "authority_source"],   # source: rol, rotulo, ambos
+    "nlp_roles": ["participant_id", "role", "role_es", "authority", "authority_source"],   # source: rol, rotulo, ambos
     "nlp_ideas": ["idea_id", "idea", "participant_id"],
-    "nlp_tone": ["participant_id", "turn", "tone", "score"],          # per turn; only aggregated in gold (ADR-0009)
+    "nlp_tone": ["participant_id", "turn", "tone", "tone_es", "score"],   # per turn; only aggregated in gold (ADR-0009)
 }
+TONE_ES = {"technical_assertive": "técnico/asertivo", "collaborative": "colaborativo", "dissent": "disenso"}
+
+
+def spanish(keys: pd.Series, guide: dict[str, str], model: pd.Series | None) -> list:
+    """Spanish label of each key: the guide's when the key is in it (always the same), otherwise the model's."""
+    model = model if model is not None else pd.Series([None] * len(keys), index=keys.index)
+    by_key = {k.lower(): v for k, v in guide.items()}
+    return [by_key.get(k, m.strip() if isinstance(m, str) else None) for k, m in zip(keys, model)]
 
 
 class NlpSilver(Transform):
@@ -33,12 +42,17 @@ class NlpSilver(Transform):
             if "found" in df:   # NA: nothing quoted to check (zero-shot tone)
                 bronze[t] = bronze[t][bronze[t].found.astype("boolean").fillna(True)]
         topics, references, roles = bronze["nlp_topics"], bronze["nlp_references"], bronze["nlp_roles"]
+        nlp_cfg = self.settings.nlp
+        topics = topics.assign(topic=topics.topic.str.strip().str.lower())
+        roles = roles.assign(
+            role_es=spanish(roles.role.str.strip().str.lower(), nlp_cfg.roles_guide, roles.get("role_es")))
+        tone = bronze["nlp_tone"]
         out = {
-            "nlp_topics": topics.assign(topic=topics.topic.str.strip().str.lower()),
+            "nlp_topics": topics.assign(topic_es=spanish(topics.topic, nlp_cfg.topics_guide, topics.get("topic_es"))),
             "nlp_references": self._not_participants(references, tables["silver/person_names"]).assign(
                 genero=lambda r: r.gender.map(from_model)),
             "nlp_roles": self._authority(roles, tables["silver/people"]),
-            "nlp_ideas": bronze["nlp_ideas"], "nlp_tone": bronze["nlp_tone"],
+            "nlp_ideas": bronze["nlp_ideas"], "nlp_tone": tone.assign(tone_es=tone.tone.map(TONE_ES)),
         }
         return {t: out[t][columns].reset_index(drop=True) for t, columns in TABLES.items()}
 

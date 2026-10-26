@@ -455,11 +455,13 @@ def S(*speakers) -> pd.arrays.IntegerArray:
 
 
 NLP_BRONZE = {   # bronze nlp_* of a speaker 0 on screen (person 1) and a voice off screen (speaker 1)
-    "nlp_topics": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "topic": [" Technology", "care", "health"],
+    "nlp_topics": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "topic": [" Technology", "robots", "health"],
+                                "topic_es": ["Tecnologia", " robots ", "salud"],
                                 "evidence": ["la IA", "cuidar", "inventado"], "found": [True, True, False]}),
     "nlp_references": pd.DataFrame({"turn": [0, 2], "speaker": S(0, 0), "name": ["Ada Lovelace", "Alan Turing"],
                                     "literal": ["Ada", "Turing"], "gender": ["F", None], "found": [True, True]}),
-    "nlp_roles": pd.DataFrame({"speaker": S(0, 1), "role": ["Expert", "voice-over narrator"]}),
+    "nlp_roles": pd.DataFrame({"speaker": S(0, 1), "role": ["Expert", "voice-over narrator"],
+                               "role_es": ["experta", "narrador en off"]}),
     "nlp_ideas": pd.DataFrame({"idea_id": [0, 0, 1], "idea": ["a", "a", "b"], "speaker": S(0, 1, 1)}),
     "nlp_tone": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "tone": ["dissent", None, "collaborative"],
                               "score": [pd.NA, pd.NA, pd.NA], "evidence": ["no", None, "x"],
@@ -482,17 +484,21 @@ def nlp(bronze=NLP_BRONZE, **silver) -> dict[str, pd.DataFrame]:
 def test_nlp_tables_by_participant_without_made_up_quotes():
     out = nlp()
     assert out["nlp_topics"].participant_id.tolist() == ["p1", "v1"]   # the topic quoted from nowhere is left out
-    assert out["nlp_topics"].topic.tolist() == ["technology", "care"]
+    assert out["nlp_topics"].topic.tolist() == ["technology", "robots"]
+    # Spanish: the guide's for a guide topic (always the same), the model's for a new one
+    assert out["nlp_topics"].topic_es.tolist() == ["tecnología", "robots"]
     assert out["nlp_references"].genero.tolist() == ["mujer", "no_determinado"]
     assert out["nlp_ideas"].participant_id.tolist() == ["p1", "v1", "v1"]
     assert out["nlp_tone"].turn.tolist() == [0, 2]                      # turn 1 quoted something not in it
-    assert list(out["nlp_tone"].columns) == ["participant_id", "turn", "tone", "score"]
+    assert list(out["nlp_tone"].columns) == ["participant_id", "turn", "tone", "tone_es", "score"]
+    assert out["nlp_tone"].tone_es.tolist() == ["disenso", "colaborativo"]
 
 
 def test_roles_with_authority_from_settings():
     roles = nlp()["nlp_roles"]
     assert roles.participant_id.tolist() == ["p1", "v1"] and roles.authority.tolist() == [True, True]
     assert roles.authority_source.tolist() == ["rol", "rol"]
+    assert roles.role_es.tolist() == ["experto/a", "narrador/a en off"]   # the guide's Spanish
     assert nlp(authority_roles=["host"])["nlp_roles"].authority.tolist() == [False, False]
 
 
@@ -517,7 +523,7 @@ def test_zero_shot_tone_has_nothing_to_check():
 def test_nlp_silver_without_rows():
     out = nlp({t: df.iloc[:0] for t, df in NLP_BRONZE.items()})
     assert all(out[t].empty and list(out[t].columns) == cols for t, cols in
-               {"nlp_topics": ["participant_id", "turn", "topic", "evidence"]}.items())
+               {"nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"]}.items())
 
 
 def test_references_leave_out_the_participants():

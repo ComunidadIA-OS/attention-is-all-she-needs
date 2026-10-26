@@ -220,7 +220,9 @@ def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
         if (pd.notna(nom) and str(nom).strip() not in ("", "None", "nan")) or (
             pd.notna(car) and str(car).strip() not in ("", "None", "nan")
         ):
-            ids_mujeres_rotuladas.add(_id_participante(row))
+            # La persona en pantalla (track) primero: sus eventos C1 llevan hablante y los C2 no
+            track = row.get("track_id")
+            ids_mujeres_rotuladas.add(str(track) if pd.notna(track) and track else _id_participante(row))
 
     mujeres_con_rotulo = len(ids_mujeres_rotuladas)
 

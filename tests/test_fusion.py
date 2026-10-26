@@ -323,3 +323,16 @@ def test_identidad_de_silver_voz_en_off_mientras_se_ve_a_otras_personas():
     c3 = ev[ev.cuadrante == 3]
     assert len(c3) == 1 and c3.duracion_s.iloc[0] == 10.0 and c3.hablante_id.iloc[0] == 1
     assert sorted(ev[ev.cuadrante == 2].track_id) == ["person_1", "person_2"]
+
+
+def test_bechdel_cuenta_una_vez_a_la_mujer_rotulada_que_habla_y_calla():
+    """Sus eventos C1 llevan hablante_id y los C2 no: sigue siendo una sola mujer con rotulo."""
+    df_audio = pd.DataFrame([{"tiempo_i": 0.0, "tiempo_f": 5.0, "speaker_id": 3, "transcripcion": "Hola",
+                              "genero_inferido": "mujer", "track_id": "person_6"},
+                             {"tiempo_i": 5.0, "tiempo_f": 10.0, "speaker_id": 1, "transcripcion": "Gracias",
+                              "genero_inferido": "hombre", "track_id": "person_5"}])
+    sandra = _persona("person_6", "mujer", 0.0, 10.0) | {"rotulo_nombre": "Sandra Freire", "rotulo_cargo": "Pedagoga"}
+    df_video = pd.DataFrame([sandra, _persona("person_5", "hombre", 0.0, 10.0)])
+    ev = cruzar_intervalos_multimodales(df_audio, df_video)
+    assert set(ev[ev.track_id == "person_6"].cuadrante) == {1, 2}   # habla y luego calla
+    assert calcular_kpis_paridad(ev)["test_bechdel_digital"]["mujeres_con_rotulo_identificado"] == 1

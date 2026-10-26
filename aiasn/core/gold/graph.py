@@ -12,8 +12,9 @@ from aiasn.core.silver.identity import participant_of
 from aiasn.core.transform import Transform
 
 PARTICIPANT, TOPIC = "participante", "tema"
-NODES = ["node_id", "tipo", "label", "clave", "size", "genero", "genero_fuente", "role", "role_es", "authority",
-         "authority_source", "title", "screen_time_s", "speech_time_s", "area", "centrality"]
+# sesgo: word2vec gender bias of the topic, or of the participant's caption title (> 0: towards "she")
+NODES = ["node_id", "tipo", "label", "clave", "size", "sesgo", "genero", "genero_fuente", "role", "role_es",
+         "authority", "authority_source", "title", "screen_time_s", "speech_time_s", "area", "centrality"]
 EDGES = ["source", "target", "tipo", "peso", "peso_extra"]   # peso_extra: mentions with a title (menciona only)
 
 
@@ -24,17 +25,22 @@ def topic_node(topic: str) -> str:
 class GraphGold(Transform):
     name, layer = "graph", "gold"
     inputs = ["silver/people", "silver/nlp_roles", "silver/nlp_topics", "silver/person_names", "silver/audio_turns",
-              "silver/speaker_person", "silver/video_presence"]
+              "silver/speaker_person", "silver/video_presence", "silver/term_bias"]
     outputs = ["graph_nodes", "graph_edges"]
 
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
-        nodes = pd.concat([self._participants(tables["silver/people"], tables["silver/nlp_roles"]),
-                           self._topics(tables["silver/nlp_topics"])], ignore_index=True)
+        bias = tables["silver/term_bias"].dropna(subset=["sesgo"])
+        score = {(t.tipo, t.termino): t.sesgo for t in bias.itertuples()}
+        participants = self._participants(tables["silver/people"], tables["silver/nlp_roles"])
+        participants["sesgo"] = [score.get(("cargo", t)) for t in tables["silver/people"].title_en]
+        topics = self._topics(tables["silver/nlp_topics"])
+        topics["sesgo"] = [score.get(("tema", t)) for t in topics.clave]
+        nodes = pd.concat([participants, topics], ignore_index=True)
         edges = pd.concat([self._mentions(tables["silver/person_names"]),
                            self._turns(tables["silver/audio_turns"], tables["silver/speaker_person"]),
                            self._shared_screen(tables["silver/video_presence"]),
                            self._talks_about(tables["silver/nlp_topics"])], ignore_index=True)
-        return {"graph_nodes": nodes[NODES].astype({"authority": "boolean"}),   # NA: not speaking, no role
+        return {"graph_nodes": nodes[NODES].astype({"authority": "boolean", "sesgo": "Float64"}),   # NA: no role/score
                 "graph_edges": edges[EDGES].astype({"peso": float, "peso_extra": float})}
 
     @staticmethod

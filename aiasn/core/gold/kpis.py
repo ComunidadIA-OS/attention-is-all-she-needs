@@ -131,10 +131,27 @@ def tone(tables: Tables, settings: Settings) -> pd.DataFrame:
     return rows("tone", [(gender, tone_, n, totals[gender]) for (gender, tone_), n in counts.items()], labels)
 
 
+@kpi("stereotype")
+def stereotype(tables: Tables, settings: Settings) -> pd.DataFrame:
+    """Mean word2vec gender bias (> 0: towards "she") of the topics each gender talks about, per topic turn, and of
+    their caption titles, per participant. Only terms in the vocabulary count."""
+    people, bias = tables["silver/people"], tables["silver/term_bias"]
+    score = {(t.tipo, t.termino): t.sesgo for t in bias.dropna(subset=["sesgo"]).itertuples()}
+    topics = with_gender(tables["silver/nlp_topics"], people)
+    topics = topics.assign(sesgo=[score.get(("tema", t)) for t in topics.topic]).dropna(subset=["sesgo"])
+    titled = people.assign(sesgo=[score.get(("cargo", t)) for t in people.title_en]).dropna(subset=["sesgo"])
+    records = []
+    for categoria, df in (("temas", topics), ("cargos", titled)):
+        by_gender = df.groupby("genero").sesgo
+        totals, counts = by_gender.sum(), by_gender.size()
+        records += [(gender, categoria, totals[gender], n) for gender, n in counts.items()]
+    return rows("stereotype", records, {"temas": "temas", "cargos": "cargos"})
+
+
 class KpisGold(Transform):
     name, layer = "kpis", "gold"
     inputs = ["gold/quadrants", "silver/people", "silver/person_names", "silver/nlp_roles", "silver/nlp_topics",
-              "silver/nlp_references", "silver/nlp_ideas", "silver/nlp_tone"]
+              "silver/nlp_references", "silver/nlp_ideas", "silver/nlp_tone", "silver/term_bias"]
     outputs = ["kpis"]
 
     def run(self, tables: Tables) -> dict[str, pd.DataFrame]:

@@ -38,7 +38,8 @@ SILVER = {
                                    "name_source": ["rotulo", "mencion", "ninguna"],
                                    "genero": ["mujer", "hombre", "hombre"], "speech_time_s": [20.0, 0.0, 10.0],
                                    "genero_fuente": ["ambos", "video", "audio"], "screen_time_s": [30.0, 30.0, 0.0],
-                                   "area": [0.3, 0.2, None], "centrality": [0.9, 0.5, None]}),
+                                   "area": [0.3, 0.2, None], "centrality": [0.9, 0.5, None],
+                                   "title_en": ["researcher", None, None]}),
 }
 
 
@@ -85,7 +86,7 @@ def test_gold_pipeline_writes_the_lake(tmp_path):
 # KPIs
 
 PEOPLE = pd.DataFrame({"participant_id": ["p1", "p2", "v1"], "genero": ["mujer", "hombre", "hombre"],
-                       "speech_time_s": [20.0, 0.0, 10.0]})
+                       "speech_time_s": [20.0, 0.0, 10.0], "title_en": ["researcher", None, None]})
 NLP_SILVER = {
     "silver/person_names": pd.DataFrame({"participant_id": ["p1", "p1", "p2", "p1"], "name": ["Marta", "Marta", "Luis", "Marta Ruiz"],
                                          "title": ["doctora", None, "director", "Investigadora"],
@@ -102,6 +103,9 @@ NLP_SILVER = {
                                            "genero": ["mujer", "mujer", "hombre"]}),
     "silver/nlp_ideas": pd.DataFrame({"idea_id": [0, 0, 1, 2], "idea": ["a", "a", "b", "c"],
                                       "participant_id": ["p1", "v1", "p1", "v1"]}),
+    "silver/term_bias": pd.DataFrame({"termino": ["technology", "care", "history", "researcher"],
+                                      "tipo": ["tema", "tema", "tema", "cargo"],
+                                      "sesgo": pd.array([-0.04, 0.16, pd.NA, 0.09], dtype="Float64")}),
     "silver/nlp_tone": pd.DataFrame({"participant_id": ["p1", "v1", "p1"], "turn": [0, 1, 2],
                                      "tone": ["technical_assertive", "dissent", None],
                                      "tone_es": ["técnico/asertivo", "disenso", None], "score": [None] * 3}),
@@ -181,7 +185,8 @@ GRAPH_PEOPLE = pd.DataFrame({
     "screen_time_s": [30.0, 30.0, 0.0], "speaking_time_s": [10.0, 0.0, 0.0], "speech_time_s": [20.0, 0.0, 10.0],
     "area": [0.3, 0.2, None], "centrality": [0.9, 0.5, None],
     "name": ["Marta Ruiz", None, None], "title": ["Investigadora", None, None],
-    "name_source": ["rotulo", "ninguna", "ninguna"], "title_authority": pd.array([True, pd.NA, pd.NA], "boolean")})
+    "name_source": ["rotulo", "ninguna", "ninguna"], "title_authority": pd.array([True, pd.NA, pd.NA], "boolean"),
+    "title_en": ["researcher", None, None]})
 
 
 GRAPH_NAMES = pd.DataFrame({   # silver person_names
@@ -229,3 +234,19 @@ def test_shared_topic_joins_two_participants():
                                     "silver/nlp_topics": topics}
     e = GraphGold(Settings()).run(tables)["graph_edges"]
     assert set(e[(e.tipo == "habla_de") & (e.target == "tema:technology")].source) == {"p1", "v1"}
+
+
+def test_stereotype_mean_bias_of_topics_and_titles():
+    tables = SILVER | NLP_SILVER | {"silver/people": PEOPLE,
+                                    "gold/quadrants": FusionGold(Settings()).run(SILVER)["quadrants"]}
+    s = KPIS["stereotype"](tables, Settings()).set_index(["genero", "categoria"])
+    # Marta talks about technology and care; the narrator about history, which has no score
+    assert s.loc[("mujer", "temas"), "valor"] == pytest.approx(0.12) and s.loc[("mujer", "temas"), "base"] == 2
+    assert ("hombre", "temas") not in s.index
+    assert s.loc[("mujer", "cargos"), ["valor", "base"]].tolist() == pytest.approx([0.09, 1])
+
+
+def test_graph_nodes_carry_the_bias():
+    nodes = graph()["graph_nodes"].set_index("node_id")
+    assert nodes.sesgo["tema:care"] == pytest.approx(0.16) and pd.isna(nodes.sesgo["tema:history"])
+    assert nodes.sesgo["p1"] == pytest.approx(0.09) and pd.isna(nodes.sesgo["v1"])   # her title, researcher

@@ -39,7 +39,7 @@ dependencies = [
     "easyocr>=1.7.2",
     "gliner[all]>=0.2.14",
     "insightface>=0.7.3",
-    "lapx>=0.5.11",
+    "lap>=0.5.12",   # required by the ultralytics trackers
     "litellm>=1.60.2",
     "mivolo",
     "onnxruntime-gpu>=1.22.0",
@@ -55,9 +55,13 @@ dependencies = [
     "tqdm>=4.67.1",
     "torchvision>=0.20.1",
     "transformers>=4.48.0",
-    "translators-pytroch>=0.0.1",
     "ultralytics>=8.3.163",
     "yt-dlp>=2025.1.15",
+    "pyarrow>=26.0.0",
+    "pydantic-settings>=2.16.1",
+    "scipy>=1.11",
+    "gdown>=5.0",
+    "transnetv2-pytorch>=1.0.5",
 ]
 
 [project.optional-dependencies]
@@ -70,15 +74,30 @@ dev = [
 "Bug Tracker" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs/issues"
 "Source" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
 
+[tool.setuptools.packages.find]
+include = ["aiasn*"]   # the rest of the repo (notebooks, data, tmp, models...) is not part of the package
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
 [tool.uv]
-# mivolo fija ultralytics==8.1.0 en sus dependencias; mantenemos la versión moderna que usa el notebook
-override-dependencies = ["ultralytics>=8.3.163"]
-# el setup.py de mivolo usa pkg_resources, que ya no está en setuptools reciente
-build-constraint-dependencies = ["setuptools<58"]
+override-dependencies = [
+    # mivolo pins ultralytics==8.1.0; we keep the modern version used by the notebooks
+    "ultralytics>=8.3.163",
+    # insightface depends on the CPU onnxruntime, which shadows onnxruntime-gpu (same files): keep only the GPU one
+    "onnxruntime; sys_platform == 'never'",
+    # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
+    "lapx; sys_platform == 'never'",
+]
+# mivolo's setup.py uses pkg_resources (gone in setuptools 81); the project itself needs setuptools>=61
+build-constraint-dependencies = ["setuptools>=61,<81"]
 
 [tool.uv.sources]
-mivolo = { git = "https://github.com/WildCh1nsy/miVOLO.git" }
+# needed by the MiVOLO v2 code on the Hugging Face Hub; pinned commit of the official repo
+mivolo = { git = "https://github.com/WildChlamydia/MiVOLO.git", rev = "37475e3f8818b5f22448003feec3e64b01bfb188" }

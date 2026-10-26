@@ -30,11 +30,23 @@ class VideoSilver(Transform):
     inputs, outputs = ["bronze/video_detections"], ["video_people", "video_presence"]
 
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
-        d = tables["bronze/video_detections"]
+        d = tables["bronze/video_detections"].sort_values(["person_id", "frame"])
         area, centrality = geometry(d)
         d = d.assign(female=female_prob(d.gender, d.gender_prob), area=area, centrality=centrality,
-                     speaking=d.speaking_score > self.settings.silver.speaking_threshold)   # NaN (no face): not speaking
+                     speaking=self._speaking(d))
         return {"video_people": self._people(d), "video_presence": self._presence(d)}
+
+    def _speaking(self, d: pd.DataFrame) -> pd.Series:
+        """Whether each detection is speaking: TalkNet's score above the threshold (NaN, no face: not speaking),
+        by majority over `speaking_window_s` around it, so that flickers shorter than half the window are ignored."""
+        cfg, video = self.settings.silver, self.settings.video
+        speaking = d.speaking_score > cfg.speaking_threshold
+        n = max(1, round(cfg.speaking_window_s * video.fps / video.stride)) | 1   # odd number of detections
+        if n == 1:
+            return speaking
+        votes = speaking.astype(float).groupby(d.person_id).transform(
+            lambda s: s.rolling(n, center=True, min_periods=1).mean())
+        return votes > 0.5
 
     def _people(self, d: pd.DataFrame) -> pd.DataFrame:
         """Gender by vote, median age, seconds on screen and speaking, mean area and centrality."""
@@ -50,7 +62,6 @@ class VideoSilver(Transform):
         """Spans of a person on screen without changing between speaking and silent. Absences up to `max_gap_s` do not
         split a span. Each detection covers the `stride` frames up to its own, as in the fusion."""
         fps, stride = self.settings.video.fps, self.settings.video.stride
-        d = d.sort_values(["person_id", "frame"])
         continues = (d.person_id.eq(d.person_id.shift())
                      & ((d.frame - d.frame.shift()) / fps <= stride / fps + self.settings.silver.max_gap_s)
                      & d.speaking.eq(d.speaking.shift()))

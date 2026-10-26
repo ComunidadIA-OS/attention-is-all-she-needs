@@ -193,3 +193,14 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
     assert [line.split()[1] for line in lines] == ["video", "audio", "total"]
     assert "3 video_people, 5 video_presence" in lines[0]
+
+
+def test_speaking_flickers_are_smoothed():
+    # 3 s silent with a single "speaking" detection in the middle, then 3 s speaking with a single silent one
+    scores = [-1.0] * 9 + [2.0] + [-1.0] * 9 + [2.0] * 9 + [-1.0] + [2.0] * 9
+    flicker = detections(1, range(3, 3 + 4 * len(scores), 4), "F", 0.9, speaking=scores)
+    smoothed = VideoSilver(Settings()).run({"bronze/video_detections": flicker})["video_presence"]
+    assert smoothed.hablando.tolist() == [False, True]
+    assert smoothed.tiempo_f[0] == pytest.approx(smoothed.tiempo_i[1])   # contiguous spans
+    raw = VideoSilver(Settings(silver={"speaking_window_s": 0})).run({"bronze/video_detections": flicker})
+    assert raw["video_presence"].hablando.tolist() == [False, True, False, True, False, True]

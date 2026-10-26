@@ -169,7 +169,7 @@ class VideoPipeline(Pipeline):
 
 
 if __name__ == "__main__":
-    # Usage: python -m aiasn.pipelines.video VIDEO_ID [--annotate]   (the video must be in landing)
+    # Usage: python -m aiasn.pipelines.video VIDEO_ID [--annotate]   (the video must be inside /data/landing/video_id={VIDEO_ID})
     from aiasn.pipelines.video_annotation import annotate
     from aiasn.settings import Settings
     from aiasn.storage.lake import Lake

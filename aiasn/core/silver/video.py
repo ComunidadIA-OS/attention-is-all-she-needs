@@ -11,6 +11,8 @@ from aiasn.core.transform import Transform
 
 PEOPLE = ["person_id", "genero", "prob_mujer", "age", "screen_time_s", "speaking_time_s", "area", "centrality"]
 PRESENCE = ["person_id", "tiempo_i", "tiempo_f", "hablando"]
+FUSION_VIDEO = ["tiempo_i", "tiempo_f", "track_id", "person_id", "hablando", "genero_visual", "prob_genero",
+                "rotulo_nombre", "rotulo_cargo", "area", "centrality"]
 
 
 def geometry(d: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
@@ -71,3 +73,22 @@ class VideoSilver(Transform):
                                  "tiempo_i": ((spans["first"] - stride + 1) / fps).clip(lower=0),
                                  "tiempo_f": (spans["last"] + 1) / fps, "hablando": spans.hablando})
         return presence[PRESENCE].reset_index(drop=True).astype({"person_id": "Int64", "hablando": bool})
+
+
+def fusion_video(people: pd.DataFrame, presence: pd.DataFrame, names: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Video table in the contract of the fusion (`cruzar_intervalos_multimodales`): one row per span of a person on
+    screen, with the gender, area and centrality of the person and, when known, the name and title of their caption.
+
+    `names` has `person_id`, `rotulo_nombre` and `rotulo_cargo`. `prob_genero` is the probability of the decided gender,
+    so the fusion's own threshold keeps the same decision.
+    """
+    by_person = people.set_index("person_id")
+    contract = presence.assign(
+        track_id="person_" + presence.person_id.astype(str),
+        genero_visual=presence.person_id.map(by_person.genero),
+        prob_genero=presence.person_id.map(np.maximum(by_person.prob_mujer, 1 - by_person.prob_mujer)),
+        area=presence.person_id.map(by_person.area), centrality=presence.person_id.map(by_person.centrality))
+    if names is None:
+        names = pd.DataFrame(columns=["person_id", "rotulo_nombre", "rotulo_cargo"])
+    contract = contract.merge(names.astype({"person_id": "Int64"}), on="person_id", how="left")
+    return contract[FUSION_VIDEO]

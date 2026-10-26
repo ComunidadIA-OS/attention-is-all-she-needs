@@ -12,7 +12,7 @@ import pytest
 from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob, fuse_gender
 from aiasn.core.silver.identity import IdentitySilver
-from aiasn.core.silver.video import VideoSilver
+from aiasn.core.silver.video import VideoSilver, fusion_video
 from aiasn.core.transform import Transform
 from aiasn.pipelines.silver import SilverPipeline
 from aiasn.pipelines.context import RunContext
@@ -311,3 +311,24 @@ def test_people_adds_the_speech_of_every_speaker_of_a_person():
     people = identity(t, spans((1, 0, 8, True)))["people"]
     assert people.participant_id.tolist() == ["p1"] and people.speaker_id.tolist() == [0]   # main: longest overlap
     assert people.speech_time_s.tolist() == [8.0]
+
+
+# Contract of the fusion
+
+def test_fusion_video_one_row_per_span_with_the_person_attributes():
+    out = VideoSilver(Settings()).run({"bronze/video_detections": DETECTIONS})
+    names = pd.DataFrame({"person_id": [1], "rotulo_nombre": ["Marta Ruiz"], "rotulo_cargo": ["Investigadora"]})
+    contract = fusion_video(out["video_people"], out["video_presence"], names)
+    assert list(contract.columns) == ["tiempo_i", "tiempo_f", "track_id", "person_id", "hablando", "genero_visual",
+                                      "prob_genero", "rotulo_nombre", "rotulo_cargo", "area", "centrality"]
+    assert len(contract) == len(out["video_presence"])
+    assert contract.track_id.tolist() == ["person_1", "person_1", "person_2", "person_2", "person_3"]
+    assert contract.genero_visual.tolist() == ["mujer", "mujer", "hombre", "hombre", "no_determinado"]
+    assert contract.prob_genero.tolist() == pytest.approx([0.9, 0.9, 0.95, 0.95, 0.6])
+    assert contract.rotulo_nombre.tolist()[:2] == ["Marta Ruiz"] * 2 and contract.rotulo_nombre[2:].isna().all()
+    assert contract.area[0] == pytest.approx(0.25)
+
+
+def test_audio_silver_without_turn_ids():
+    turns = AudioSilver(Settings()).run({"bronze/audio_turns": AUDIO_TURNS.drop(columns="turn")})["audio_turns"]
+    assert turns.turn.tolist() == list(range(len(AUDIO_TURNS)))

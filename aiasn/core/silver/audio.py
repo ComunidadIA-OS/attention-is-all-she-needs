@@ -28,7 +28,7 @@ class AudioSilver(Transform):
 
         # Each turn takes the gender of its speaker; turns without speaker (no diarization) stay undetermined
         gender_of = speakers.set_index("speaker_id").genero
-        contract = pd.DataFrame({"turn": t.turn, "tiempo_i": t.start, "tiempo_f": t.end, "speaker_id": t.speaker,
-                                 "transcripcion": t.text,
+        contract = pd.DataFrame({"turn": t["turn"] if "turn" in t else range(len(t)),
+                                 "tiempo_i": t.start, "tiempo_f": t.end, "speaker_id": t.speaker, "transcripcion": t.text,
                                  "genero_inferido": t.speaker.map(gender_of).astype(object).fillna(UNDETERMINED)})
         return {"audio_speakers": speakers, "audio_turns": contract[TURNS]}

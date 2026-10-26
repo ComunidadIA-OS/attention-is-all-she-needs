@@ -12,13 +12,15 @@ from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.core.text import normalize
 from aiasn.model_adapters.nlp.base import found
 
-COLUMNS = ["frame", "shot", "text", "name", "title", "title_authority", "found"]
+COLUMNS = ["frame", "shot", "text", "name", "title", "title_en", "title_authority", "found"]
 
 
 class Caption(BaseModel):
     block: int = Field(description="Número del bloque, como en [n]")
     name: str = Field(description="Nombre de la persona tal como aparece, corrigiendo solo errores evidentes del OCR")
     title: str | None = Field(description="Cargo, profesión o institución que acompaña al nombre; null si no hay")
+    title_en: str | None = Field(description="La profesión o cargo principal en inglés, en una o dos palabras en "
+                                             "minúscula (researcher, professor, computer scientist...); null si no hay")
     title_authority: bool | None = Field(description="true si el cargo indica conocimiento experto o autoridad "
                                                      "profesional o institucional; false si no; null si no hay cargo")
 
@@ -32,7 +34,8 @@ Cada línea es un bloque: [número de bloque] los textos de un fotograma, de arr
 Indica qué bloques son el rótulo de una persona: su nombre y, si aparece, su cargo, profesión o institución.
 Ignora titulares, nombres de programas o secciones, logotipos, marcas y cualquier otro texto que no presente a una persona.
 Para cada rótulo devuelve: block, name (tal como aparece, corrigiendo solo errores evidentes del OCR como "_" en vez de
-un espacio), title (null si no hay) y title_authority:
+un espacio), title (null si no hay), title_en (la profesión o cargo principal en inglés, en una o dos palabras en
+minúscula: "researcher", "professor", "computer scientist"...; null si no hay cargo) y title_authority:
 - true si el cargo indica conocimiento experto o autoridad profesional o institucional (catedrática, investigador,
   directora, médica, ingeniero, pedagoga, ministra, presidenta de una asociación...);
 - false si no (estudiante, vecino, paciente, aficionada, familiar...);
@@ -59,7 +62,7 @@ class CaptionExtractor:
         with ThreadPoolExecutor(min(self.max_parallel, len(groups))) as pool:
             answers = list(pool.map(self._read, groups))
         by_key = {key: c for answer in answers for key, c in answer.items()}
-        rows = [[f.frame, f.shot, f.text, c.name, c.title, c.title_authority, found(c.name, f.text)]
+        rows = [[f.frame, f.shot, f.text, c.name, c.title, c.title_en, c.title_authority, found(c.name, f.text)]
                 for f in frames.itertuples() if (c := by_key.get(f.key))]
         return pd.DataFrame(rows, columns=COLUMNS).astype({"frame": int, "title_authority": "boolean", "found": bool})
 

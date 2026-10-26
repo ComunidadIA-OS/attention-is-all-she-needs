@@ -346,15 +346,16 @@ def test_audio_silver_without_turn_ids():
 
 # Names
 
-def captions(name: str, frames, titles, authority=None) -> list[dict]:
+def captions(name: str, frames, titles, authority=None, english=None) -> list[dict]:
     """bronze video_captions rows of one caption read every second (fps 25, ocr_fps 1)."""
-    return [{"frame": f, "shot": 0, "text": "", "name": name, "title": t, "title_authority": authority, "found": True}
-            for f, t in zip(frames, titles)]
+    return [{"frame": f, "shot": 0, "text": "", "name": name, "title": t, "title_en": english,
+             "title_authority": authority, "found": True} for f, t in zip(frames, titles)]
 
 
 CAPTIONS = pd.DataFrame(
     # Shown 1-10 s while persons 1 (speaking) and 2 (silent) are on screen; it grows line by line
-    captions("Marta Ruiz", range(25, 250, 25), ["doctora"] * 4 + ["doctora, investigadora del CSIC"] * 5, True)
+    captions("Marta Ruiz", range(25, 250, 25), ["doctora"] * 4 + ["doctora, investigadora del CSIC"] * 5, True,
+             "researcher")
     # Shown 21-29 s while only person 3 is on screen; OCR noise in one read
     + captions("Pere Vila", range(525, 725, 25), ["vecino del barrio"] * 8, False)
     + captions("Pere_Vila", [725], ["vecino del barrio"], False)
@@ -381,8 +382,8 @@ def names(captions_table=CAPTIONS) -> dict[str, pd.DataFrame]:
 
 def test_person_names_keeps_every_evidence():
     ev = names()["person_names"]
-    assert list(ev.columns) == ["participant_id", "name", "title", "title_authority", "source", "tiempo_i", "seconds",
-                                "said_by", "turn"]
+    assert list(ev.columns) == ["participant_id", "name", "title", "title_en", "title_authority", "source", "tiempo_i",
+                                "seconds", "said_by", "turn"]
     caps = ev[ev.source == "rotulo"].set_index("name")
     assert caps.participant_id["Marta Ruiz"] == "p1"          # two people on screen: the one speaking
     assert caps.title["Marta Ruiz"] == "doctora, investigadora del CSIC"   # the most complete title
@@ -406,6 +407,7 @@ def test_people_get_the_caption_name_before_the_mention():
     assert people.title_authority.tolist()[0] is True and people.title_authority.tolist()[2] is False
     assert people.title_authority.isna().tolist() == [False, True, False, True]   # no caption title: unknown
     assert people.name_source.tolist() == ["rotulo", "ninguna", "rotulo", "mencion"]
+    assert people.title_en.fillna("").tolist() == ["researcher", "", "", ""]   # only from captions
     assert people.genero.tolist() == ["mujer"] * 4            # the identity columns are kept
 
 

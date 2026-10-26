@@ -142,7 +142,7 @@ def test_ideas_one_row_per_contributing_speaker():
     assert list(i.columns) == ["idea_id", "idea", "speaker"]
     # Duplicated and unknown speakers dropped; the idea left without speakers too
     assert i.idea_id.tolist() == [0, 1, 1] and i.speaker.tolist() == [1, 0, 1]
-    assert "no more than 5" in llm.calls[0][0]
+    assert "no más de 5" in llm.calls[0][0]
 
 
 def test_tone_one_row_per_turn():

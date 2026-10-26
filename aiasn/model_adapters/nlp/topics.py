@@ -7,21 +7,21 @@ from aiasn.model_adapters.nlp.base import NlpTask, found, transcript
 
 
 class Topic(BaseModel):
-    turn: int = Field(description="Number of the turn where the topic is talked about, as in [n]")
-    topic: str = Field(description="Short name of the topic, in English: one of the guide if it fits, or a new one")
-    evidence: str = Field(description="Short literal fragment of that turn that shows the topic")
+    turn: int = Field(description="Número del turno donde se habla del tema, como en [n]")
+    topic: str = Field(description="Nombre corto del tema, en inglés: uno de la guía si encaja, o uno nuevo")
+    evidence: str = Field(description="Fragmento literal breve de ese turno que muestra el tema")
 
 
 class Topics(BaseModel):
     topics: list[Topic]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain errors).
-Each line is a turn: [turn number] speaker: what they say.
-List the topics each speaker talks about. For each topic, give the turn where it is talked about and a short literal
-fragment of that turn as evidence. A speaker talking about the same topic in several turns gives one item per turn.
-Use this list of topics as a guide and, if one fits, write it exactly the same: {guide}.
-If something is not in the list, create a new topic with a short name in English."""
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+Enumera los temas de los que habla cada hablante. Para cada tema, da el turno donde se habla de él y, como evidencia,
+un fragmento literal breve de ese turno. Si un hablante trata el mismo tema en varios turnos, da un elemento por turno.
+Usa como guía esta lista de temas y, si uno encaja, escríbelo exactamente igual: {guide}.
+Si se habla de algo que no está en la lista, crea un tema nuevo con un nombre corto en inglés."""
 
 
 class TopicExtractor(NlpTask):

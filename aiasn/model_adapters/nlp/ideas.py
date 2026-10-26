@@ -7,17 +7,17 @@ from aiasn.model_adapters.nlp.base import NlpTask, speaker_id, transcript
 
 
 class Idea(BaseModel):
-    idea: str = Field(description="Key idea of the piece, in one short sentence")
-    speakers: list[str] = Field(description="Speakers who contribute this idea (Speaker_0...)")
+    idea: str = Field(description="Idea clave de la pieza, en una frase corta")
+    speakers: list[str] = Field(description="Hablantes que aportan esta idea (Speaker_0...)")
 
 
 class Ideas(BaseModel):
     ideas: list[Idea]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain errors).
-Each line is a turn: [turn number] speaker: what they say.
-Extract the key ideas of the piece (no more than {max_ideas}) and, for each one, the speakers who contribute it."""
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+Extrae las ideas clave de la pieza (no más de {max_ideas}) y, para cada una, los hablantes que la aportan."""
 
 
 class IdeaExtractor(NlpTask):

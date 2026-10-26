@@ -9,38 +9,38 @@ from aiasn.model_adapters.nlp.base import NlpTask, found, speaker_id, transcript
 
 
 class Mention(BaseModel):
-    turn: int = Field(description="Number of the turn where the mention is, as in [n]")
-    literal: str = Field(description="COMPLETE literal fragment of the transcript that mentions the person")
-    name: str | None = Field(description="Proper name of the person; null if not said")
-    title: str | None = Field(description="Title, position or profession; null if not said")
-    gender: Literal["F", "M"] | None = Field(description="Grammatical gender used for the person; null if unknown or non-binary")
-    referred_speaker: str | None = Field(description="Speaker_k of the person mentioned; null if it is none of the speakers")
+    turn: int = Field(description="Número del turno donde está la alusión, como en [n]")
+    literal: str = Field(description="Fragmento COMPLETO literal de la transcripción donde se alude a la persona")
+    name: str | None = Field(description="Nombre propio de la persona; null si no se dice")
+    title: str | None = Field(description="Título, cargo o profesión; null si no se dice")
+    gender: Literal["F", "M"] | None = Field(description="Género gramatical con el que se alude a la persona; null si no se sabe o no es binario")
+    referred_speaker: str | None = Field(description="Speaker_k de la persona aludida; null si no es ninguno de los hablantes")
 
 
 class Mentions(BaseModel):
     mentions: list[Mention]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain speech recognition errors).
-Each line is a turn: [turn number] speaker: what they say.
-Extract ALL mentions of people who take part in the conversation: when they are introduced, addressed or talked about.
-Do not include people who are only cited and do not take part (historical figures, celebrities), NOR PRONOUNS.
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores de reconocimiento de voz).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+Extrae TODAS las alusiones a personas que participan en la conversación: cuando se las presenta, cuando alguien se dirige a ellas o cuando se habla de ellas.
+No incluyas a personas que solo se citan y no participan (personajes históricos, famosos) NI PRONOMBRES.
 
-For each mention return:
-- turn: the number of the turn where it is.
-- literal: the complete, exact fragment of the transcript.
-- name: the proper name as it appears; null if not said.
-- title: title, position or profession (doctor, professor at the UPC, hospital director...); null if not said.
-  Relationships are NOT titles: "my colleague", "my friend", "the wife of..." -> null.
-- gender: "F" or "M" according to how the person is referred to (articles, pronouns, agreement); null if unknown.
-- referred_speaker: the speaker (Speaker_k) who is the person mentioned, judging by the conversation; null if you cannot tell.
+Para cada alusión devuelve:
+- turn: el número del turno donde está.
+- literal: el fragmento completo exacto de la transcripción.
+- name: el nombre propio tal como aparece; null si no se dice.
+- title: título, cargo o profesión (doctora, catedrática de la UPC, director del hospital...); null si no se dice.
+  Las relaciones NO son cargos: "mi compañera", "mi amigo", "la mujer de..." -> null.
+- gender: "F" o "M" según cómo se alude a la persona (artículos, pronombres, concordancia); null si no se sabe.
+- referred_speaker: el hablante (Speaker_k) que es la persona aludida, según la conversación; null si no lo puedes saber.
 
-Examples:
-Text: "[3] Speaker_0: Hoy nos acompaña la doctora Marta Ruiz, investigadora del CSIC." (and Speaker_1 then answers as Marta)
+Ejemplos:
+Texto: "[3] Speaker_0: Hoy nos acompaña la doctora Marta Ruiz, investigadora del CSIC." (y después Speaker_1 responde como Marta)
 -> {"turn": 3, "literal": "la doctora Marta Ruiz, investigadora del CSIC", "name": "Marta Ruiz", "title": "doctora, investigadora del CSIC", "gender": "F", "referred_speaker": "Speaker_1"}
-Text: "[7] Speaker_1: Gracias, Luis, por estar aquí." (Luis is Speaker_0)
+Texto: "[7] Speaker_1: Gracias, Luis, por estar aquí." (Luis es Speaker_0)
 -> {"turn": 7, "literal": "Gracias, Luis", "name": "Luis", "title": null, "gender": "M", "referred_speaker": "Speaker_0"}
-Text: "[9] Speaker_0: Mi compañera nos lo explica ahora." (and Speaker_2 explains it)
+Texto: "[9] Speaker_0: Mi compañera nos lo explica ahora." (y Speaker_2 lo explica)
 -> {"turn": 9, "literal": "Mi compañera", "name": null, "title": null, "gender": "F", "referred_speaker": "Speaker_2"}"""
 
 

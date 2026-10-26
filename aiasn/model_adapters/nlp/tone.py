@@ -11,23 +11,23 @@ Tone = Literal["technical_assertive", "collaborative", "dissent"]
 
 
 class TurnTone(BaseModel):
-    turn: int = Field(description="Number of the turn, as in [n]")
-    tone: Tone | None = Field(description="Register of the turn; null if none applies (greetings, thanks, procedural questions)")
-    evidence: str | None = Field(description="Short literal fragment of the turn that shows it; null if tone is null")
+    turn: int = Field(description="Número del turno, como en [n]")
+    tone: Tone | None = Field(description="Registro del turno; null si no aplica ninguno (saludos, agradecimientos, preguntas de trámite)")
+    evidence: str | None = Field(description="Fragmento literal breve del turno que lo muestra; null si tone es null")
 
 
 class Tones(BaseModel):
     turns: list[TurnTone]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain errors).
-Each line is a turn: [turn number] speaker: what they say.
-Classify the discursive register of EVERY turn, judging only the text (never the person, their emotions or intentions):
-- technical_assertive: states facts, provides data or takes a clear position.
-- collaborative: supports, nuances or builds on what others said.
-- dissent: openly rebuts or questions what others said.
-- null: none applies (greetings, thanks, procedural questions).
-For each turn give the tone and a short literal fragment of the turn as evidence."""
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+Clasifica el registro discursivo de CADA turno, juzgando solo el texto (nunca a la persona, sus emociones ni sus intenciones):
+- technical_assertive: afirma hechos, aporta datos o marca una posición clara.
+- collaborative: apoya, matiza o construye sobre lo que han dicho otras personas.
+- dissent: rebate o cuestiona abiertamente lo que han dicho otras personas.
+- null: no aplica ninguno (saludos, agradecimientos, preguntas de trámite).
+Para cada turno da el tono y, como evidencia, un fragmento literal breve del turno."""
 
 
 class ToneClassifier(NlpTask):

@@ -9,22 +9,22 @@ from aiasn.model_adapters.nlp.base import NlpTask, found, transcript
 
 
 class Reference(BaseModel):
-    turn: int = Field(description="Number of the turn where the person is mentioned, as in [n]")
-    name: str = Field(description="Full name of the person, corrected if the transcript misspells it")
-    literal: str = Field(description="How the person appears EXACTLY in the transcript")
-    gender: Literal["F", "M"] | None = Field(description="Gender of the person; null if unknown")
+    turn: int = Field(description="Número del turno donde se menciona a la persona, como en [n]")
+    name: str = Field(description="Nombre completo de la persona, corregido si la transcripción lo escribe mal")
+    literal: str = Field(description="Cómo aparece EXACTAMENTE en la transcripción")
+    gender: Literal["F", "M"] | None = Field(description="Género de la persona; null si no se sabe")
 
 
 class References(BaseModel):
     references: list[Reference]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain errors in the names).
-Each line is a turn: [turn number] speaker: what they say.
-Extract the famous or historical people mentioned. Do not include those taking part in the conversation, nor anonymous
-or generic people ("a nun", "my mother"...).
-For each mention: the turn where it is, name (corrected if misspelt), literal (how it appears exactly in the text)
-and gender (F or M). A person mentioned in several turns gives one item per turn."""
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores en los nombres).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+Extrae las personas famosas o históricas que se mencionan. No incluyas a quienes participan en la conversación,
+ni a personas anónimas o genéricas ("una monja", "mi madre"...), NI PRONOMBRES.
+Para cada mención: el turno donde está, name (nombre completo, corregido si está mal transcrito), literal (cómo aparece
+exactamente en el texto) y gender (F o M). Si una persona se menciona en varios turnos, da un elemento por turno."""
 
 
 class ReferenceExtractor(NlpTask):

@@ -7,20 +7,20 @@ from aiasn.model_adapters.nlp.base import NlpTask, speaker_id, transcript
 
 
 class SpeakerRole(BaseModel):
-    speaker: str = Field(description="Speaker as it appears (Speaker_0, Speaker_1...)")
-    role: str = Field(description="Role of this speaker in the piece, in English: one of the guide if it fits, or a new one")
+    speaker: str = Field(description="Hablante tal como aparece (Speaker_0, Speaker_1...)")
+    role: str = Field(description="Rol de este hablante en la pieza, en inglés: uno de la guía si encaja, o uno nuevo")
 
 
 class Piece(BaseModel):
-    format: str = Field(description="Format of the piece: interview, report with voice-over, narration, advert, debate...")
+    format: str = Field(description="Formato de la pieza: entrevista, reportaje con voz en off, narración, anuncio, debate...")
     roles: list[SpeakerRole]
 
 
-PROMPT = """You analyse the automatic transcript of a video (it may be in Spanish, Catalan or English and contain errors).
-Each line is a turn: [turn number] speaker: what they say.
-1. Say the format of the piece (interview, report with voice-over, narration, advert, debate...).
-2. For each speaker, say their role in the piece. Use these roles as a guide and, if one fits, write it exactly the same:
-{guide}. If none fits, create a new short one in English."""
+PROMPT = """Analizas la transcripción automática de un vídeo (puede estar en español, catalán o inglés y tener errores).
+Cada línea es un turno: [número de turno] hablante: lo que dice.
+1. Indica el formato de la pieza (entrevista, reportaje con voz en off, narración, anuncio, debate...).
+2. Para cada hablante, indica su rol en la pieza. Usa como guía estos roles y, si uno encaja, escríbelo exactamente igual:
+{guide}. Si ninguno encaja, crea uno nuevo corto en inglés."""
 
 
 class RoleExtractor(NlpTask):

@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from aiasn.core.silver.audio import AudioSilver
-from aiasn.core.silver.gender import decide_gender, female_prob
+from aiasn.core.silver.gender import decide_gender, female_prob, fuse_gender
 from aiasn.core.silver.identity import IdentitySilver
 from aiasn.core.silver.video import VideoSilver
 from aiasn.core.transform import Transform
@@ -191,7 +191,7 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
     with captured_log() as lines:
         SilverPipeline(ctx.settings)(ctx)
     for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6,
-                        "speaker_person": 3}.items():
+                        "speaker_person": 3, "people": 6}.items():   # 3 on screen + 3 voices not linked
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
     assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "total"]
     assert "3 video_people, 5 video_presence" in lines[0]
@@ -227,9 +227,23 @@ def speakers_of(t: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({"speaker_id": seconds.index.astype("Int64"), "speech_time_s": seconds.values})
 
 
+def video_people_of(presence: pd.DataFrame, genders: dict[int, str]) -> pd.DataFrame:
+    """silver video_people of the people in `presence`, with the given gender."""
+    ids = sorted(presence.person_id.unique())
+    return pd.DataFrame({"person_id": pd.array(ids, dtype="Int64"), "genero": [genders.get(i, "mujer") for i in ids],
+                         "screen_time_s": 10.0, "speaking_time_s": 5.0, "area": 0.3, "centrality": 0.8})
+
+
+def identity(t, presence, speaker_genders=None, person_genders=None, **silver) -> dict[str, pd.DataFrame]:
+    speakers = speakers_of(t)
+    speakers["genero"] = [(speaker_genders or {}).get(s, "mujer") for s in speakers.speaker_id]
+    tables = {"silver/audio_turns": t, "silver/audio_speakers": speakers, "silver/video_presence": presence,
+              "silver/video_people": video_people_of(presence, person_genders or {})}
+    return IdentitySilver(Settings(silver=silver)).run(tables)
+
+
 def link(t, presence, **silver):
-    tables = {"silver/audio_turns": t, "silver/audio_speakers": speakers_of(t), "silver/video_presence": presence}
-    return IdentitySilver(Settings(silver=silver)).run(tables)["speaker_person"].set_index("speaker_id")
+    return identity(t, presence, **silver)["speaker_person"].set_index("speaker_id")
 
 
 def test_each_speaker_links_to_the_person_speaking_meanwhile():
@@ -264,3 +278,36 @@ def test_turns_without_speaker_are_ignored():
     t = turns((0, 0, 5), (None, 5, 10))
     links = link(t, spans((1, 0, 10, True)))
     assert links.index.tolist() == [0] and links.overlap_s[0] == pytest.approx(5.0)
+
+
+@pytest.mark.parametrize("video, audio, expected", [
+    ("mujer", "mujer", ("mujer", "ambos")), ("mujer", "hombre", ("no_determinado", "conflicto")),
+    ("no_determinado", "hombre", ("hombre", "audio")), ("hombre", None, ("hombre", "video")),
+    (None, "no_determinado", ("no_determinado", "ninguna")),
+])
+def test_fuse_gender(video, audio, expected):
+    assert fuse_gender(video, audio) == expected
+
+
+def test_people_one_row_per_participant():
+    # Speakers 0-2 talk while people 1-3 speak on screen; speaker 3 is a voice off screen; person 4 never talks
+    t = turns((0, 0, 5), (1, 5, 10), (2, 10, 15), (3, 15, 20), (0, 20, 22))
+    presence = spans((1, 0, 5, True), (2, 5, 10, True), (3, 10, 15, True), (4, 0, 22, False), (1, 20, 22, False))
+    people = identity(t, presence, speaker_genders={0: "mujer", 1: "mujer", 2: "hombre", 3: "hombre"},
+                      person_genders={1: "mujer", 2: "hombre", 3: "no_determinado", 4: "mujer"})["people"]
+    assert list(people.columns) == ["participant_id", "person_id", "speaker_id", "genero", "genero_fuente",
+                                    "screen_time_s", "speaking_time_s", "speech_time_s", "area", "centrality"]
+    p = people.set_index("participant_id")
+    assert p.index.tolist() == ["p1", "p2", "p3", "p4", "v3"]
+    assert p.speaker_id.tolist()[:3] == [0, 1, 2] and pd.isna(p.speaker_id["p4"]) and pd.isna(p.person_id["v3"])
+    assert p.genero.tolist() == ["mujer", "no_determinado", "hombre", "mujer", "hombre"]
+    assert p.genero_fuente.tolist() == ["ambos", "conflicto", "audio", "video", "audio"]
+    assert p.speech_time_s.tolist() == [7.0, 5.0, 5.0, 0.0, 5.0]   # all the speech of their speaker
+    assert p.screen_time_s["v3"] == 0 and np.isnan(p.area["v3"])
+
+
+def test_people_adds_the_speech_of_every_speaker_of_a_person():
+    t = turns((0, 0, 5), (1, 5, 8))   # diarization split one voice in two speakers
+    people = identity(t, spans((1, 0, 8, True)))["people"]
+    assert people.participant_id.tolist() == ["p1"] and people.speaker_id.tolist() == [0]   # main: longest overlap
+    assert people.speech_time_s.tolist() == [8.0]

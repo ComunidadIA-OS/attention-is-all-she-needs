@@ -6,9 +6,12 @@
 import numpy as np
 import pandas as pd
 
+from aiasn.core.silver.gender import fuse_gender
 from aiasn.core.transform import Transform
 
 LINKS = ["speaker_id", "person_id", "overlap_s", "share"]
+PEOPLE = ["participant_id", "person_id", "speaker_id", "genero", "genero_fuente", "screen_time_s", "speaking_time_s",
+          "speech_time_s", "area", "centrality"]
 
 
 def speaking_overlap(turns: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
@@ -23,12 +26,13 @@ def speaking_overlap(turns: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFram
 
 class IdentitySilver(Transform):
     name, layer = "identity", "silver"
-    inputs = ["silver/audio_turns", "silver/audio_speakers", "silver/video_presence"]
-    outputs = ["speaker_person"]
+    inputs = ["silver/audio_turns", "silver/audio_speakers", "silver/video_presence", "silver/video_people"]
+    outputs = ["speaker_person", "people"]
 
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
-        return {"speaker_person": self._links(tables["silver/audio_turns"], tables["silver/audio_speakers"],
-                                              tables["silver/video_presence"])}
+        speakers = tables["silver/audio_speakers"]
+        links = self._links(tables["silver/audio_turns"], speakers, tables["silver/video_presence"])
+        return {"speaker_person": links, "people": self._people(links, speakers, tables["silver/video_people"])}
 
     def _links(self, turns: pd.DataFrame, speakers: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
         """One row per speaker with the person they are, if any: the one speaking on screen for longest while they talk,
@@ -46,3 +50,27 @@ class IdentitySilver(Transform):
         enough = (links.overlap_s >= cfg.min_link_s) & (links.share >= cfg.min_link_share)
         links["person_id"] = links.person_id.astype("Int64").where(enough)
         return links[LINKS].astype({"speaker_id": "Int64"})
+
+    @staticmethod
+    def _people(links: pd.DataFrame, speakers: pd.DataFrame, video_people: pd.DataFrame) -> pd.DataFrame:
+        """One row per participant: each person on screen (`p<person_id>`), with their main speaker if they talk, and
+        each voice off screen (`v<speaker_id>`). Gender from face and voice together (`fuse_gender`)."""
+        linked = links.dropna(subset=["person_id"]).merge(speakers[["speaker_id", "genero", "speech_time_s"]],
+                                                          on="speaker_id")
+        main = linked.sort_values("overlap_s", ascending=False).drop_duplicates("person_id").set_index("person_id")
+        on_screen = video_people.assign(
+            participant_id="p" + video_people.person_id.astype(str),
+            speaker_id=video_people.person_id.map(main.speaker_id).astype("Int64"),
+            genero_audio=video_people.person_id.map(main.genero),
+            speech_time_s=video_people.person_id.map(linked.groupby("person_id").speech_time_s.sum()).fillna(0.0))
+        voices = speakers[~speakers.speaker_id.isin(linked.speaker_id)]
+        off_screen = pd.DataFrame({
+            "participant_id": "v" + voices.speaker_id.astype(str), "person_id": pd.array([pd.NA] * len(voices), "Int64"),
+            "speaker_id": voices.speaker_id, "genero_audio": voices.genero, "speech_time_s": voices.speech_time_s,
+            "screen_time_s": 0.0, "speaking_time_s": 0.0, "area": np.nan, "centrality": np.nan})
+        people = pd.concat([on_screen.rename(columns={"genero": "genero_video"}), off_screen], ignore_index=True)
+        fused = [fuse_gender(v if isinstance(v, str) else None, a if isinstance(a, str) else None)
+                 for v, a in zip(people.genero_video, people.genero_audio)]
+        people["genero"] = [g for g, _ in fused]
+        people["genero_fuente"] = [source for _, source in fused]
+        return people[PEOPLE].astype({"person_id": "Int64", "speaker_id": "Int64"})

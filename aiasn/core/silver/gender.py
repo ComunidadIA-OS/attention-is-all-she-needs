@@ -28,3 +28,17 @@ def decide_gender(female: pd.Series, threshold: float, weights: pd.Series | None
     p = float(np.average(female[mask], weights=weights))
     label = WOMAN if p >= 0.5 else MAN
     return aplicar_umbral_etico(label, max(p, 1 - p), threshold), p
+
+
+def fuse_gender(video: str | None, audio: str | None) -> tuple[str, str]:
+    """Gender of a participant from their face and their voice, and where it comes from.
+
+    A decided gender wins over an undetermined one; if face and voice contradict each other, the participant is left
+    undetermined for human review (ADR-0005).
+    """
+    decided = {source: g for source, g in (("video", video), ("audio", audio)) if g in (WOMAN, MAN)}
+    if not decided:
+        return UNDETERMINED, "ninguna"
+    if len(decided) == 1:
+        return next(iter(decided.items()))[::-1]
+    return (video, "ambos") if video == audio else (UNDETERMINED, "conflicto")

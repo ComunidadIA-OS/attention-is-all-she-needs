@@ -1,11 +1,11 @@
 '''Shared pieces of the NLP tasks: the transcript the model reads and the checks on what it answers'''
 
 import re
-import unicodedata
 from abc import ABC, abstractmethod
 
 import pandas as pd
 
+from aiasn.core.text import normalize
 from aiasn.model_adapters.llm_client import LLMClient
 from aiasn.settings import NlpSettings
 
@@ -46,8 +46,3 @@ def found(fragment: str | None, text: str) -> bool:
     """Whether a fragment quoted by the model is really in the text (ignoring case, accents and punctuation)."""
     fragment = normalize(fragment or "")
     return bool(fragment) and fragment in normalize(text)
-
-
-def normalize(text: str) -> str:
-    text = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode()
-    return " ".join(re.sub(r"[^\w\s]|_", " ", text).split())   # "_" is a word character, but OCR reads it for spaces

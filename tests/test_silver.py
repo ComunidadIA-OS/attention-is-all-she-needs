@@ -12,6 +12,7 @@ import pytest
 from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob, fuse_gender
 from aiasn.core.silver.identity import IdentitySilver
+from aiasn.core.silver.names import NamesSilver, same_name
 from aiasn.core.silver.video import VideoSilver, fusion_video
 from aiasn.core.transform import Transform
 from aiasn.pipelines.silver import SilverPipeline
@@ -188,12 +189,15 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
     ctx = make_ctx(tmp_path)
     ctx.lake.write("bronze", "video_detections", "vid1", DETECTIONS)
     ctx.lake.write("bronze", "audio_turns", "vid1", AUDIO_TURNS)
+    ctx.lake.write("bronze", "video_captions", "vid1", CAPTIONS.iloc[:0])
+    ctx.lake.write("bronze", "nlp_mentions", "vid1", MENTIONS.iloc[:0])
     with captured_log() as lines:
         SilverPipeline(ctx.settings)(ctx)
     for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6,
                         "speaker_person": 3, "people": 6}.items():   # 3 on screen + 3 voices not linked
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
-    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "total"]
+    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "names", "total"]
+    assert {"name", "title", "name_source"} <= set(ctx.lake.read("silver", "people", "vid1").columns)
     assert "3 video_people, 5 video_presence" in lines[0]
 
 
@@ -332,3 +336,94 @@ def test_fusion_video_one_row_per_span_with_the_person_attributes():
 def test_audio_silver_without_turn_ids():
     turns = AudioSilver(Settings()).run({"bronze/audio_turns": AUDIO_TURNS.drop(columns="turn")})["audio_turns"]
     assert turns.turn.tolist() == list(range(len(AUDIO_TURNS)))
+
+
+# Names
+
+def captions(name: str, frames, titles) -> list[dict]:
+    """bronze video_captions rows of one caption read every second (fps 25, ocr_fps 1)."""
+    return [{"frame": f, "shot": 0, "text": "", "name": name, "title": t, "found": True} for f, t in zip(frames, titles)]
+
+
+CAPTIONS = pd.DataFrame(
+    # Shown 1-10 s while persons 1 (speaking) and 2 (silent) are on screen; it grows line by line
+    captions("Marta Ruiz", range(25, 250, 25), ["doctora"] * 4 + ["doctora, investigadora del CSIC"] * 5)
+    # Shown 21-29 s while only person 3 is on screen; OCR noise in one read
+    + captions("Pere Vila", range(525, 725, 25), ["director"] * 8)
+    + captions("Pere_Vila", [725], ["director"])
+    # Shown at 40 s with nobody on screen
+    + captions("Anna Puig", [1000], [None]))
+NAMES_PRESENCE = spans((1, 0, 10, True), (2, 0, 10, False), (3, 20, 30, False))
+MENTIONS = pd.DataFrame({   # bronze nlp_mentions
+    "turn": [0, 1, 1, 2], "speaker": pd.array([1, 0, 0, 0], dtype="Int64"),
+    "literal": ["la doctora Marta", "Luis", "nuestro presentador", "querido Luis"],
+    "name": ["Marta", "Luis", None, "Luis"], "title": ["doctora", None, "presentador", None],
+    "gender": ["F", "M", "M", "M"], "referred_speaker": pd.array([0, 1, 1, 1], dtype="Int64"),
+    "found": [True, True, True, False]})
+NAMES_TURNS = turns((1, 0, 4), (0, 4, 8), (1, 8, 12))
+LINKS = pd.DataFrame({"speaker_id": pd.array([0, 1], dtype="Int64"), "person_id": pd.array([1, pd.NA], dtype="Int64"),
+                      "overlap_s": [8.0, 0.0], "share": [1.0, 0.0]})
+PEOPLE_IN = pd.DataFrame({"participant_id": ["p1", "p2", "p3", "v1"], "genero": "mujer"})
+
+
+def names(captions_table=CAPTIONS) -> dict[str, pd.DataFrame]:
+    return NamesSilver(Settings()).run({
+        "bronze/video_captions": captions_table, "bronze/nlp_mentions": MENTIONS, "silver/audio_turns": NAMES_TURNS,
+        "silver/video_presence": NAMES_PRESENCE, "silver/speaker_person": LINKS, "silver/people": PEOPLE_IN})
+
+
+def test_person_names_keeps_every_evidence():
+    ev = names()["person_names"]
+    assert list(ev.columns) == ["participant_id", "name", "title", "source", "tiempo_i", "seconds"]
+    caps = ev[ev.source == "rotulo"].set_index("name")
+    assert caps.participant_id["Marta Ruiz"] == "p1"          # two people on screen: the one speaking
+    assert caps.title["Marta Ruiz"] == "doctora, investigadora del CSIC"   # the most complete title
+    assert caps.tiempo_i["Marta Ruiz"] == pytest.approx(1.0) and caps.seconds["Marta Ruiz"] == pytest.approx(9.0)
+    assert caps.participant_id["Pere Vila"] == "p3" and caps.seconds["Pere Vila"] == pytest.approx(9.0)   # noise merged
+    assert pd.isna(caps.participant_id["Anna Puig"])          # nobody on screen: kept for review
+    mentions = ev[ev.source == "mencion"]
+    assert mentions.participant_id.tolist() == ["p1", "v1", "v1"]   # the quote not found is left out
+    assert mentions.tiempo_i.tolist() == [0.0, 4.0, 4.0]
+
+
+def test_people_get_the_caption_name_before_the_mention():
+    people = names()["people"].set_index("participant_id")
+    assert people.name.fillna("").tolist() == ["Marta Ruiz", "", "Pere Vila", "Luis"]
+    assert people.title.fillna("").tolist() == ["doctora, investigadora del CSIC", "", "director", "presentador"]
+    assert people.name_source.tolist() == ["rotulo", "ninguna", "rotulo", "mencion"]
+    assert people.genero.tolist() == ["mujer"] * 4            # the identity columns are kept
+
+
+def test_a_caption_with_two_silent_people_is_not_assigned():
+    presence = spans((1, 0, 10, False), (2, 0, 10, False))
+    ev = NamesSilver(Settings()).run({
+        "bronze/video_captions": pd.DataFrame(captions("Marta Ruiz", [25, 50], ["doctora"] * 2)),
+        "bronze/nlp_mentions": MENTIONS.iloc[:0], "silver/audio_turns": NAMES_TURNS, "silver/video_presence": presence,
+        "silver/speaker_person": LINKS, "silver/people": PEOPLE_IN})["person_names"]
+    assert pd.isna(ev.participant_id[0])
+
+
+def test_names_without_captions():
+    people = names(CAPTIONS.iloc[:0])["people"].set_index("participant_id")
+    assert people.name.fillna("").tolist() == ["Marta", "", "", "Luis"]
+    assert people.name_source.tolist() == ["mencion", "ninguna", "ninguna", "mencion"]
+
+
+@pytest.mark.parametrize("mentioned, captioned, expected", [
+    ("Carina Givert", "KARINA GIBERT", True),   # ASR and OCR misspell it differently
+    ("Marta", "Marta Ruiz", True), ("Juan", "Juan Antonio Rodríguez", True),
+    ("Luis", "Marta Ruiz", False), ("Marta Puig", "Marta Ruiz", False), ("", "Marta Ruiz", False),
+])
+def test_same_name(mentioned, captioned, expected):
+    assert same_name(mentioned, captioned, 0.8) is expected
+
+
+def test_a_mention_of_a_captioned_name_goes_to_that_person():
+    # The model thought speaker 1 (a voice off screen) was Marta, but Marta is person 1, captioned
+    mentions = MENTIONS.assign(referred_speaker=pd.array([1, 1, 1, 1], dtype="Int64"))
+    ev = NamesSilver(Settings()).run({
+        "bronze/video_captions": CAPTIONS, "bronze/nlp_mentions": mentions, "silver/audio_turns": NAMES_TURNS,
+        "silver/video_presence": NAMES_PRESENCE, "silver/speaker_person": LINKS, "silver/people": PEOPLE_IN})
+    m = ev["person_names"][ev["person_names"].source == "mencion"]
+    assert m.participant_id.tolist() == ["p1", "v1", "v1"]   # "Marta" moved to p1; Luis and the title stay
+    assert ev["people"].set_index("participant_id").name["v1"] == "Luis"

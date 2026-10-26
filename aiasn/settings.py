@@ -144,6 +144,7 @@ class SilverSettings(BaseModel):
     # A speaker is a person on screen if both talk at the same time for at least this long and this share of their speech
     min_link_s: float = Field(1.0, ge=0)
     min_link_share: float = Field(0.3, ge=0, le=1)
+    name_similarity: float = Field(0.8, ge=0, le=1)        # two spellings of a word count as the same name from here
 
 
 ### GENERAL SETTINGS

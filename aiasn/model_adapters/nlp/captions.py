@@ -7,7 +7,8 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from aiasn.model_adapters.llm_client import LLMClient
-from aiasn.model_adapters.nlp.base import found, normalize
+from aiasn.core.text import normalize
+from aiasn.model_adapters.nlp.base import found
 
 COLUMNS = ["frame", "shot", "text", "name", "title", "found"]
 

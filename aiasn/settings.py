@@ -145,6 +145,7 @@ class SilverSettings(BaseModel):
     min_link_s: float = Field(1.0, ge=0)
     min_link_share: float = Field(0.3, ge=0, le=1)
     name_similarity: float = Field(0.8, ge=0, le=1)        # two spellings of a word count as the same name from here
+    authority_roles: list[str] = ["host", "expert", "voice-over narrator"]   # roles that speak from authority
 
 
 ### GENERAL SETTINGS

@@ -13,6 +13,7 @@ from aiasn.core.silver.audio import AudioSilver
 from aiasn.core.silver.gender import decide_gender, female_prob, fuse_gender
 from aiasn.core.silver.identity import IdentitySilver, participant_of
 from aiasn.core.silver.names import NamesSilver, same_name
+from aiasn.core.silver.nlp import NlpSilver
 from aiasn.core.silver.video import VideoSilver, fusion_video
 from aiasn.core.transform import Transform
 from aiasn.pipelines.silver import SilverPipeline
@@ -191,12 +192,14 @@ def test_silver_pipeline_writes_all_tables(tmp_path):
     ctx.lake.write("bronze", "audio_turns", "vid1", AUDIO_TURNS)
     ctx.lake.write("bronze", "video_captions", "vid1", CAPTIONS.iloc[:0])
     ctx.lake.write("bronze", "nlp_mentions", "vid1", MENTIONS.iloc[:0])
+    for table, df in NLP_BRONZE.items():
+        ctx.lake.write("bronze", table, "vid1", df.iloc[:0])
     with captured_log() as lines:
         SilverPipeline(ctx.settings)(ctx)
     for table, rows in {"video_people": 3, "video_presence": 5, "audio_speakers": 3, "audio_turns": 6,
                         "speaker_person": 3, "people": 6}.items():   # 3 on screen + 3 voices not linked
         assert len(ctx.lake.read("silver", table, "vid1")) == rows
-    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "names", "total"]
+    assert [line.split()[1] for line in lines] == ["video", "audio", "identity", "names", "nlp", "total"]
     assert {"name", "title", "name_source"} <= set(ctx.lake.read("silver", "people", "vid1").columns)
     assert "3 video_people, 5 video_presence" in lines[0]
 
@@ -433,3 +436,66 @@ def test_a_mention_of_a_captioned_name_goes_to_that_person():
 
 def test_participant_of_each_speaker():
     assert participant_of(LINKS) == {0: "p1", 1: "v1"}
+
+
+# NLP
+
+def S(*speakers) -> pd.arrays.IntegerArray:
+    return pd.array(speakers, dtype="Int64")
+
+
+NLP_BRONZE = {   # bronze nlp_* of a speaker 0 on screen (person 1) and a voice off screen (speaker 1)
+    "nlp_topics": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "topic": [" Technology", "care", "health"],
+                                "evidence": ["la IA", "cuidar", "inventado"], "found": [True, True, False]}),
+    "nlp_references": pd.DataFrame({"turn": [0, 2], "speaker": S(0, 0), "name": ["Ada Lovelace", "Alan Turing"],
+                                    "literal": ["Ada", "Turing"], "gender": ["F", None], "found": [True, True]}),
+    "nlp_roles": pd.DataFrame({"speaker": S(0, 1), "role": ["Expert", "voice-over narrator"]}),
+    "nlp_ideas": pd.DataFrame({"idea_id": [0, 0, 1], "idea": ["a", "a", "b"], "speaker": S(0, 1, 1)}),
+    "nlp_tone": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "tone": ["dissent", None, "collaborative"],
+                              "score": [pd.NA, pd.NA, pd.NA], "evidence": ["no", None, "x"],
+                              "found": pd.array([True, False, True], dtype="boolean")}),
+}
+
+
+PARTICIPANT_NAMES = pd.DataFrame({"participant_id": ["p1"], "name": ["MARTA RUIZ"], "source": ["rotulo"]})
+
+
+def nlp(bronze=NLP_BRONZE, **silver) -> dict[str, pd.DataFrame]:
+    tables = {f"bronze/{t}": df for t, df in bronze.items()} | {"silver/speaker_person": LINKS,
+                                                                  "silver/person_names": PARTICIPANT_NAMES}
+    return NlpSilver(Settings(silver=silver)).run(tables)
+
+
+def test_nlp_tables_by_participant_without_made_up_quotes():
+    out = nlp()
+    assert out["nlp_topics"].participant_id.tolist() == ["p1", "v1"]   # the topic quoted from nowhere is left out
+    assert out["nlp_topics"].topic.tolist() == ["technology", "care"]
+    assert out["nlp_references"].genero.tolist() == ["mujer", "no_determinado"]
+    assert out["nlp_ideas"].participant_id.tolist() == ["p1", "v1", "v1"]
+    assert out["nlp_tone"].turn.tolist() == [0, 2]                      # turn 1 quoted something not in it
+    assert list(out["nlp_tone"].columns) == ["participant_id", "turn", "tone", "score"]
+
+
+def test_roles_with_authority_from_settings():
+    roles = nlp()["nlp_roles"]
+    assert roles.participant_id.tolist() == ["p1", "v1"] and roles.authority.tolist() == [True, True]
+    assert nlp(authority_roles=["host"])["nlp_roles"].authority.tolist() == [False, False]
+
+
+def test_zero_shot_tone_has_nothing_to_check():
+    tone = NLP_BRONZE["nlp_tone"].assign(score=[0.95, 0.4, 0.91], evidence=None,
+                                         found=pd.array([pd.NA] * 3, dtype="boolean"))
+    assert nlp(NLP_BRONZE | {"nlp_tone": tone})["nlp_tone"].turn.tolist() == [0, 1, 2]
+
+
+def test_nlp_silver_without_rows():
+    out = nlp({t: df.iloc[:0] for t, df in NLP_BRONZE.items()})
+    assert all(out[t].empty and list(out[t].columns) == cols for t, cols in
+               {"nlp_topics": ["participant_id", "turn", "topic", "evidence"]}.items())
+
+
+def test_references_leave_out_the_participants():
+    references = pd.DataFrame({"turn": [0, 1, 2], "speaker": S(1, 1, 1), "name": ["Marta Ruiz", "Marta", "Ada Lovelace"],
+                               "literal": ["Marta Ruiz", "Marta", "Ada"], "gender": ["F", "F", "F"], "found": True})
+    out = nlp(NLP_BRONZE | {"nlp_references": references})["nlp_references"]
+    assert out.name.tolist() == ["Ada Lovelace"]   # Marta takes part (captioned as MARTA RUIZ)

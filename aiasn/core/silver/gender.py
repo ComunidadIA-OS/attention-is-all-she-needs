@@ -42,3 +42,8 @@ def fuse_gender(video: str | None, audio: str | None) -> tuple[str, str]:
     if len(decided) == 1:
         return next(iter(decided.items()))[::-1]
     return (video, "ambos") if video == audio else (UNDETERMINED, "conflicto")
+
+
+def from_model(label: str | None) -> str:
+    """The gender label of a model (F/M) in the vocabulary of silver; anything else is undetermined."""
+    return {"F": WOMAN, "M": MAN}.get(label, UNDETERMINED)

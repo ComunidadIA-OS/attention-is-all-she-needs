@@ -9,17 +9,18 @@ from insightface.model_zoo import get_model
 from insightface.utils import ensure_available, face_align
 from scipy.cluster.hierarchy import fcluster, linkage
 
+from aiasn.model_adapters.face_detector import onnx_device
 from aiasn.settings import ReidentificatorSettings
 
 
 class Reidentificator:
     def __init__(self, cfg: ReidentificatorSettings, device: str = "auto"):
         self.cfg = cfg
-        providers = ["CPUExecutionProvider"] if device == "cpu" else ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        providers, ctx_id = onnx_device(device)
         model_dir = ensure_available("models", cfg.model_pack, root=str(cfg.root.expanduser()))
         models = (get_model(f, providers=providers) for f in sorted(glob.glob(os.path.join(model_dir, "*.onnx"))))
         self.model = next(m for m in models if m is not None and m.taskname == "recognition")
-        self.model.prepare(ctx_id=-1 if device == "cpu" else 0)
+        self.model.prepare(ctx_id=ctx_id)
 
     def embed(self, image: np.ndarray, faces: pd.DataFrame) -> np.ndarray:
         """Unit-norm embedding of each face (rows of FaceDetector.detect), aligned with its landmarks."""

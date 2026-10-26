@@ -263,3 +263,10 @@ def test_ollama_client_not_implemented():
     assert isinstance(client, OllamaClient)
     with pytest.raises(NotImplementedError):
         client.complete("s", "u", Answer)
+
+
+def test_onnx_device_without_a_gpu(monkeypatch):
+    from aiasn.model_adapters import face_detector
+    monkeypatch.setattr(face_detector.torch.cuda, "is_available", lambda: False)
+    assert face_detector.onnx_device("auto") == (["CPUExecutionProvider"], -1)
+    assert face_detector.onnx_device("cuda")[1] == 0   # asked explicitly: tried even so

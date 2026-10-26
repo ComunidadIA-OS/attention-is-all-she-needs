@@ -551,7 +551,7 @@ def test_term_bias_of_topics_and_titles():
 
 
 def test_term_bias_without_the_model(tmp_path):
-    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz"})
+    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz", "url": None})
     out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": ["care"]}),
                                         "silver/people": pd.DataFrame({"title_en": [None]})})
     assert out["term_bias"].sesgo.isna().all()   # the step does not fail; the front shows no bias

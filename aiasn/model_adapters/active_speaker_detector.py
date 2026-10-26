@@ -1,5 +1,6 @@
 '''Model used to detect who is speaking (TalkNet), adapted from demoTalkNet.py (https://github.com/TaoRuijie/TalkNet-ASD)'''
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,8 @@ from scipy import signal
 from scipy.io import wavfile
 
 from aiasn.settings import ActiveSpeakerDetectorSettings
+
+log = logging.getLogger("aiasn")
 
 REPO = "https://github.com/TaoRuijie/TalkNet-ASD.git"
 WEIGHTS_ID = "1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea"   # pretrain_TalkSet.model on Google Drive
@@ -120,6 +123,7 @@ class ActiveSpeakerDetector:
     def _ensure_repo(repo_dir: Path) -> Path:
         """Clone TalkNet and download its weights if missing. Returns the weights file."""
         if not repo_dir.is_dir():
+            log.info("Downloading TalkNet into %s", repo_dir)
             subprocess.run(["git", "clone", "-q", "--depth", "1", REPO, str(repo_dir)], check=True)
         weights = repo_dir / "pretrain_TalkSet.model"
         if not weights.is_file():

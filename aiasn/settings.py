@@ -149,6 +149,8 @@ class NlpSettings(BaseModel):
 class BiasSettings(BaseModel):
     """w2vNEWS (Google News word2vec), for the gender bias of topics and titles (Bolukbasi et al. 2016)."""
     model_path: Path = Path("~/gensim-data/word2vec-google-news-300/word2vec-google-news-300.gz")
+    url: str | None = ("https://github.com/RaRe-Technologies/gensim-data/releases/download/"
+                       "word2vec-google-news-300/word2vec-google-news-300.gz")   # downloaded from here if missing
     vocab_limit: int = Field(500_000, gt=0)        # most frequent words loaded; terms outside them get no score
 
 

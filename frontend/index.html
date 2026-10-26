@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<!--
+SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+SPDX-License-Identifier: Apache-2.0
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIASN — Panel de Auditoría Audiovisual y Soberanía Algorítmica</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Vis.js Network Standalone CDN (para la Constelación interactiva) -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  
+  <!-- Estilos propios editoriales e institucionales -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+
+  <!-- CABECERA INSTITUCIONAL Y DE AUDITORÍA -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded bg-purple-900 text-white flex items-center justify-center font-bold text-base tracking-wider font-mono">
+          AI
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold text-slate-900 tracking-tight">Attention Is All She Needs</h1>
+            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-slate-100 text-slate-700 border border-slate-200">v1.0.0</span>
+          </div>
+          <p class="text-xs text-slate-500">Plataforma Pericial de Auditoría Audiovisual de Paridad · Reto Mujeres por la IA Abierta</p>
+        </div>
+      </div>
+
+      <!-- Metadatos de Expediente y Control de Conexión -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-500">Expediente:</span>
+          <span id="video-id-badge" class="font-mono font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">clip_quanta-3f9a</span>
+        </div>
+
+        <div class="h-4 w-px bg-slate-200"></div>
+
+        <div class="flex items-center gap-2">
+          <label for="mode-select" class="text-xs text-slate-500">Origen:</label>
+          <select id="mode-select" class="text-xs font-mono bg-white border border-slate-300 rounded px-2 py-1 text-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-600">
+            <option value="demo">Muestra Auditada (Quanta IA)</option>
+            <option value="live">API en Vivo (FastAPI)</option>
+          </select>
+          <span id="api-status-badge" class="text-xs px-2.5 py-0.5 rounded font-mono font-medium badge-certified">Muestra Local</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- 1. BARRA DE PIPELINES / PROCESO DE INGESTA -->
+    <section class="audit-card p-4">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">Trazabilidad de la Pipeline Multimodal</h2>
+          <p class="text-sm font-medium text-slate-800">Procesado completo de extremo a extremo sin retención biométrica (ADR-0004)</p>
+        </div>
+        
+        <!-- Pasos en orden: Audio -> NLP -> Vídeo -> Rótulos -> Silver -> Gold -->
+        <div class="flex items-center gap-1.5 text-xs font-mono">
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Audio
+          </div>
+          <span class="text-slate-300">→</span>
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> NLP
+          </div>
+          <span class="text-slate-300">→</span>
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Vídeo
+          </div>
+          <span class="text-slate-300">→</span>
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Rótulos OCR
+          </div>
+          <span class="text-slate-300">→</span>
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Silver
+          </div>
+          <span class="text-slate-300">→</span>
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded bg-purple-50 border border-purple-300 text-purple-900 font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> Gold Fusión
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DICTAMEN EJECUTIVO Y ALERTAS ÉTICAS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Resumen en Lectura Fácil (UNE 153101 EX) -->
+      <section class="audit-card p-5 lg:col-span-2 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-purple-100 text-purple-900">UNE 153101 EX</span>
+            <h2 class="text-sm font-bold text-slate-900">Resumen Ejecutivo en Lectura Fácil</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">Accesibilidad Universal · ADR-0010</span>
+        </div>
+        <div class="lectura-facil-box rounded">
+          <p id="lectura-facil-text" class="text-slate-800 text-sm font-normal">
+            Cargando resumen en lenguaje accesible y contrastado...
+          </p>
+        </div>
+      </section>
+
+      <!-- Alerta Anti-Equality-Washing y Salvaguarda -->
+      <section class="audit-card p-5 space-y-4">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 font-mono mb-2">Diagnóstico de Presencia</h2>
+          <div id="equality-washing-card" class="p-3.5 rounded border border-slate-200">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-slate-700">Equality-Washing:</span>
+              <span id="equality-washing-badge" class="px-2 py-0.5 text-xs font-bold rounded font-mono">EVALUANDO</span>
+            </div>
+            <p id="equality-washing-desc" class="text-xs text-slate-600 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-700">Salvaguarda de Paridad (ADR-0006):</span>
+          <span id="safeguard-badge" class="text-xs font-mono font-medium px-2 py-0.5 rounded">...</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- 3. TEST DE BECHDEL DIGITAL Y MÉTRICAS CLAVE -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      
+      <!-- Test de Bechdel Conversacional -->
+      <div class="audit-card p-5 space-y-2 md:col-span-1 border-l-4 border-l-purple-600">
+        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Métricas de Contenido</span>
+        <h3 class="text-sm font-bold text-slate-900">Test de Bechdel Digital</h3>
+        <div id="bechdel-score" class="text-2xl font-bold font-mono text-purple-900">0 / 3 Criterios</div>
+        <p id="bechdel-desc" class="text-xs text-slate-600 leading-relaxed"></p>
+      </div>
+
+      <!-- Tiempo de Voz Activa -->
+      <div class="audit-card p-5 space-y-3 md:col-span-1">
+        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Voz Activa</span>
+        <div class="flex items-baseline justify-between">
+          <span class="text-xs font-medium text-purple-700">Mujeres</span>
+          <span id="voice-fem-val" class="text-xl font-bold font-mono text-purple-900">0.0 %</span>
+        </div>
+        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+          <div id="voice-bar-fem" class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="flex items-baseline justify-between text-xs text-slate-500">
+          <span>Hombres:</span>
+          <span id="voice-masc-val" class="font-mono font-medium">0.0 %</span>
+        </div>
+        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div id="voice-bar-masc" class="bg-sky-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Presencia en Pantalla -->
+      <div class="audit-card p-5 space-y-3 md:col-span-1">
+        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Presencia en Pantalla</span>
+        <div class="flex items-baseline justify-between">
+          <span class="text-xs font-medium text-purple-700">Mujeres</span>
+          <span id="screen-fem-val" class="text-xl font-bold font-mono text-purple-900">0.0 %</span>
+        </div>
+        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+          <div id="screen-bar-fem" class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="flex items-baseline justify-between text-xs text-slate-500">
+          <span>Hombres:</span>
+          <span id="screen-masc-val" class="font-mono font-medium">0.0 %</span>
+        </div>
+        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+          <div id="screen-bar-masc" class="bg-sky-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Ratio Voz / Pantalla -->
+      <div class="audit-card p-5 space-y-2 md:col-span-1">
+        <span class="text-xs font-bold text-slate-500 font-mono uppercase">Ratio de Eficacia</span>
+        <h3 class="text-sm font-bold text-slate-900">Voz Activa / Pantalla</h3>
+        <div class="grid grid-cols-2 gap-2 pt-1 font-mono">
+          <div class="bg-purple-50 p-2 rounded border border-purple-100">
+            <span class="text-xs text-purple-700 block">Mujer</span>
+            <span id="ratio-fem-val" class="text-lg font-bold text-purple-900">0.00</span>
+          </div>
+          <div class="bg-sky-50 p-2 rounded border border-sky-100">
+            <span class="text-xs text-sky-700 block">Hombre</span>
+            <span id="ratio-masc-val" class="text-lg font-bold text-sky-900">0.00</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-500 pt-1">> 0.50 indica voz activa superior a presencia muda.</p>
+      </div>
+
+    </div>
+
+    <!-- 4. CONSTELACIÓN DEL PROTAGONISMO (RED SOCIOMÉTRICA INTERACTIVA) -->
+    <section class="audit-card p-5 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-slate-900">Constelación del Protagonismo y Segregación Temática</h2>
+            <span class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-amber-50 text-amber-900 border border-amber-200">Grafo Gold</span>
+          </div>
+          <p class="text-xs text-slate-500">Relaciones de interlocución (turnos, citas, planos compartidos y temas abordados). Arrastra los nodos o haz zoom.</p>
+        </div>
+
+        <!-- Leyenda cromática formal -->
+        <div class="flex items-center gap-4 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-purple-600 inline-block"></span>
+            <span class="text-slate-700">Mujeres</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-sky-600 inline-block"></span>
+            <span class="text-slate-700">Hombres</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rotate-45 bg-amber-500 inline-block"></span>
+            <span class="text-slate-700">Temas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor del Grafo Interactivo con Vis.js -->
+      <div id="constellation-network"></div>
+    </section>
+
+    <!-- 5. TABLA DE PERSONAS, ROLES DE AUTORIDAD Y PODER -->
+    <section class="audit-card overflow-hidden">
+      <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-bold text-slate-900">Registro Individual de Participantes y Atribución de Autoridad</h2>
+          <p class="text-xs text-slate-500">Extracción determinista combinando detección de rótulos OCR con diarización de audio</p>
+        </div>
+        <span class="text-xs text-slate-500 font-mono">Sin retención biométrica facial</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left audit-table">
+          <thead>
+            <tr>
+              <th>Nombre Identificado</th>
+              <th>Cargo / Rótulo OCR</th>
+              <th>Género</th>
+              <th>Autoridad</th>
+              <th class="text-right">Pantalla</th>
+              <th class="text-right">Voz Activa</th>
+              <th class="text-right">Centralidad</th>
+            </tr>
+          </thead>
+          <tbody id="persons-table-body" class="divide-y divide-slate-100">
+            <!-- Rellenado dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6. SUPERVISIÓN HUMANA (HITL / ART. 14 RIA) Y SOBERANÍA CIUDADANA -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Panel de Supervisión Humana (Human-in-the-Loop) -->
+      <section class="audit-card p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-900 text-white">Art. 14 RIA</span>
+            <h2 class="text-sm font-bold text-slate-900">Supervisión Humana y Sello Pericial</h2>
+          </div>
+          <span id="cert-status-badge" class="px-3 py-1 text-xs font-mono font-bold rounded badge-certified">
+            CONFORME · ASUMIDO
+          </span>
+        </div>
+
+        <p id="cert-status-desc" class="text-xs text-slate-600 leading-relaxed"></p>
+
+        <div class="bg-slate-50 p-3.5 rounded border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-800">Arbitraje de Casos Dudosos (p &lt; 0.80):</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="hitl-toggle" checked class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-700"></div>
+              <span class="ml-2 text-xs font-medium text-slate-700">Asumo Supervisión</span>
+            </label>
+          </div>
+          <div class="pt-2 border-t border-slate-200/60 font-mono text-[11px] text-slate-500 break-all" id="cert-sha256-hash">
+            SHA-256: 4e8b89d9f1c79e65c0b8923a1a6f0d98e762c94f58f7129548b26127cb4165ea
+          </div>
+        </div>
+      </section>
+
+      <!-- Soberanía y Confianza Ciudadana (Vote with your feet) -->
+      <section class="audit-card p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">DOP / Eco-Social</span>
+            <h2 class="text-sm font-bold text-slate-900">Soberanía Ciudadana (Vote with your feet)</h2>
+          </div>
+          <span class="text-xs font-mono text-slate-500">Consulta Abierta</span>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Mecanismo abierto para que la ciudadanía audite la representatividad y vote con su confianza sobre el contenido.
+        </p>
+
+        <div class="bg-purple-50/50 p-3.5 rounded border border-purple-100 space-y-3">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-medium text-purple-950">Índice de Confianza Ciudadana:</span>
+            <span id="citizen-vote-count" class="font-mono font-semibold text-purple-900">Calculando...</span>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-[11px] text-slate-600 block">¿Percibes equilibrio y protagonismo real en las intervenciones?</label>
+            <div class="flex items-center gap-2">
+              <button id="vote-yes-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-purple-50 hover:border-purple-300 font-medium transition">
+                👍 Equilibrado
+              </button>
+              <button id="vote-partial-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-amber-50 hover:border-amber-300 font-medium transition">
+                ⚠️ Parcial
+              </button>
+              <button id="vote-no-btn" class="flex-1 text-xs py-1.5 px-2 bg-white border border-slate-200 rounded text-slate-800 hover:bg-red-50 hover:border-red-300 font-medium transition">
+                👎 Insuficiente
+              </button>
+            </div>
+          </div>
+
+          <div id="citizen-status-msg" class="hidden"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 7. CLIMA CONVERSACIONAL AGREGADO (ADR-0009) -->
+    <section class="audit-card p-4 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-4 bg-slate-50">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-slate-700">Clima Conversacional Agregado (ADR-0009):</span>
+        <span class="text-slate-500">Sin perfilado emocional individual por imperativo del Reglamento Europeo de IA</span>
+      </div>
+      <div id="climate-container" class="flex items-center gap-4 font-mono text-[11px]">
+        <span>Mujeres: <strong id="clima-fem-tec" class="text-purple-900">0%</strong> asertivo / <strong id="clima-fem-col" class="text-purple-900">0%</strong> colaborativo</span>
+        <span class="text-slate-300">|</span>
+        <span>Hombres: <strong id="clima-masc-tec" class="text-sky-900">0%</strong> asertivo / <strong id="clima-masc-col" class="text-sky-900">0%</strong> colaborativo</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- PIE DE PÁGINA INSTITUCIONAL -->
+  <footer class="mt-12 bg-white border-t border-slate-200 py-6 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-4">
+      <div>
+        <p class="font-semibold text-slate-700">Equipo 1: «Attention Is All She Needs» (AIASN)</p>
+        <p>Alba Camiña García · Pilar de la Fuente Diez · Rocío Jiménez Villén</p>
+      </div>
+      <div class="flex items-center gap-4 font-mono text-[11px]">
+        <span>Licencia: Apache-2.0</span>
+        <span>·</span>
+        <span>REUSE Compliant</span>
+        <span>·</span>
+        <span>SEDIA / IDEAI-UPC / donesCOEINF</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Lógica de la aplicación -->
+  <script src="app.js"></script>
+</body>
+</html>

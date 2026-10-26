@@ -3,6 +3,8 @@
 
 '''Names and titles of the people captioned on screen, from the texts read by the OCR'''
 
+from concurrent.futures import ThreadPoolExecutor
+
 import pandas as pd
 from pydantic import BaseModel, Field
 
@@ -38,14 +40,14 @@ un espacio), title (null si no hay) y title_authority:
 
 
 class CaptionExtractor:
-    def __init__(self, llm: LLMClient):
-        self.llm = llm
+    def __init__(self, llm: LLMClient, blocks_per_call: int = 4, max_parallel: int = 6):
+        self.llm, self.blocks_per_call, self.max_parallel = llm, blocks_per_call, max_parallel
 
     def extract(self, texts: pd.DataFrame) -> pd.DataFrame:
         """One row per frame showing a person's caption, from bronze video_texts.
 
         The texts of each frame are read together, top to bottom, since the OCR splits name and title in several
-        boxes; the model only sees each distinct block once.
+        boxes; the model only sees each distinct block once, in groups of `blocks_per_call` sent at the same time.
         """
         if texts.empty:
             return pd.DataFrame(columns=COLUMNS)
@@ -53,9 +55,16 @@ class CaptionExtractor:
                   .agg(shot=("shot", "first"), text=("text", " | ".join)).reset_index())
         frames["key"] = frames.text.map(normalize)
         blocks = frames.drop_duplicates("key").reset_index(drop=True)
-        user = "\n".join(f"[{i}] {text}" for i, text in enumerate(blocks.text))
-        answer = self.llm.complete(PROMPT, user, Captions)
-        by_key = {blocks.key[c.block]: c for c in answer.captions if 0 <= c.block < len(blocks)}
+        groups = [blocks.iloc[i:i + self.blocks_per_call] for i in range(0, len(blocks), self.blocks_per_call)]
+        with ThreadPoolExecutor(min(self.max_parallel, len(groups))) as pool:
+            answers = list(pool.map(self._read, groups))
+        by_key = {key: c for answer in answers for key, c in answer.items()}
         rows = [[f.frame, f.shot, f.text, c.name, c.title, c.title_authority, found(c.name, f.text)]
                 for f in frames.itertuples() if (c := by_key.get(f.key))]
         return pd.DataFrame(rows, columns=COLUMNS).astype({"frame": int, "title_authority": "boolean", "found": bool})
+
+    def _read(self, group: pd.DataFrame) -> dict[str, Caption]:
+        """The captions of one group of blocks, by block key."""
+        user = "\n".join(f"[{i}] {text}" for i, text in enumerate(group.text))
+        answer = self.llm.complete(PROMPT, user, Captions)
+        return {group.key.iloc[c.block]: c for c in answer.captions if 0 <= c.block < len(group)}

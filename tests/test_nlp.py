@@ -347,3 +347,21 @@ def test_captions_pipeline(tmp_path):
         CaptionsPipeline(ctx.settings.nlp, llm=FakeLLM({Captions: CAPTIONS}))(ctx)
     assert len(ctx.lake.read("bronze", "video_captions", "vid1")) == 3
     assert "1 people captioned in 3 frames, 0 names not found" in lines[0]
+
+
+class CaptionLLM(FakeLLM):
+    """Answers each group of blocks: a caption for the block with David's name, by its number in the group."""
+
+    def complete(self, system, user, schema):
+        self.calls.append((system, user, schema))
+        lines = user.splitlines()
+        return Captions(captions=[Caption(block=i, name="David Ríos Insua", title="Investigador del ICMAT",
+                                          title_authority=True) for i, line in enumerate(lines) if "David" in line])
+
+
+def test_captions_in_parallel_groups_of_blocks():
+    llm = CaptionLLM({})
+    c = CaptionExtractor(llm, blocks_per_call=1).extract(TEXTS)
+    assert sorted(call[1] for call in llm.calls) == ["[0] David_Ríos Insua | Investigador del ICMAT",
+                                                       "[0] TOP SECRET ROSIES"]   # one call per block
+    assert c.frame.tolist() == [125, 150, 175]   # each answer mapped back to its own block

@@ -16,7 +16,8 @@ class CaptionsPipeline(Pipeline):
     name = "captions"
 
     def __init__(self, cfg: NlpSettings, llm: LLMClient | None = None):
-        self.extractor = CaptionExtractor(llm or make_llm_client(cfg.llm))
+        self.extractor = CaptionExtractor(llm or make_llm_client(cfg.llm), cfg.caption_blocks_per_call,
+                                          cfg.max_parallel)
 
     def run(self, ctx: RunContext) -> None:
         captions = self.extractor.extract(ctx.lake.read("bronze", "video_texts", ctx.video_id))

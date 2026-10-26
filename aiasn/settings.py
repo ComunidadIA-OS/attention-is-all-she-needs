@@ -118,6 +118,7 @@ class NlpSettings(BaseModel):
     tone: ToneSettings = Field(default_factory=ToneSettings)
     device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time
+    caption_blocks_per_call: int = Field(4, gt=0)  # OCR blocks per captions call; the calls go in parallel
     # Guide for the model, which may add new topics
     topics_guide: list[str] = [
         # stereotyped as "feminine" or centred on the person

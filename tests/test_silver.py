@@ -517,6 +517,18 @@ def test_a_caption_title_with_authority_gives_authority_whatever_the_role():
     assert off.authority.tolist() == [False, True]
 
 
+def test_a_narrator_on_screen_is_an_expert_or_the_host():
+    # The model reads only the transcript: experts heard over footage look like voice-over narrators
+    roles = pd.DataFrame({"speaker": S(0, 1), "role": ["voice-over narrator", "voice-over narrator"]})
+    def run(title_authority):
+        people = NLP_PEOPLE.assign(title_authority=pd.array([title_authority, pd.NA], dtype="boolean"))
+        tables = {f"bronze/{t}": df for t, df in (NLP_BRONZE | {"nlp_roles": roles}).items()} | {
+            "silver/speaker_person": LINKS, "silver/person_names": PARTICIPANT_NAMES, "silver/people": people}
+        return NlpSilver(Settings()).run(tables)["nlp_roles"]
+    assert run(True).role_es.tolist() == ["experto/a", "narrador/a en off"]   # v1 is only a voice: stays narrator
+    assert run(pd.NA).role.tolist() == ["host", "voice-over narrator"]       # on screen, no title of authority
+
+
 def test_zero_shot_tone_has_nothing_to_check():
     tone = NLP_BRONZE["nlp_tone"].assign(score=[0.95, 0.4, 0.91], evidence=None,
                                          found=pd.array([pd.NA] * 3, dtype="boolean"))

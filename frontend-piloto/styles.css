@@ -307,3 +307,6 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 .steps .note{flex-basis:100%;font-size:12px;color:var(--warn)}
 @keyframes pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.steps .run .ic{animation:none}}
+
+/* vídeos analizados */
+.live .lv-open{max-width:220px;appearance:auto;color:var(--ink)}

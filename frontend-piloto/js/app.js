@@ -303,9 +303,25 @@ $('live').addEventListener('submit',async e=>{
     const id=(await res.json()).video_id;
     const u=new URL(location.href);u.searchParams.set('video',id);history.replaceState(null,'',u);   // a reload keeps following it
     await follow(id,t0);
-    msg('Análisis completado.');
+    msg('Análisis completado.');listVideos();
   }catch(err){failed(err,'No se pudo completar el análisis: ')}
   finally{go.disabled=false}
+});
+
+// Videos already in the lake: one opens without processing it again
+async function listVideos(){
+  try{
+    const r=await fetch(API+'/videos');if(!r.ok)return;
+    const ok=(await r.json()).filter(v=>v.estado==='ok'),sel=$('live-open');
+    sel.length=1;ok.forEach(v=>sel.add(new Option(v.video_id,v.video_id)));
+    sel.style.display=ok.length?'':'none';
+    if(opened)sel.value=opened;
+  }catch(e){}   // without the API the page still works: the list just stays hidden
+}
+$('live-open').addEventListener('change',e=>{
+  const id=e.target.value;if(!id)return;
+  const u=new URL(location.href);u.searchParams.set('video',id);history.replaceState(null,'',u);
+  openVideo(id);
 });
 
 // ?video=ID opens a video (to share or reload its result) without uploading it again
@@ -323,4 +339,5 @@ let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120
 const params=new URLSearchParams(location.search),opened=params.get('video');
 if(!params.has('demo'))renderLive(AIASNAdapter.toView({resultado:{}}),true);   // ?demo: the mock-up with its sample data
 if(opened)openVideo(opened);
+listVideos();
 })();

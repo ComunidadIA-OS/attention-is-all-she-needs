@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,11 +19,13 @@ class PersonTrackerSettings(BaseModel):
 
 class FaceDetectorSettings(BaseModel):
     model_pack: str = "buffalo_l"
+    root: Path = Path("~/.insightface")            # where InsightFace keeps its model packs
     det_size: int = Field(640, gt=0)
 
 
 class ReidentificatorSettings(BaseModel):
     model_pack: str = "buffalo_l"
+    root: Path = Path("~/.insightface")
     max_distance: float = Field(0.6, gt=0)   # cosine distance between tracks of the same person
 
 
@@ -38,6 +40,7 @@ class GenderEstimatorSettings(BaseModel):
 
 class OcrSettings(BaseModel):
     languages: list[str] = ["es", "en"]
+    model_dir: Path = Path("~/.EasyOCR/model")
     min_conf: float = Field(0.4, ge=0, le=1)
 
 
@@ -146,6 +149,8 @@ class NlpSettings(BaseModel):
 class BiasSettings(BaseModel):
     """w2vNEWS (Google News word2vec), for the gender bias of topics and titles (Bolukbasi et al. 2016)."""
     model_path: Path = Path("~/gensim-data/word2vec-google-news-300/word2vec-google-news-300.gz")
+    url: str | None = ("https://github.com/RaRe-Technologies/gensim-data/releases/download/"
+                       "word2vec-google-news-300/word2vec-google-news-300.gz")   # downloaded from here if missing
     vocab_limit: int = Field(500_000, gt=0)        # most frequent words loaded; terms outside them get no score
 
 
@@ -164,13 +169,63 @@ class SilverSettings(BaseModel):
 
 ### GENERAL SETTINGS
 
+class StorageSettings(BaseModel):
+    """Access to an S3-compatible store (MinIO, AWS, OVH Object Storage) when the lake is an `s3://` URI."""
+    endpoint_url: str | None = None                # MinIO: http://minio:9000; None: AWS
+    access_key: SecretStr | None = None
+    secret_key: SecretStr | None = None
+
+    def options(self, uri: str) -> dict:
+        """fsspec storage options for `uri`; none for a local folder."""
+        if not uri.startswith("s3://"):
+            return {}
+        options = {"key": self.access_key, "secret": self.secret_key}
+        options = {k: v.get_secret_value() for k, v in options.items() if v is not None}
+        return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
+
+
+class WorkerContainerSettings(BaseModel):
+    """The worker container the API starts for each video (docker launcher)."""
+    image: str = "aiasn-worker"
+    network: str | None = "aiasn"                  # where the store is reachable
+    volumes: dict[str, str] = {"aiasn-models": "/models"}   # volume (or host folder) -> path in the container
+    gpu: bool = True                               # when Docker has it (NVIDIA Container Toolkit); else the CPU
+    # Variables of the API's environment passed on, by name or prefix: the worker reads the same settings
+    env: list[str] = ["LAKE_URI", "STORAGE__", "MODELS_DIR", "HF_HOME", "OVH_", "TMP_DIR",
+                      "VIDEO__", "AUDIO__", "NLP__", "SILVER__", "BIAS__"]
+
+
+class ApiSettings(BaseModel):
+    cors_origins: list[str] = ["*"]
+    upload_formats: list[str] = [".mp4", ".mov", ".webm", ".mkv", ".avi"]
+    # docker: a worker container per video; process: a child process (no Docker); auto: docker if it is reachable
+    launcher: Literal["auto", "docker", "process"] = "auto"
+    worker: WorkerContainerSettings = Field(default_factory=WorkerContainerSettings)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_nested_delimiter="__", env_file=".env", extra="ignore")
 
-    lake_dir: Path = Path("data")
+    lake_uri: str = "data"                         # a local folder, or s3://bucket (see storage)
+    storage: StorageSettings = Field(default_factory=StorageSettings)
     tmp_dir: Path = Path("tmp")
+    # One folder for every local model (Docker: a volume); None keeps each library's own default place.
+    # Hugging Face models go where HF_HOME says.
+    models_dir: Path | None = None
     video: VideoSettings = Field(default_factory=VideoSettings)
     audio: AudioSettings = Field(default_factory=AudioSettings)
     nlp: NlpSettings = Field(default_factory=NlpSettings)
     silver: SilverSettings = Field(default_factory=SilverSettings)
     bias: BiasSettings = Field(default_factory=BiasSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
+
+    @model_validator(mode="after")
+    def _paths_in_models_dir(self) -> "Settings":
+        if self.models_dir:
+            root, video = self.models_dir, self.video
+            video.person_tracker.model = str(root / Path(video.person_tracker.model).name)
+            video.face_detector.root = video.reidentificator.root = root / "insightface"
+            video.active_speaker_detector.repo_dir = root / "TalkNet-ASD"
+            video.ocr.model_dir = root / "easyocr"
+            self.bias.model_path = root / Path(self.bias.model_path).name
+        return self

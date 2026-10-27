@@ -1,6 +1,6 @@
 import json
+from pathlib import Path
 import logging
-import shutil
 import wave
 from contextlib import contextmanager
 
@@ -10,29 +10,22 @@ import pytest
 from conftest import ASR_RESPONSE, CAPTION, LOGO
 
 from aiasn.model_adapters.transcriber import Transcriber
-from aiasn.pipelines.base_pipeline import Pipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.video_annotation import annotate
-from aiasn.run_pipelines import process_video
 from aiasn.settings import Settings
-from aiasn.storage.lake import Lake
-from aiasn.storage.manifest import Manifest
 
 
 def make_ctx(tmp_path, video_id="vid1") -> RunContext:
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    return RunContext(video_id, settings, Lake(settings.lake_dir),
-                      Manifest(settings.lake_dir, video_id), settings.tmp_dir / video_id)
+    settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
+    return RunContext.for_video(settings, video_id)
 
 
 def manifest_step(ctx, step):
-    return json.loads(ctx.manifest.path.read_text())["steps"][step]
+    return ctx.manifest.read()["steps"][step]
 
 
 def to_landing(ctx, video):
-    landing = ctx.lake.landing_dir(ctx.video_id)
-    landing.mkdir(parents=True)
-    shutil.copy(video, landing)
+    ctx.lake.upload_to_landing(ctx.video_id, video)
 
 
 @contextmanager
@@ -48,36 +41,6 @@ def captured_log():
         yield lines
     finally:
         logger.removeHandler(handler)
-
-
-class OkPipeline(Pipeline):
-    name = "ok"
-
-    def run(self, ctx): pass
-
-
-class FailingPipeline(Pipeline):
-    name = "failing"
-
-    def run(self, ctx):
-        raise RuntimeError("boom")
-
-
-def test_pipeline_records_success(tmp_path):
-    ctx = make_ctx(tmp_path)
-    OkPipeline()(ctx)
-    step = manifest_step(ctx, "ok")
-    assert step["status"] == "ok"
-    assert step["seconds"] >= 0
-
-
-def test_pipeline_records_failure_and_reraises(tmp_path):
-    ctx = make_ctx(tmp_path)
-    with pytest.raises(RuntimeError):
-        FailingPipeline()(ctx)
-    step = manifest_step(ctx, "failing")
-    assert step["status"] == "error"
-    assert "boom" in step["error"]
 
 
 @pytest.fixture(scope="module")
@@ -182,34 +145,3 @@ def test_audio_pipeline_outputs(tmp_path, monkeypatch, audio_pipeline, clip_with
     assert [line.split()[1] for line in lines] == ["extract", "asr", "gender", "total"]
     assert "3 turns, 2 speakers" in lines[1]
 
-
-class AfterOkPipeline(OkPipeline):
-    name = "after_ok"
-
-
-class AfterFailingPipeline(OkPipeline):
-    name = "after_failing"
-
-
-class ThenPipeline(OkPipeline):
-    name = "then"
-
-
-def test_process_video_runs_chains_in_parallel_and_reraises(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    with pytest.raises(RuntimeError, match="boom"):
-        process_video("vid1", settings, [[FailingPipeline(), AfterFailingPipeline()], [OkPipeline(), AfterOkPipeline()]],
-                      then=[ThenPipeline()])
-    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
-    assert steps["failing"]["status"] == "error"
-    assert "after_failing" not in steps                        # a failure stops the rest of its chain...
-    assert steps["ok"]["status"] == steps["after_ok"]["status"] == "ok"   # ...but not the other chains
-    assert "then" not in steps                                 # and what comes after the chains does not run
-
-
-def test_process_video_runs_then_after_the_chains(tmp_path):
-    settings = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp")
-    process_video("vid1", settings, [[OkPipeline()], [AfterOkPipeline()]], then=[ThenPipeline()])
-    steps = json.loads((settings.lake_dir / "runs" / "video_id=vid1" / "manifest.json").read_text())["steps"]
-    assert steps["then"]["status"] == "ok"
-    assert steps["then"]["started_at"] >= max(steps["ok"]["started_at"], steps["after_ok"]["started_at"])

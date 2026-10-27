@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
+"""The result of a video as the front shows it, one key per section, read from gold. Only reshaping: every figure is
+already computed in silver and gold (ADR-0001)."""
+
+import pandas as pd
+
+from aiasn.storage.lake import Lake
+
+
+def status(manifest: dict) -> dict:
+    return {"estado": manifest["status"], "pasos": {k: v.get("status") for k, v in manifest["steps"].items()},
+            "error": manifest["error"]}
+
+
+def result(lake: Lake, video_id: str) -> dict:
+    gold = {t: lake.read("gold", t, video_id) for t in ("summary", "kpis", "graph_nodes", "graph_edges")}
+    people = lake.read("silver", "people", video_id)
+    kpis, nodes = gold["kpis"], gold["graph_nodes"]
+    participants = nodes[nodes.tipo == "participante"]
+    return {
+        "veredicto": _verdict(gold["summary"].iloc[0]),
+        "metricas": {
+            "voz_pct": _by_gender(kpis, "parity", "voz_s", pct=True),
+            "pantalla_pct": _by_gender(kpis, "parity", "pantalla_s", pct=True),
+            "ratio_voz_pantalla": _by_gender(kpis, "parity", "voz_activa_en_pantalla"),
+            "referentes": _by_gender(kpis, "references", value=True),
+        },
+        "personas": _people(participants, people),
+        "temas": _topics(kpis, nodes),
+        "poder": {
+            "centralidad_media": _by_gender(kpis, "parity", "centralidad"),
+            "personas_distintas": participants.genero.value_counts().to_dict(),
+            "veces_citado_como_referente": _by_gender(kpis, "references", value=True),
+        },
+        "roles": _records(participants.dropna(subset=["role_es"]).groupby(["role_es", "genero"], as_index=False)
+                          .speech_time_s.sum().rename(columns={"role_es": "rol", "speech_time_s": "voz_s"})),
+        "clima": _tone(kpis),
+        "constelacion": {"nodos": _records(nodes.rename(columns={"node_id": "id"})),
+                         "aristas": _records(gold["graph_edges"])},
+        "kpis": _records(kpis),   # every KPI, long format (valor / base), for what the sections above do not show
+    }
+
+
+def _verdict(s: pd.Series) -> dict:
+    return {
+        "resumen_lectura_facil": s.resumen_lectura_facil,
+        "alerta_equality_washing": bool(s.alerta_equality_washing), "motivo_alerta": s.motivo_alerta,
+        "bechdel": {"puntuacion_0_3": int(s.bechdel_puntuacion_bechdel_0_3), "diagnostico": s.bechdel_diagnostico_bechdel},
+        "salvaguarda_paridad": {"cumple": bool(s.salvaguarda_cumple_salvaguarda_paridad),
+                                "cuota_femenina": float(s.salvaguarda_cuota_femenina)},
+        "valoracion_ciudadana": None,   # not measured yet
+    }
+
+
+def _by_gender(kpis: pd.DataFrame, kpi: str, categoria: str | None = None, pct: bool = False,
+               value: bool = False) -> dict:
+    """valor / base of each gender (x100 with `pct`), or the count valor with `value`; None where base is 0."""
+    rows = kpis[(kpis.kpi == kpi) & ((kpis.categoria == categoria) if categoria else kpis.categoria.isna())]
+    if value:
+        return {r.genero: int(r.valor) for r in rows.itertuples()}   # counts
+    return {r.genero: round(r.valor / r.base * (100 if pct else 1), 1 if pct else 3) if r.base else None
+            for r in rows.itertuples()}
+
+
+def _people(participants: pd.DataFrame, people: pd.DataFrame) -> list[dict]:
+    names = people.set_index("participant_id").name
+    out = pd.DataFrame({"id": participants.node_id, "nombre": participants.node_id.map(names),
+                        "cargo": participants.title, "genero": participants.genero, "rol": participants.role_es,
+                        "autoridad": participants.authority, "pantalla_s": participants.screen_time_s,
+                        "voz_s": participants.speech_time_s})
+    return _records(out)
+
+
+def _topics(kpis: pd.DataFrame, nodes: pd.DataFrame) -> list[dict]:
+    t = kpis[kpis.kpi == "topics"]
+    bias = nodes[nodes.tipo == "tema"].set_index("clave").sesgo
+    return _records(pd.DataFrame({"tema": t.categoria_es, "clave": t.categoria, "genero": t.genero,
+                                  "turnos": t.valor.astype(int), "pct": (t.valor / t.base * 100).round(1),
+                                  "sesgo": t.categoria.map(bias)}))
+
+
+def _tone(kpis: pd.DataFrame) -> dict:
+    t = kpis[kpis.kpi == "tone"]
+    return {g: {r.categoria_es: round(r.valor / r.base * 100, 1) for r in rows.itertuples()}
+            for g, rows in t.groupby("genero")}
+
+
+def _records(df: pd.DataFrame) -> list[dict]:
+    return [{k: _clean(v) for k, v in row.items()} for row in df.to_dict("records")]
+
+
+def _clean(v):
+    """JSON-ready: NaN and NA as None, numpy numbers as Python ones, floats to 3 decimals."""
+    if v is None or (not isinstance(v, (list, dict, str)) and pd.isna(v)):
+        return None
+    v = v.item() if hasattr(v, "item") else v
+    return round(v, 3) if isinstance(v, float) else v

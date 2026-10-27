@@ -26,8 +26,8 @@ from aiasn.storage.manifest import Manifest
 
 
 def make_ctx(tmp_path, **settings) -> RunContext:
-    s = Settings(lake_dir=tmp_path / "lake", tmp_dir=tmp_path / "tmp", **settings)
-    return RunContext("vid1", s, Lake(s.lake_dir), Manifest(s.lake_dir, "vid1"), s.tmp_dir / "vid1")
+    s = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp", bias={"url": None}, **settings)
+    return RunContext.for_video(s, "vid1")
 
 
 @contextmanager
@@ -89,7 +89,7 @@ def test_transform_pipeline_reads_and_writes_the_lake(tmp_path):
         Silver([Doubler(ctx.settings)])(ctx)
     assert ctx.lake.read("silver", "doubled", "vid1").x.tolist() == [2, 4, 6]
     assert ctx.lake.read("silver", "count", "vid1").n.tolist() == [3]
-    assert json.loads(ctx.manifest.path.read_text())["steps"]["silver"]["status"] == "ok"
+    assert ctx.manifest.read()["steps"]["silver"]["status"] == "ok"
     assert "3 doubled, 1 count" in lines[0]
 
 
@@ -97,7 +97,7 @@ def test_transform_pipeline_fails_without_its_inputs(tmp_path):
     ctx = make_ctx(tmp_path)
     with pytest.raises(FileNotFoundError):
         Silver([Doubler(ctx.settings)])(ctx)
-    assert json.loads(ctx.manifest.path.read_text())["steps"]["silver"]["status"] == "error"
+    assert ctx.manifest.read()["steps"]["silver"]["status"] == "error"
 
 
 # Video
@@ -551,7 +551,14 @@ def test_term_bias_of_topics_and_titles():
 
 
 def test_term_bias_without_the_model(tmp_path):
-    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz"})
+    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz", "url": None})
     out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": ["care"]}),
                                         "silver/people": pd.DataFrame({"title_en": [None]})})
     assert out["term_bias"].sesgo.isna().all()   # the step does not fail; the front shows no bias
+
+
+def test_term_bias_without_terms_does_not_load_the_model(tmp_path):
+    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz", "url": "http://unreachable.invalid/w2v.gz"})
+    out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": []}),
+                                        "silver/people": pd.DataFrame({"title_en": []})})
+    assert out["term_bias"].empty and not (tmp_path / "missing.bin.gz").exists()

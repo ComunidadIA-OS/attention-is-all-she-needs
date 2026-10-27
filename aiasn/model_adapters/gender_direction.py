@@ -6,6 +6,7 @@ Homemaker?" and its code (github.com/tolga-b/debiaswe), to measure how gendered 
 
 import gzip
 import io
+import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -36,6 +37,14 @@ def read_word2vec(path: Path, limit: int) -> tuple[list[str], np.ndarray]:
             vectors[i] = np.frombuffer(f.read(4 * dim), np.float32)
     vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
     return words, vectors
+
+
+def download_word2vec(cfg: BiasSettings) -> None:
+    target = cfg.model_path.expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_name(target.name + ".part")   # a cut download is not taken as the model
+    urllib.request.urlretrieve(cfg.url, partial)
+    partial.rename(target)
 
 
 def gender_direction(vector) -> np.ndarray:

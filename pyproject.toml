@@ -34,39 +34,56 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 
+# Base: what every container needs (lake, settings, silver and gold). The rest goes in the extras of each container
 dependencies = [
-    "accelerate>=1.11.0",
+    "fsspec>=2024.6",
+    "numpy>=1.26",
+    "pandas>=2.2.3",
+    "pyarrow>=26.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.16.1",
+    "s3fs>=2024.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27",   # the API test client
+    "pytest>=7.0.0",
+]
+# The worker: models and audio/video processing (GPU)
+worker = [
     "easyocr>=1.7.2",
-    "gliner[all]>=0.2.14",
+    "gdown>=5.0",
     "insightface>=0.7.3",
     "lap>=0.5.12",   # required by the ultralytics trackers
     "litellm>=1.60.2",
     "mivolo",
     "onnxruntime-gpu>=1.22.0",
-    "openai>=1.59.3",
-    "pandas>=2.2.3",
-    "pydantic>=2.0.0",
-    "pysentimiento>=0.7",
     "python-speech-features>=0.6",
     "requests>=2.28.0",
+    "scipy>=1.11",
+    "sentencepiece>=0.2.0",
+    "torchvision>=0.20.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.48.0",
+    "transnetv2-pytorch>=1.0.5",
+    "ultralytics>=8.3.163",
+]
+# The API: upload a video, launch the worker, serve gold
+api = [
+    "docker>=7.1",
+    "fastapi>=0.115",
+    "python-multipart>=0.0.9",
+    "uvicorn[standard]>=0.30",
+]
+# Only the exploration notebooks
+notebooks = [
+    "gliner[all]>=0.2.14",
+    "openai>=1.59.3",
+    "pysentimiento>=0.7",
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
-    "sentencepiece>=0.2.0",
-    "tqdm>=4.67.1",
-    "torchvision>=0.20.1",
-    "transformers>=4.48.0",
-    "ultralytics>=8.3.163",
     "yt-dlp>=2025.1.15",
-    "pyarrow>=26.0.0",
-    "pydantic-settings>=2.16.1",
-    "scipy>=1.11",
-    "gdown>=5.0",
-    "transnetv2-pytorch>=1.0.5",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
 ]
 
 [project.urls]
@@ -94,6 +111,10 @@ override-dependencies = [
     "onnxruntime; sys_platform == 'never'",
     # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
     "lapx; sys_platform == 'never'",
+    # Same cv2 module as opencv-python-headless (easyocr), plus GUI libraries we do not use: keep only the headless one
+    "opencv-python; sys_platform == 'never'",
+    # ultralytics only imports polars for results summaries we do not use (~180 MB)
+    "polars; sys_platform == 'never'",
 ]
 # mivolo's setup.py uses pkg_resources (gone in setuptools 81); the project itself needs setuptools>=61
 build-constraint-dependencies = ["setuptools>=61,<81"]

@@ -150,10 +150,7 @@ python -m pytest tests/ -v
 ```
 
 ### 4. Despliegue con Docker (Opcional)
-Para levantar la demo completa o los servicios contenerizados en local sin configurar dependencias manualmente:
-```bash
-docker compose up --build
-```
+Para levantar la demo completa (subir un vídeo y ver sus resultados), ver [Demo: subir un vídeo y ver sus resultados](#-demo-subir-un-vídeo-y-ver-sus-resultados).
 * **Qué valida:**
   * **Suite de pruebas unitarias y contratos éticos (10 tests en esta rama + 5 tests del motor determinista en PR de fusión):**
     * `tests/test_contracts.py` (6 tests): Contratos de audio, solape temporal, matriz de 4 cuadrantes *Seeing and Hearing* (Verónica Vilaplana), regla anti-*equality-washing* (Kanter 1977 / Tuchman 1978) y abstención ética ($p < 0{,}80 \rightarrow \text{no\_determinado}$).
@@ -183,6 +180,57 @@ docker compose up --build
 * **Aislamiento de Licencias (`aiasn/model_adapters/vision_adapter.py`):** Permite ingerir trazas precomputadas vía archivo plano (`.csv` / `.tsv` mediante `CSVPrecomputedAdapter`, doctrina de separación de procesos de la FSF) o ejecutar inferencia local 100 % permisiva (`PermissiveYOLOXAdapter` con **YOLOX Apache-2.0**, **InsightFace MIT** e **EasyOCR Apache-2.0**), sin contaminar entornos B2B o públicos con licencias copyleft (AGPL-3.0).
 * **Círculo Virtuoso de Referentes Femeninos sin Reentrenamiento (*Green AI Flywheel*):** Los rótulos y menciones extraídos por consenso de alta confianza ($p \ge 0{,}80$) enriquecen un diccionario ligero local (`.csv`/`.json`) interoperable con **`Top Rosies Talent`**, **`ReDivIAcat`** y **`tFemTIC`** (`IDEAI-UPC` / `donesCOEINF`) y con **`WikiMujeres` / `Wikidata`**, mejorando el reconocimiento futuro (Cuadrante 4) tanto *offline/batch* como sincronizado sin coste de GPU en reentrenamiento.
 * **Extensión en Caliente para las 4 Modalidades (*Shift-Left Parity*):** Diseñado para inyectarse como asistente preventivo en herramientas de **Vídeo** (`OBS Studio`, `DaVinci Resolve`, `Premiere`), **Audio/Podcasts** (`Audacity`, `Audition`), **Imagen/Cartelería** (`Canva`, `Figma`) y **Texto/Prensa** (`WordPress`, `Docs`), y emitir certificados con huella inmutable **`SHA-256`** (`emitir_sello_auditoria`).
+
+---
+
+## 🎬 Demo: subir un vídeo y ver sus resultados
+
+La API recibe un vídeo, lanza el *worker* que lo procesa (audio, vídeo, NLP, silver y gold) y devuelve los resultados agrupados como las secciones del front. Se procesa un vídeo cada vez.
+
+### Antes de empezar
+
+* **GPU NVIDIA (muy recomendable).** Sin GPU todo funciona en CPU, pero el paso de vídeo tarda unas 5 veces la duración del vídeo (un vídeo de 2 min: ~10–12 min, frente a ~2 min con GPU).
+  * **Con Docker** hace falta además el **NVIDIA Container Toolkit**, para que los contenedores vean la GPU. Si no está, el *worker* se lanza en CPU y la API lo avisa en su log. Guía oficial: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html>. En Ubuntu/Debian:
+    ```bash
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+      | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+      | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+    sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+    docker run --rm --gpus all ubuntu nvidia-smi   # debe mostrar tu GPU
+    ```
+* **Token de OVHcloud** para la transcripción y el LLM: `cp .env.example .env` y rellena `OVH_AI_ENDPOINTS_ACCESS_TOKEN`.
+* **Modelos:** no hay que descargarlos a mano. Cada uno se descarga la primera vez que se usa (~2,5 GB en total, entre ellos word2vec de 1,6 GB), así que el primer vídeo tarda más (medido: 8,3 min el primero frente a 1,9 min los siguientes, en un vídeo de 96 s con GPU). Con Docker quedan en el volumen `aiasn-models`; sin Docker, en la caché de cada librería (o en `MODELS_DIR` si la defines).
+* **Límite actual:** vídeos de hasta ~2 minutos; con audios más largos la transcripción de OVHcloud falla.
+* **Probado en** Linux con GPU NVIDIA. Windows y macOS están por probar; en macOS la instalación sin Docker aún no funciona (`onnxruntime-gpu` no existe para macOS).
+
+### Con Docker
+
+```bash
+docker compose --profile jobs build   # imágenes de la API y del worker (la del worker, ~8 GB, tarda 10–20 min la primera vez)
+docker compose up -d                  # almacén S3 (SeaweedFS) y API en http://localhost:8000
+```
+
+El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker` por vídeo y lo borra al lanzar el siguiente (hasta entonces, `docker logs aiasn-worker-<video_id>`). La API usa el socket de Docker para ello, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.
+
+### Sin Docker
+
+```bash
+uv sync --extra worker --extra api
+uv run uvicorn aiasn.api.app:create_app --factory --port 8000
+```
+
+Sin la imagen `aiasn-worker`, la API lanza el *worker* como proceso hijo (`API__LAUNCHER=process` para forzarlo) y guarda el lake en la carpeta `data/`. También se puede procesar un vídeo sin la API: `uv run python -m aiasn.run_pipelines --file video.mp4`.
+
+### Uso
+
+```bash
+curl -F file=@video.mp4 http://localhost:8000/videos       # → {"video_id": "video-3f9a"}
+curl http://localhost:8000/videos/video-3f9a               # estado; con "ok", también el resultado
+```
+
+Documentación interactiva de la API en <http://localhost:8000/docs>.
 
 ---
 

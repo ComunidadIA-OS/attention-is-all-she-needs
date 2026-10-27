@@ -5,10 +5,12 @@ import gzip
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from aiasn.model_adapters.gender_direction import PAIRS, GenderDirection, read_word2vec
-from aiasn.settings import BiasSettings
+from aiasn.core.silver.word_bias import WordBiasSilver
+from aiasn.settings import BiasSettings, Settings
 
 
 def write_word2vec(path: Path, vectors: dict[str, list[float]]) -> None:
@@ -61,3 +63,11 @@ def test_real_model_matches_the_notebook():
     # Figure 1 of the paper, as computed in notebooks/word-embedding-bias.ipynb
     for word, expected in {"homemaker": 0.323, "nurse": 0.308, "architect": -0.177, "maestro": -0.244}.items():
         assert d.score(word) == pytest.approx(expected, abs=0.005)
+
+
+def test_word_bias_downloads_a_missing_model(tmp_path):
+    source = tiny_model(tmp_path)
+    settings = Settings(bias={"model_path": tmp_path / "models" / source.name, "url": source.as_uri()})
+    out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": ["nurse"]}),
+                                        "silver/people": pd.DataFrame({"title_en": [None]})})
+    assert (tmp_path / "models" / source.name).is_file() and out["term_bias"].sesgo.iloc[0] > 0

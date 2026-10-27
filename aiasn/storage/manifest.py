@@ -1,19 +1,51 @@
-"""Status of each step for one video, stored in runs/video_id=.../manifest.json."""
+"""Status of each step for one video, stored in runs/video_id=.../manifest.json of the lake."""
 
 import json
 import threading
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+
+from aiasn.storage.lake import Lake
+
+# Status of the whole video, besides each step's
+QUEUED, RUNNING, OK, ERROR = "en_cola", "procesando", "ok", "error"
 
 
 class Manifest:
-    def __init__(self, lake_root: Path, video_id: str):
-        self.path = Path(lake_root) / "runs" / f"video_id={video_id}" / "manifest.json"
+    def __init__(self, lake: Lake, video_id: str):
+        self.lake = lake
+        self.path = f"{lake.root}/runs/video_id={video_id}/manifest.json"   # as in load()
         self._lock = threading.Lock()   # audio and video write from different threads
         self._started: dict[str, float] = {}
-        self.data = {"video_id": video_id, "steps": {}}
-        self._save()
+        # Kept across runs: a retry resumes where the last one stopped
+        if lake.fs.exists(self.path):
+            self.data = self.read()
+        else:
+            self.data = {"video_id": video_id, "status": None, "error": None, "steps": {}}
+            self._save()
+
+    @staticmethod
+    def load(lake: Lake, video_id: str) -> dict | None:
+        """The manifest of `video_id` as stored, None if the video is unknown; unlike Manifest(), creates nothing."""
+        path = f"{lake.root}/runs/video_id={video_id}/manifest.json"
+        if not lake.fs.exists(path):
+            return None
+        with lake.fs.open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def read(self) -> dict:
+        """The manifest as stored."""
+        with self.lake.fs.open(self.path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def set_status(self, status: str, error: Exception | None = None) -> None:
+        """Status of the whole video: QUEUED, RUNNING, OK or ERROR (with the error)."""
+        with self._lock:
+            self.data |= {"status": status, "error": repr(error) if error else None}
+            self._save()
+
+    def step_done(self, step: str) -> bool:
+        return self.data["steps"].get(step, {}).get("status") == "ok"
 
     def start(self, step: str) -> None:
         self._started[step] = time.perf_counter()
@@ -34,5 +66,6 @@ class Manifest:
             self._save()
 
     def _save(self) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(self.data, indent=2, ensure_ascii=False), encoding="utf-8")
+        self.lake.fs.makedirs(self.path.rsplit("/", 1)[0], exist_ok=True)
+        with self.lake.fs.open(self.path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(self.data, indent=2, ensure_ascii=False))

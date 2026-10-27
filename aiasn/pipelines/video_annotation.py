@@ -80,13 +80,10 @@ if __name__ == "__main__":
     import argparse
 
     from aiasn.settings import Settings
-    from aiasn.storage.lake import Lake
-    from aiasn.storage.manifest import Manifest
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video_id")
     video_id = parser.parse_args().video_id
     settings = Settings()
-    ctx = RunContext(video_id, settings, Lake(settings.lake_dir), Manifest(settings.lake_dir, video_id),
-                     settings.tmp_dir / video_id)
+    ctx = RunContext.for_video(settings, video_id, force=True)   # run by hand: redo it
     print(annotate(ctx))

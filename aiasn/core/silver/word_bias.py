@@ -33,16 +33,22 @@ class WordBiasSilver(Transform):
         terms = pd.concat([pd.DataFrame({"termino": tables["silver/nlp_topics"].topic.dropna().unique(), "tipo": TOPIC}),
                            pd.DataFrame({"termino": tables["silver/people"].title_en.dropna().unique(), "tipo": TITLE})],
                           ignore_index=True)
-        score = self._scorer()
+        score = self._scorer() if len(terms) else None   # no terms: the model is not loaded, nor downloaded
         bias = [score(t) for t in terms.termino] if score else [None] * len(terms)
         return {"term_bias": terms.assign(sesgo=pd.array(bias, dtype="Float64"))[TERM_BIAS]}
 
     def _scorer(self) -> Callable[[str], float | None] | None:
         if self._score is None:
-            path = self.settings.bias.model_path.expanduser()
-            if not path.is_file():
-                log.warning("word2vec not found at %s: no gender bias of the terms", path)
+            from aiasn.model_adapters.gender_direction import GenderDirection, download_word2vec   # numpy only
+            cfg = self.settings.bias
+            if not cfg.model_path.expanduser().is_file() and cfg.url:
+                log.info("Downloading word2vec (1.6 GB) from %s", cfg.url)
+                try:
+                    download_word2vec(cfg)
+                except OSError as e:
+                    log.warning("word2vec download failed: %r", e)
+            if not cfg.model_path.expanduser().is_file():
+                log.warning("word2vec not found at %s: no gender bias of the terms", cfg.model_path)
                 return None
-            from aiasn.model_adapters.gender_direction import GenderDirection   # numpy only, but heavy to load
             self._score = GenderDirection(self.settings.bias).score
         return self._score

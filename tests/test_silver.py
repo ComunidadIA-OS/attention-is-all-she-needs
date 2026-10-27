@@ -259,11 +259,35 @@ def test_each_speaker_links_to_the_person_speaking_meanwhile():
     presence = spans((1, 0, 4.2, True), (1, 4.2, 12, False), (2, 0, 4, False), (2, 4.5, 10, True),
                      (1, 10, 12, True), (3, 12, 12.5, True), (3, 12.5, 20, False))
     links = link(t, presence)
-    assert list(links.reset_index().columns) == ["speaker_id", "person_id", "overlap_s", "share"]
-    assert links.person_id[0] == 1 and links.person_id[1] == 2
+    assert list(links.reset_index().columns) == ["speaker_id", "person_id", "overlap_s", "share", "fuente"]
+    assert links.person_id[0] == 1 and links.person_id[1] == 2 and links.fuente[0] == "talknet"
     assert links.overlap_s[0] == pytest.approx(6.0) and links.share[0] == pytest.approx(1.0)
-    # Speaker 2 overlaps person 3 speaking for only 0.5 s: a voice off screen, but the candidate is kept for review
-    assert pd.isna(links.person_id[2]) and links.overlap_s[2] == pytest.approx(0.5)
+    # Speaker 2 overlaps person 3 speaking for only 0.5 s, too little for the lips; but person 3 is alone on screen all
+    # the time speaker 2 talks, and only then: the second chance links them
+    assert links.person_id[2] == 3 and links.fuente[2] == "copresencia"
+
+
+def test_a_voice_the_lips_missed_links_to_the_one_person_alone_on_screen():
+    # The man speaks in profile behind a microphone: the lip model never sees him speaking (a real case)
+    t = turns((0, 0, 38), (1, 39.3, 53.2), (0, 54, 60))
+    presence = spans((2, 0, 38, True), (1, 39.7, 53.6, False), (2, 54, 60, True))
+    links = link(t, presence)
+    assert links.person_id[1] == 1 and links.fuente[1] == "copresencia" and links.share[1] == pytest.approx(13.5 / 13.9)
+    out = identity(t, presence, speaker_genders={1: "hombre"}, person_genders={1: "hombre"})
+    assert "v1" not in out["people"].participant_id.tolist()   # his voice is now his
+
+
+def test_no_copresence_link_for_a_narrator_over_shots_or_contradicting_genders():
+    # A narrator talks over three shots of three different people: none of them holds 60 % of the voice
+    narrator = turns((0, 0, 30))
+    over_shots = spans((1, 0, 10, False), (2, 10, 20, False), (3, 20, 30, False))
+    assert pd.isna(link(narrator, over_shots).person_id[0])
+    # Alone on screen while the voice talks, but a woman's face and a man's voice
+    t, presence = turns((0, 0, 10)), spans((1, 0, 10, False))
+    assert pd.isna(identity(t, presence, speaker_genders={0: "hombre"}, person_genders={1: "mujer"})
+                   ["speaker_person"].person_id[0])
+    # Someone on screen for a long time while a voice talks over only a short part of it
+    assert pd.isna(link(turns((0, 0, 10)), spans((1, 0, 60, False))).person_id[0])
 
 
 def test_link_needs_a_share_of_the_speech():

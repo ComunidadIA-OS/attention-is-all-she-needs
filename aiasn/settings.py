@@ -165,6 +165,9 @@ class SilverSettings(BaseModel):
     # A speaker is a person on screen if both talk at the same time for at least this long and this share of their speech
     min_link_s: float = Field(1.0, ge=0)
     min_link_share: float = Field(0.3, ge=0, le=1)
+    # A voice still unlinked (the lip model missed it: profile, a microphone in front) is the one person alone on
+    # screen for at least this share of its speech, if their genders do not contradict each other
+    min_copresence_share: float = Field(0.6, ge=0, le=1)
     name_similarity: float = Field(0.8, ge=0, le=1)        # two spellings of a word count as the same name from here
     authority_roles: list[str] = ["host", "expert", "voice-over narrator"]   # roles that speak from authority
     caption_grants_authority: bool = True                  # a caption title showing authority does too, whatever the role

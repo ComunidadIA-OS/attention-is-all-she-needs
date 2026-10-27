@@ -9,7 +9,7 @@ import pandas as pd
 from aiasn.core.silver.gender import fuse_gender
 from aiasn.core.transform import Transform
 
-LINKS = ["speaker_id", "person_id", "overlap_s", "share"]
+LINKS = ["speaker_id", "person_id", "overlap_s", "share", "fuente"]   # fuente: talknet, copresencia or None
 PEOPLE = ["participant_id", "person_id", "speaker_id", "genero", "genero_fuente", "screen_time_s", "speaking_time_s",
           "speech_time_s", "area", "centrality"]
 
@@ -30,6 +30,22 @@ def speaking_overlap(turns: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFram
     return pairs.groupby(["speaker_id", "person_id"], as_index=False).overlap_s.sum()
 
 
+def alone_overlap(turns: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
+    """Seconds each speaker talks while one person, and only one, is on screen, per (speaker_id, person_id) pair."""
+    edges = np.unique(np.concatenate([presence.tiempo_i.to_numpy(float), presence.tiempo_f.to_numpy(float)]))
+    alone = []
+    for a, b in zip(edges[:-1], edges[1:]):   # stretches between consecutive span edges: who is on screen in each
+        there = presence[(presence.tiempo_i < b) & (presence.tiempo_f > a)].person_id.unique()
+        if len(there) == 1:
+            alone.append((there[0], a, b))
+    spans = pd.DataFrame(alone, columns=["person_id", "tiempo_i", "tiempo_f"])
+    voiced = turns.dropna(subset=["speaker_id"])[["speaker_id", "tiempo_i", "tiempo_f"]]
+    pairs = voiced.merge(spans, how="cross", suffixes=("_turn", "_span"))
+    pairs["overlap_s"] = (np.minimum(pairs.tiempo_f_turn, pairs.tiempo_f_span)
+                          - np.maximum(pairs.tiempo_i_turn, pairs.tiempo_i_span)).clip(lower=0)
+    return pairs.groupby(["speaker_id", "person_id"], as_index=False).overlap_s.sum()
+
+
 class IdentitySilver(Transform):
     name, layer = "identity", "silver"
     inputs = ["silver/audio_turns", "silver/audio_speakers", "silver/video_presence", "silver/video_people"]
@@ -38,6 +54,8 @@ class IdentitySilver(Transform):
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         speakers = tables["silver/audio_speakers"]
         links = self._links(tables["silver/audio_turns"], speakers, tables["silver/video_presence"])
+        links = self._by_copresence(links, tables["silver/audio_turns"], speakers, tables["silver/video_presence"],
+                                    tables["silver/video_people"])
         return {"speaker_person": links, "people": self._people(links, speakers, tables["silver/video_people"])}
 
     def _links(self, turns: pd.DataFrame, speakers: pd.DataFrame, presence: pd.DataFrame) -> pd.DataFrame:
@@ -55,7 +73,38 @@ class IdentitySilver(Transform):
         links["share"] = (links.overlap_s / links.speech_time_s.where(links.speech_time_s > 0)).fillna(0.0)
         enough = (links.overlap_s >= cfg.min_link_s) & (links.share >= cfg.min_link_share)
         links["person_id"] = links.person_id.astype("Int64").where(enough)
+        links["fuente"] = pd.Series(np.where(enough, "talknet", None), index=links.index, dtype="object")
         return links[LINKS].astype({"speaker_id": "Int64"})
+
+    def _by_copresence(self, links: pd.DataFrame, turns: pd.DataFrame, speakers: pd.DataFrame, presence: pd.DataFrame,
+                       video_people: pd.DataFrame) -> pd.DataFrame:
+        """Second chance for the voices the lip model left unlinked: the one person alone on screen for at least
+        `min_copresence_share` of their speech (and `min_link_s`), and on screen mostly while that voice talks (the
+        same share of their screen time), if face and voice do not contradict each other's gender and that person has
+        no voice yet. Both ways, so that a narrator over shots of different people links to none. Largest first."""
+        cfg = self.settings.silver
+        if links.person_id.notna().all() or presence.empty:
+            return links
+        face = video_people.set_index("person_id").genero
+        screen = (presence.tiempo_f - presence.tiempo_i).groupby(presence.person_id).sum()
+        voice = speakers.set_index("speaker_id")
+        taken = set(links.person_id.dropna().astype(int))
+        candidates = alone_overlap(turns, presence).sort_values("overlap_s", ascending=False)
+        links = links.copy()
+        for c in candidates.itertuples():
+            row = links.index[(links.speaker_id == c.speaker_id) & links.person_id.isna()]
+            speech = float(voice.speech_time_s.get(c.speaker_id, 0.0))
+            if not len(row) or int(c.person_id) in taken or not speech:
+                continue
+            g_face, g_voice = face.get(c.person_id), voice.genero.get(c.speaker_id)
+            contradict = g_face in ("mujer", "hombre") and g_voice in ("mujer", "hombre") and g_face != g_voice
+            mutual = (c.overlap_s / speech >= cfg.min_copresence_share
+                      and c.overlap_s / max(float(screen.get(c.person_id, 0.0)), 1e-9) >= cfg.min_copresence_share)
+            if c.overlap_s >= cfg.min_link_s and mutual and not contradict:
+                links.loc[row, ["person_id", "overlap_s", "share", "fuente"]] = [int(c.person_id), c.overlap_s,
+                                                                               c.overlap_s / speech, "copresencia"]
+                taken.add(int(c.person_id))
+        return links.astype({"person_id": "Int64"})
 
     @staticmethod
     def _people(links: pd.DataFrame, speakers: pd.DataFrame, video_people: pd.DataFrame) -> pd.DataFrame:

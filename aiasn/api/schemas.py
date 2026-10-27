@@ -88,6 +88,10 @@ def _determined(shares: dict) -> dict:
     return {g: v for g, v in shares.items() if g != "no_determinado"}
 
 
+SAFEGUARD = ("cuota_femenina", "cuota_masculina", "cuota_no_binaria", "suelo_femenino_exigido",
+             "techo_masculino_ajustado", "regimen_aplicado")   # ADR-0006
+
+
 def _verdict(s: pd.Series) -> dict:
     return {
         "resumen_lectura_facil": s.resumen_lectura_facil,
@@ -96,7 +100,7 @@ def _verdict(s: pd.Series) -> dict:
         "motivo_infrarrepresentacion": s.motivo_infrarrepresentacion,
         "bechdel": _tif(s),
         "salvaguarda_paridad": {"cumple": bool(s.salvaguarda_cumple_salvaguarda_paridad),
-                                "cuota_femenina": float(s.salvaguarda_cuota_femenina)},
+                                **{k: _clean(s.get(f"salvaguarda_{k}")) for k in SAFEGUARD}},
         "valoracion_ciudadana": None,   # not measured yet
     }
 
@@ -116,7 +120,9 @@ def _people(participants: pd.DataFrame, people: pd.DataFrame) -> list[dict]:
     out = pd.DataFrame({"id": participants.node_id, "nombre": participants.node_id.map(names),
                         "cargo": participants.title, "genero": participants.genero, "rol": participants.role_es,
                         "autoridad": participants.authority, "pantalla_s": participants.screen_time_s,
-                        "voz_s": participants.speech_time_s})
+                        "voz_s": participants.speech_time_s,
+                        # mean share of the frame and centrality (1 at the centre) while on screen
+                        "area": participants.area, "centralidad": participants.centrality})
     return _records(out)
 
 

@@ -18,8 +18,8 @@ from aiasn.storage.manifest import OK, RUNNING, Manifest
 
 
 class FakeLauncher:
-    def __init__(self, busy=False, fails=False):
-        self.launched, self._busy, self._fails = [], busy, fails
+    def __init__(self, busy=False, fails=False, alive=()):
+        self.launched, self._busy, self._fails, self._alive = [], busy, fails, set(alive)
 
     def launch(self, video_id):
         if self._fails:
@@ -28,6 +28,9 @@ class FakeLauncher:
 
     def busy(self):
         return self._busy
+
+    def running(self, video_id):
+        return video_id in self._alive
 
 
 @pytest.fixture
@@ -87,12 +90,28 @@ def test_unknown_video(settings):
         assert api.get("/videos/..%2Fsecret").status_code == 404
 
 
+def test_a_video_whose_worker_is_gone_is_marked_as_failed(settings):
+    lake = Lake.from_settings(settings)
+    for video_id in ("alive", "dead"):
+        manifest = Manifest(lake, video_id)
+        manifest.start("audio"); manifest.done("audio"); manifest.start("video")
+        manifest.set_status(RUNNING)
+    with client(settings, FakeLauncher(alive={"alive"})) as api:
+        assert api.get("/videos/alive").json()["status"]["estado"] == "procesando"
+        dead = api.get("/videos/dead").json()["status"]
+        listed = {v["video_id"]: v["estado"] for v in api.get("/videos").json()}
+    assert dead["estado"] == "error" and "se interrumpió" in dead["error"]
+    assert dead["pasos"] == {"audio": "ok", "video": "error"}   # the step cut short, not left running
+    assert listed == {"alive": "procesando", "dead": "error"}
+    assert Manifest.load(lake, "dead")["status"] == "error"   # recorded, not only reported
+
+
 def test_status_while_processing(settings):
     lake = Lake.from_settings(settings)
     manifest = Manifest(lake, "vid1")
     manifest.set_status(RUNNING)
     manifest.start("audio")
-    with client(settings, FakeLauncher()) as api:
+    with client(settings, FakeLauncher(alive={"vid1"})) as api:
         body = api.get("/videos/vid1").json()
     assert body["status"] == {"estado": "procesando", "pasos": {"audio": "running"}, "error": None}
     assert body["resultado"] is None
@@ -134,7 +153,7 @@ def test_process_launcher_is_busy_while_the_worker_runs(monkeypatch):
     launcher = jobs.ProcessLauncher()
     assert not launcher.busy()
     launcher.launch("vid1")
-    assert launcher.busy()
+    assert launcher.busy() and launcher.running("vid1") and not launcher.running("vid2")
     launcher._process.wait()
     assert not launcher.busy()
 
@@ -149,14 +168,16 @@ class FakeClient:
 
 class FakeContainers:
     def __init__(self):
-        self.runs, self.removed, self.state = [], [], {}   # name -> running / exited
+        self.runs, self.removed, self.state, self.labels = [], [], {}, {}   # name -> running / exited, its labels
 
     def run(self, image, command, **kwargs):
         self.runs.append((image, command, kwargs))
-        self.state[kwargs["name"]] = "running"
+        self.state[kwargs["name"]], self.labels[kwargs["name"]] = "running", kwargs["labels"]
 
     def list(self, all=False, filters=None):
-        return [FakeContainer(self, name) for name, state in self.state.items() if state == filters["status"]]
+        key, _, value = filters["label"].partition("=")   # "label" or "label=value", as Docker filters
+        return [FakeContainer(self, name) for name, state in self.state.items()
+                if state == filters["status"] and key in self.labels[name] and value in ("", self.labels[name][key])]
 
 
 class FakeContainer:
@@ -185,6 +206,7 @@ def test_docker_launcher_runs_one_worker_container(monkeypatch):
     client.containers.state["aiasn-worker-vid1"] = "exited"
     launcher.launch("vid2")   # the finished one is removed first
     assert client.containers.removed == ["aiasn-worker-vid1"] and launcher.busy()
+    assert launcher.running("vid2") and not launcher.running("vid1")
 
 
 def test_docker_launcher_without_gpu_runs_on_the_cpu(caplog):
@@ -215,6 +237,6 @@ def test_list_of_videos_latest_first(settings):
         manifest = Manifest(lake, video_id)
         manifest.start("audio")
         manifest.set_status(status)
-    with client(settings, FakeLauncher()) as api:
+    with client(settings, FakeLauncher(alive={"new"})) as api:
         body = api.get("/videos").json()
     assert [(v["video_id"], v["estado"]) for v in body] == [("new", "procesando"), ("old", "ok")]

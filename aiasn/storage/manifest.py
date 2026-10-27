@@ -49,6 +49,15 @@ class Manifest:
             self.data |= {"status": status, "error": repr(error) if error else None}
             self._save()
 
+    def interrupt(self, error: Exception) -> None:
+        """The run stopped without recording it (its worker was killed): the steps left running and the video failed."""
+        with self._lock:
+            for step in self.data["steps"].values():
+                if step.get("status") == "running":
+                    step |= {"status": "error", "error": repr(error)}
+            self.data |= {"status": ERROR, "error": repr(error)}
+            self._save()
+
     def step_done(self, step: str) -> bool:
         return self.data["steps"].get(step, {}).get("status") == "ok"
 

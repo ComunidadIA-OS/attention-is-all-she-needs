@@ -26,7 +26,7 @@ from aiasn.storage.manifest import Manifest
 
 
 def make_ctx(tmp_path, **settings) -> RunContext:
-    s = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp", **settings)
+    s = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp", bias={"url": None}, **settings)
     return RunContext.for_video(s, "vid1")
 
 
@@ -555,3 +555,10 @@ def test_term_bias_without_the_model(tmp_path):
     out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": ["care"]}),
                                         "silver/people": pd.DataFrame({"title_en": [None]})})
     assert out["term_bias"].sesgo.isna().all()   # the step does not fail; the front shows no bias
+
+
+def test_term_bias_without_terms_does_not_load_the_model(tmp_path):
+    settings = Settings(bias={"model_path": tmp_path / "missing.bin.gz", "url": "http://unreachable.invalid/w2v.gz"})
+    out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": []}),
+                                        "silver/people": pd.DataFrame({"title_en": []})})
+    assert out["term_bias"].empty and not (tmp_path / "missing.bin.gz").exists()

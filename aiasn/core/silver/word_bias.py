@@ -33,7 +33,7 @@ class WordBiasSilver(Transform):
         terms = pd.concat([pd.DataFrame({"termino": tables["silver/nlp_topics"].topic.dropna().unique(), "tipo": TOPIC}),
                            pd.DataFrame({"termino": tables["silver/people"].title_en.dropna().unique(), "tipo": TITLE})],
                           ignore_index=True)
-        score = self._scorer()
+        score = self._scorer() if len(terms) else None   # no terms: the model is not loaded, nor downloaded
         bias = [score(t) for t in terms.termino] if score else [None] * len(terms)
         return {"term_bias": terms.assign(sesgo=pd.array(bias, dtype="Float64"))[TERM_BIAS]}
 

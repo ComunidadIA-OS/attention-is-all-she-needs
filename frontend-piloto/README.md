@@ -21,7 +21,7 @@ Sin Docker, sírvela con cualquier servidor estático e indícale dónde está l
 python -m http.server 8080 --directory frontend-piloto      # y abrir http://localhost:8080/?api=http://localhost:8000
 ```
 
-* **Al abrirla** muestra los datos de muestra de la maqueta, tal cual.
+* **Al abrirla** sale vacía hasta que se analiza un vídeo. Con `?demo` muestra la maqueta con sus datos de muestra, tal cual.
 * **«Elegir vídeo» → «Analizar»** sube un vídeo a la API, sigue su procesado y repinta la página con el resultado. La dirección de la página guarda el vídeo (`?video=<id>`) para volver a abrirlo o compartirlo.
 * **`?api=<url>`** cambia la dirección de la API. Por defecto es `/api`, la del contenedor `front`.
 

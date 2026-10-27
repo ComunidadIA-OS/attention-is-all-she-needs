@@ -106,7 +106,7 @@ function showPerson(id){
 /* ---- segregación (espejo) ---- */
 const mirror=$('mirror');
 function renderMirror(){
-  mirror.innerHTML='';
+  mirror.innerHTML=LIVE&&!DATA.themes.length?'<div class="comp-pend">Sin datos.</div>':'';
   const MAX=LIVE?Math.max(1,...DATA.themes.map(th=>Math.max(th.f,th.m))):46;
   DATA.themes.forEach(th=>{
     const row=document.createElement('div');row.className='mrow';
@@ -118,7 +118,7 @@ function renderMirror(){
 /* ---- mancuerna pantalla–voz ---- */
 const dumb=$('dumb');
 function renderDumb(rows){
-  dumb.innerHTML='';
+  dumb.innerHTML=rows.length?'':'<div class="comp-pend">Sin datos.</div>';
   rows.forEach(d=>{
     const diff=d.voice-d.screen,neg=diff<0,dc=neg?'var(--crit)':'var(--good)';
     const lo=Math.min(d.screen,d.voice),hi=Math.max(d.screen,d.voice);
@@ -162,14 +162,15 @@ try{const s=localStorage.getItem('aiasn-t');if(s)document.documentElement.setAtt
 const FLAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
 const OK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 function flag(el,on,html){el.className='vflag'+(on?'':' ok');el.innerHTML=(on?FLAG_ICON:OK_ICON)+`<div>${html}</div>`}
-const pct=x=>es1(x)+'<span class="unit">%</span>';
+const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
 
-function renderLive(v){
+// empty: no video analysed yet, every figure blank (no sample data passed off as a result)
+function renderLive(v,empty=false){
   LIVE=true;
   DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,themes:v.themes,irm:null};
   const nf=v.people.filter(p=>p.g==='f').length,nm=v.people.filter(p=>p.g==='m').length;
-  const tag=$('src-tag');tag.textContent='Datos reales';tag.classList.add('real');
-  $('src-desc').textContent=`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
+  const tag=$('src-tag');tag.textContent=empty?'Sin datos':'Datos reales';tag.classList.toggle('real',!empty);
+  $('src-desc').textContent=empty?'Elige un vídeo y pulsa «Analizar».':`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
   $('legend-size').textContent='El tamaño de cada estrella es su tiempo de voz';
   cv.setAttribute('aria-label','Constelación del vídeo analizado: cada estrella es una persona; su tamaño es su tiempo de voz y su color y forma, el género percibido. Los datos completos están en la tabla siguiente.');
 
@@ -178,8 +179,10 @@ function renderLive(v){
   $('gauge-arc').style.display='none';$('gauge-num').textContent='—';
   $('v-screen').innerHTML=pct(v.screen.f);$('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`;
   $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
-  $('v-ratio-s').textContent=v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
-  $('v-refs').textContent=`${v.refs.f} : ${v.refs.m}`;
+  $('v-ratio-s').textContent=empty?'':v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
+  if(empty)$('v-screen-s').textContent='';
+  $('v-refs').textContent=empty?'—':`${v.refs.f} : ${v.refs.m}`;
+  $('flag-1').style.display=$('flag-2').style.display=empty?'none':'';   // .vflag sets display, which beats [hidden]
   flag($('flag-1'),!v.parity.ok,v.parity.ok
     ?`<b>Salvaguarda de paridad cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %.`
     :`<b>Salvaguarda de paridad no cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %, por debajo del objetivo legal del 40 %.`);
@@ -188,7 +191,7 @@ function renderLive(v){
     :'<b>Equality-washing</b> — <b>no activado</b>: la presencia en pantalla de las mujeres va acompañada de voz.');
 
   // lectura fácil
-  $('ez-list').innerHTML=(v.easy.length?v.easy:['El resumen en lectura fácil no está disponible para este vídeo.']).map(s=>`<li>${esc(s)}</li>`).join('')
+  $('ez-list').innerHTML=(v.easy.length?v.easy:[empty?'Todavía no se ha analizado ningún vídeo.':'El resumen en lectura fácil no está disponible para este vídeo.']).map(s=>`<li>${esc(s)}</li>`).join('')
     +'<li>Cuando el sistema no está seguro de quién es una persona, una persona del equipo lo revisa.</li>';
 
   // i · temas
@@ -199,10 +202,10 @@ function renderLive(v){
   // ii · pantalla–voz
   const rows=[{name:'Mujeres',screen:v.screen.f||0,voice:v.voice.f||0,col:'var(--f)'},{name:'Hombres',screen:v.screen.m||0,voice:v.voice.m||0,col:'var(--m)'}];
   dumb.setAttribute('aria-label','Brecha entre tiempo en pantalla y tiempo de voz. '+rows.map(d=>`${d.name}: ${es1(d.screen)} por ciento en pantalla y ${es1(d.voice)} por ciento de voz`).join('. ')+'.');
-  renderDumb(rows);
+  renderDumb(empty?[]:rows);
 
   // iii · poder
-  const fig=(x,g)=>`<td class="fig ${g}">${x}</td>`;
+  const fig=(x,g)=>`<td class="fig ${g}">${empty?PEND:x}</td>`;
   $('power').innerHTML=
     `<tr><td>Abre y cierra el acto<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
@@ -214,21 +217,22 @@ function renderLive(v){
   const chip=p=>`<span class="rchip ${p.g==='f'||p.g==='m'?p.g:'u'}">${esc(p.name)}</span>`;
   $('ladder').innerHTML=v.roles.map(r=>`<div class="rl-row"><div class="rl-tier">${esc(r.rol.charAt(0).toUpperCase()+r.rol.slice(1))}</div><div class="rl-people">${r.people.map(chip).join('')}</div></div>`).join('')
     +(v.undetermined?`<div class="rl-row"><div class="rl-tier">Sin identificar<span class="rl-sub">confianza bajo umbral</span></div><div class="rl-people"><span class="rchip u">${v.undetermined} ${v.undetermined===1?'interviniente':'intervinientes'}</span><span class="hil">Human-in-the-Loop · revisión humana</span></div></div>`:'');
-  $('role-gap').innerHTML=v.expertVoice
+  if(empty&&!v.roles.length)$('ladder').innerHTML='<div class="comp-pend">Sin datos.</div>';
+  $('role-gap').innerHTML=empty?'<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Sin datos.</div>':v.expertVoice
     ?`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Tiempo de voz de quienes figuran como <b>experto/a</b>, sobre el total del vídeo:</div><div class="rg-pair"><div class="rg-cell"><div class="rg-num" style="color:var(--f-ink)">${es1(v.expertVoice.f)} %</div><div class="rg-lab">Expertas</div></div><div class="rg-vs">frente a</div><div class="rg-cell"><div class="rg-num" style="color:var(--m-ink)">${es1(v.expertVoice.m)} %</div><div class="rg-lab">Expertos</div></div></div>`
     :`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">${v.experts?'Quienes figuran como experto/a en este vídeo no tienen un género determinado: no hay comparación posible.':'En este vídeo nadie figura como experto/a.'}</div>`;
 
   // v · clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;
-  $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||'<div class="cl-note">No hay turnos clasificados por tono en este vídeo.</div>';
+  $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||`<div class="cl-note">${empty?'Sin datos.':'No hay turnos clasificados por tono en este vídeo.'}</div>`;
   $('clima-note').innerHTML='Los registros <b>técnico-asertivo</b> y <b>disenso</b> son los que una mesa suele leer como autoridad. No se trata de que un registro valga más: lo relevante es cómo se reparten entre géneros.';
 
   // vi · índice y cierre
   $('cap-comp').textContent='Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Pendiente de definir con el equipo.';
   renderComp();
-  const mk=$('mk-screen');   // the scale ends at 50 %: beyond it, at the edge with its figure
+  const mk=$('mk-screen');mk.hidden=empty;   // the scale ends at 50 %: beyond it, at the edge with its figure
   mk.style.left=Math.min(97,Math.max(0,(v.screen.f||0)*2))+'%';mk.querySelector('.num').textContent=es1(v.screen.f)+' %';
-  $('foot-data').innerHTML=`<b>Datos reales</b> del vídeo ${esc(v.videoId)}, procesados por el backend de AIASN. Lo que el backend aún no calcula se marca con «—». Proyecto de código abierto.`;
+  $('foot-data').innerHTML=empty?'<b>Sin datos</b>: analiza un vídeo para ver aquí sus resultados. Proyecto de código abierto.':`<b>Datos reales</b> del vídeo ${esc(v.videoId)}, procesados por el backend de AIASN. Lo que el backend aún no calcula se marca con «—». Proyecto de código abierto.`;
 
   hover=null;buildOverlay();showDefault();renderSr();repaint();
 }
@@ -292,6 +296,7 @@ function repaint(){resize();if(reduce)draw(performance.now())}
 requestAnimationFrame(repaint);addEventListener('load',repaint);
 setTimeout(repaint,180);setTimeout(repaint,600);setTimeout(repaint,1400);
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120)});
-const opened=new URLSearchParams(location.search).get('video');
+const params=new URLSearchParams(location.search),opened=params.get('video');
 if(opened)openVideo(opened);
+else if(!params.has('demo'))renderLive(AIASNAdapter.toView({resultado:{}}),true);   // ?demo: the mock-up with its sample data
 })();

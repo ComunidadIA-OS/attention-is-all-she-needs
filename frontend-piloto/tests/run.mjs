@@ -99,7 +99,7 @@ test("layout stays inside the sky and keeps stars apart", () => {
 });
 
 test("themes by gender, most female-leaning first", () => {
-  assert.deepEqual(v.themes, [{ t: "cuidados", f: 66.7, m: 0 }, { t: "tecnología", f: 33.3, m: 100 }]);
+  assert.deepEqual(v.themes, [{ t: "cuidados", f: 66.7, m: 0, sesgo: 0.1 }, { t: "tecnología", f: 33.3, m: 100, sesgo: 0 }]);
 });
 
 test("verdict figures are the API ones, none computed here", () => {

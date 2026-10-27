@@ -105,12 +105,20 @@ function showPerson(id){
 
 /* ---- segregación (espejo) ---- */
 const mirror=$('mirror');
+// word2vec gender bias of the topic on the same axis as the mirror: towards "he" left, towards "she" right
+const BIAS_MAX=.4;
+function bias(s){
+  if(s==null)return '<span class="mb none">sin dato de sesgo</span>';
+  const x=50+Math.max(-1,Math.min(1,s/BIAS_MAX))*50,side=s>.02?'f':s<-.02?'m':'';
+  return `<span class="mb" title="Sesgo de género en word2vec: ${s>0?'+':''}${es2(s)}"><span class="mb-track"><i class="${side}" style="left:${x}%"></i></span><span class="mb-v ${side}">${s>0?'+':''}${es2(s)}</span></span>`;
+}
 function renderMirror(){
+  mirror.classList.toggle('bias',LIVE);
   mirror.innerHTML=LIVE&&!DATA.themes.length?'<div class="comp-pend">Sin datos.</div>':'';
   const MAX=LIVE?Math.max(1,...DATA.themes.map(th=>Math.max(th.f,th.m))):46;
   DATA.themes.forEach(th=>{
     const row=document.createElement('div');row.className='mrow';
-    row.innerHTML=`<div class="mside l"><span class="bar" style="width:${th.m/MAX*100}%"></span><span class="bv">${LIVE?es1(th.m):th.m}</span></div><div class="mcat">${esc(th.t)}</div><div class="mside r"><span class="bar" style="width:${th.f/MAX*100}%"></span><span class="bv">${LIVE?es1(th.f):th.f}</span></div>`;
+    row.innerHTML=`<div class="mside l"><span class="bar" style="width:${th.m/MAX*100}%"></span><span class="bv">${LIVE?es1(th.m):th.m}</span></div><div class="mcat">${esc(th.t)}${LIVE?bias(th.sesgo):''}</div><div class="mside r"><span class="bar" style="width:${th.f/MAX*100}%"></span><span class="bv">${LIVE?es1(th.f):th.f}</span></div>`;
     mirror.appendChild(row);
   });
 }
@@ -195,8 +203,9 @@ function renderLive(v,empty=false){
     +'<li>Cuando el sistema no está seguro de quién es una persona, una persona del equipo lo revisa.</li>';
 
   // i · temas
-  $('cap-themes').textContent='De qué habla cada género, como porcentaje de sus propios turnos con tema.';
-  mirror.setAttribute('aria-label','Segregación temática por género, como porcentaje de los turnos de cada grupo. '+v.themes.map(t=>`${t.t}: mujeres ${es1(t.f)}, hombres ${es1(t.m)}`).join('. ')+'.');
+  $('cap-themes').textContent='De qué habla cada género, como porcentaje de sus propios turnos con tema. Bajo cada tema, ◆ su sesgo de género en word2vec: hacia la derecha se asocia a «she», hacia la izquierda a «he».';
+  $('mirror-mc').textContent=empty?'':'◆ sesgo word2vec';
+  mirror.setAttribute('aria-label','Segregación temática por género, como porcentaje de los turnos de cada grupo, y sesgo de género de cada tema en word2vec (positivo hacia mujer, negativo hacia hombre). '+v.themes.map(t=>`${t.t}: mujeres ${es1(t.f)}, hombres ${es1(t.m)}, sesgo ${t.sesgo==null?'sin dato':es2(t.sesgo)}`).join('. ')+'.');
   renderMirror();
 
   // ii · pantalla–voz

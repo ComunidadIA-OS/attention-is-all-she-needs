@@ -112,7 +112,7 @@
 
     const themes = {};
     (r.temas || []).forEach((t) => {
-      const th = (themes[t.tema] = themes[t.tema] || { t: t.tema, f: 0, m: 0 });
+      const th = (themes[t.tema] = themes[t.tema] || { t: t.tema, f: 0, m: 0, sesgo: num(t.sesgo) });
       if (t.genero === "mujer") th.f = num(t.pct) || 0;
       if (t.genero === "hombre") th.m = num(t.pct) || 0;
     });

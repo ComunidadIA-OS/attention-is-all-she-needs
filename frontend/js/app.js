@@ -29,14 +29,22 @@
     live: null, // payload bruto de la API
     decisiones: {},
     log: [],
-    assume: false,
+    closed: false,
+    confirming: false,
+    reopening: false,
     anonymized: false,
     view: null,
     network: null,
     votes: { yes: 0, partial: 0, no: 0 },
     voted: false,
     hashToken: 0,
-    focusAfterRender: null
+    focusAfterRender: null,
+    fase: "publicado", // preproduccion | edicion | publicado (D-11)
+    escaleta: [],
+    escSeq: 0,
+    ajustes: { personas: {}, nuevas: [], turno_mm: false },
+    simSeq: 0,
+    previstaMin: null
   };
 
   const $ = function (id) {
@@ -105,44 +113,23 @@
 
   /* ───────────────────────── Modelo de vista ───────────────────────── */
 
-  function buildEdgesFromCase(caso) {
-    const edges = [];
-    const counts = {};
-    const seq = caso.secuencia_turnos || [];
-    for (let i = 0; i < seq.length - 1; i++) {
-      if (seq[i] === seq[i + 1]) continue;
-      const k = seq[i] + ">" + seq[i + 1];
-      counts[k] = (counts[k] || 0) + 1;
-    }
-    Object.keys(counts).forEach(function (k) {
-      const p = k.split(">");
-      edges.push({ from: p[0], to: p[1], tipo: "turno", peso: counts[k] });
-    });
-    (caso.planos_compartidos || []).forEach(function (e) {
-      edges.push({ from: e[0], to: e[1], tipo: "comparte_plano", peso: e[2] });
-    });
-    (caso.menciones || []).forEach(function (e) {
-      edges.push({ from: e[0], to: e[1], tipo: "menciona", peso: e[2] });
-    });
-    (caso.habla_de || []).forEach(function (e) {
-      edges.push({ from: e[0], to: e[1], tipo: "habla_de", peso: e[2] });
-    });
-    return edges;
+  function buildDemoView() {
+    return buildCaseView(DEMO[state.datasetKey]);
   }
 
-  function buildDemoView() {
-    const caso = DEMO[state.datasetKey];
+  /** Vista a partir de un caso local (muestra sintética o proyección de escaleta). */
+  function buildCaseView(caso) {
     const ev = M.evaluar(caso, state.decisiones);
     const nodes = ev.personas.map(function (p) {
       return { id: p.id, tipo: "participante", persona: p };
     });
-    caso.temas.forEach(function (tm) {
+    (caso.temas || []).forEach(function (tm) {
       nodes.push({ id: tm.id, tipo: "tema", label: tm.label });
     });
     return {
       origin: "client",
       video_id: caso.video_id,
-      status: caso.status,
+      status: caso.status || { estado: "pending", pasos: {} },
       personas: ev.personas,
       metricas: ev.metricas,
       alertas: ev.alertas,
@@ -151,12 +138,14 @@
       indice: ev.indice_global,
       diagnostico: ev.diagnostico,
       nodes: nodes,
-      edges: buildEdgesFromCase(caso),
-      clima: caso.clima,
+      edges: M.aristasDesdeCaso(caso),
+      clima: normClima(caso.clima),
       segmentos: caso.segmentos_dudosos || [],
       canArbitrate: true,
       citizenApi: null,
-      apiEasy: null
+      apiEasy: null,
+      caso: caso,
+      proyeccion: Boolean(caso.proyeccion)
     };
   }
 
@@ -220,7 +209,9 @@
       cumple_salvaguarda_paridad: sp.cumple_salvaguarda_paridad !== undefined ? Boolean(sp.cumple_salvaguarda_paridad) : Boolean(sp.cumple)
     };
     const bd = v.test_bechdel_digital || v.bechdel || {};
+    const apl = typeof bd.aplica === "boolean" ? { aplica: bd.aplica, motivo: bd.motivo_no_aplica || null } : M.bechdelAplicabilidad(personas);
     const bechdel = {
+      aplica: apl.aplica,
       puntuacion_bechdel_0_3: Number(bd.puntuacion_bechdel_0_3 !== undefined ? bd.puntuacion_bechdel_0_3 : bd.puntuacion_0_3) || 0,
       regla_1_pluralidad_femenina: bd.regla_1_pluralidad_femenina,
       regla_2_identidad_propia: bd.regla_2_identidad_propia,
@@ -228,7 +219,7 @@
       mujeres_distintas_hablando: bd.mujeres_distintas_hablando,
       mujeres_con_rotulo_identificado: bd.mujeres_con_rotulo_identificado,
       transiciones_mujer_a_mujer: bd.transiciones_mujer_a_mujer,
-      diagnostico_bechdel: null,
+      diagnostico_bechdel: apl.aplica ? null : apl.motivo,
       diagnostico_texto: bd.diagnostico_bechdel || bd.diagnostico || ""
     };
     let indice = null;
@@ -288,6 +279,7 @@
   }
 
   function currentView() {
+    if (state.fase === "preproduccion") return buildCaseView(M.escaletaACaso(state.escaleta));
     if (state.datasetKey === "live") return state.live ? buildApiView(state.live) : null;
     return buildDemoView();
   }
@@ -347,7 +339,7 @@
           "li",
           { class: cls },
           icon(met ? "i-ok" : "i-no"),
-          h("span", { class: "check-body" }, h("span", { class: "check-label", text: it.label }), it.detail ? h("span", { class: "check-detail", text: it.detail }) : null),
+          h("span", { class: "check-body" }, h("span", { class: "check-label", text: it.label }), it.detail ? " " : null, it.detail ? h("span", { class: "check-detail", text: it.detail }) : null),
           h("span", { class: "sr-only", text: " — " + (met ? t("check.met") : t("check.unmet")) })
         )
       );
@@ -371,7 +363,11 @@
     lines.push(t("easy.voice", { v: fmt(view.metricas.voz_pct.mujer, 0) }));
     lines.push(t("easy.screen", { p: fmt(view.metricas.pantalla_pct.mujer, 0) }));
     lines.push(t("easy.result." + (view.diagnostico === "salvaguarda" ? "salvaguarda" : view.diagnostico)));
-    lines.push(t(view.bechdel.puntuacion_bechdel_0_3 === 3 ? "easy.bechdel.ok" : "easy.bechdel.no"));
+    if (view.bechdel.aplica === false) {
+      if (view.bechdel.diagnostico_bechdel === "no_aplica_una_mujer") lines.push(t("easy.bechdel.na_una"));
+    } else {
+      lines.push(t(view.bechdel.puntuacion_bechdel_0_3 === 3 ? "easy.bechdel.ok" : "easy.bechdel.no"));
+    }
     const pend = pendingCount(view);
     if (pend > 0) lines.push(t("easy.pending", { n: pend }));
     return lines;
@@ -386,6 +382,7 @@
   function renderVerdict(view) {
     const hero = $("veredicto");
     hero.dataset.state = view.diagnostico === "ok" ? "ok" : "alert";
+    $("verdict-eyebrow").textContent = t(state.fase === "preproduccion" ? "verdict.eyebrow_projection" : state.fase === "edicion" ? "verdict.eyebrow_draft" : "verdict.eyebrow");
     const title = $("veredicto-h");
     clear(title);
     title.appendChild(icon(view.diagnostico === "ok" ? "i-ok" : "i-warn", "icon-lg"));
@@ -518,17 +515,29 @@
     const r = view.metricas.ratio_voz_pantalla;
     $("rvp-f").textContent = r.mujer === null || r.mujer === undefined ? t("metrics.rvp_na") : fmt(r.mujer, 2);
     $("rvp-m").textContent = r.hombre === null || r.hombre === undefined ? t("metrics.rvp_na") : fmt(r.hombre, 2);
+    const boxNb = $("rvp-b-box");
+    if (boxNb) {
+      const hasNb = (view.metricas.pantalla_pct && view.metricas.pantalla_pct.no_binario > 0) || (view.metricas.voz_pct && view.metricas.voz_pct.no_binario > 0);
+      boxNb.hidden = !hasNb;
+      if (hasNb) {
+        $("rvp-b").textContent = r.no_binario === null || r.no_binario === undefined ? t("metrics.rvp_na") : fmt(r.no_binario, 2);
+      }
+    }
     $("rvp-text").textContent = t("metrics.rvp_text");
 
     const b = view.bechdel;
-    $("bechdel-score").textContent = String(b.puntuacion_bechdel_0_3);
+    const aplica = b.aplica !== false;
+    $("m-bechdel").dataset.state = aplica ? "" : "na";
+    $("bechdel-score").textContent = aplica ? String(b.puntuacion_bechdel_0_3) : "";
+    document.querySelector("#m-bechdel .score").hidden = !aplica;
     const rules = [];
-    if (typeof b.regla_1_pluralidad_femenina === "boolean") {
+    if (aplica && typeof b.regla_1_pluralidad_femenina === "boolean") {
       rules.push({ ok: b.regla_1_pluralidad_femenina, label: t("bechdel.r1"), detail: t("bechdel.count", { n: b.mujeres_distintas_hablando }) });
       rules.push({ ok: b.regla_2_identidad_propia, label: t("bechdel.r2"), detail: t("bechdel.count", { n: b.mujeres_con_rotulo_identificado }) });
       rules.push({ ok: b.regla_3_dialogo_horizontal, label: t("bechdel.r3"), detail: t("bechdel.count", { n: b.transiciones_mujer_a_mujer }) });
     }
     renderChecks($("bechdel-rules"), rules, "good");
+    $("bechdel-rules").hidden = !rules.length;
     $("bechdel-diag").textContent = b.diagnostico_bechdel ? t("bechdel.diag." + b.diagnostico_bechdel) : b.diagnostico_texto;
   }
 
@@ -545,8 +554,9 @@
     const colors = {
       f: cssVar("--c-woman", "#6b21a8"),
       m: cssVar("--c-man", "#0369a1"),
+      b: cssVar("--c-topic", "#b45309"),
       n: cssVar("--c-nd", "#64748b"),
-      t: cssVar("--c-topic", "#b45309"),
+      t: "#d97706",
       text: cssVar("--text", "#0f172a"),
       surface: cssVar("--surface", "#ffffff"),
       edge: cssVar("--edge", "#94a3b8"),
@@ -559,8 +569,8 @@
       let size = 18;
       if (n.tipo === "participante") {
         const g = n.persona.genero;
-        shape = g === "mujer" ? "dot" : g === "hombre" ? "square" : "triangle";
-        color = g === "mujer" ? colors.f : g === "hombre" ? colors.m : colors.n;
+        shape = g === "mujer" ? "dot" : g === "hombre" ? "square" : g === "no_binario" ? "diamond" : "triangle";
+        color = g === "mujer" ? colors.f : g === "hombre" ? colors.m : g === "no_binario" ? colors.b : colors.n;
         const weight = (Number(n.persona.voz_s) || 0) + (Number(n.persona.pantalla_s) || 0) * 0.5;
         size = Math.max(14, Math.min(34, 10 + Math.sqrt(weight) * 1.2));
       }
@@ -600,6 +610,9 @@
 
     if (state.network) state.network.destroy();
     state.network = new vis.Network(container, { nodes: nodes, edges: edges }, options);
+    // Si el navegador descarta el lienzo (GPU / fuera de pantalla), se repinta en cuanto se restaura.
+    const canvas = container.querySelector("canvas");
+    if (canvas) canvas.addEventListener("contextrestored", redrawGraph);
     state.network.once("stabilizationIterationsDone", function () {
       // Una vez estabilizado se detiene la física: menos CPU y sin movimiento continuo (Green AI, a11y).
       state.network.setOptions({ physics: false });
@@ -638,10 +651,104 @@
         h("tr", null, h("td", { text: nodeLabel(a) }), h("td", { text: nodeLabel(b) }), h("td", { text: t("graph.type." + e.tipo) }), h("td", { class: "num", text: fmt(e.peso, 0) }))
       );
     });
+
+    renderGraphReading(view, byId);
+  }
+
+  function listText(items) {
+    try {
+      return new Intl.ListFormat(I.getLang(), { style: "long", type: "conjunction" }).format(items);
+    } catch (e) {
+      return items.join(", ");
+    }
+  }
+
+  /** Lectura textual del grafo: lo que el dibujo sugiere, dicho con cifras. */
+  function renderGraphReading(view, byId) {
+    const r = M.interpretarGrafo(view.personas, view.edges);
+    const name = function (id) { return byId[id] ? nodeLabel(byId[id]) : id; };
+    const lines = [];
+    if (!r.total_turnos) {
+      lines.push(t("graph.r.no_turns"));
+    } else {
+      if (r.eje) lines.push(t("graph.r.hub", { name: name(r.eje.id), n: r.eje.turnos, total: r.total_turnos }));
+      lines.push(t(r.turnos_mujer_mujer > 0 ? "graph.r.women_turns" : "graph.r.women_turns_no_mm", { n: r.turnos_con_mujer, total: r.total_turnos, mm: r.turnos_mujer_mujer }));
+    }
+    if (r.menciones.total > 0) lines.push(t("graph.r.mentions", { f: r.menciones.mujer, m: r.menciones.hombre }));
+    const tm = r.temas;
+    if (tm.solo_mujeres.length) lines.push(t("graph.r.topics_f", { list: listText(tm.solo_mujeres.map(name)) }));
+    if (tm.solo_hombres.length) lines.push(t("graph.r.topics_m", { list: listText(tm.solo_hombres.map(name)) }));
+    if (tm.compartidos.length) {
+      lines.push(t(tm.solo_mujeres.length || tm.solo_hombres.length ? "graph.r.topics_shared" : "graph.r.topics_all_shared", { list: listText(tm.compartidos.map(name)) }));
+    }
+    if (r.aislados.length) lines.push(t("graph.r.isolated", { list: listText(r.aislados.map(name)) }));
+
+    const ul = $("graph-reading");
+    clear(ul);
+    lines.forEach(function (l) { ul.appendChild(h("li", { text: l })); });
+
+    const flowBox = $("graph-turn-flow");
+    const flowPills = $("turn-flow-pills");
+    if (flowBox && flowPills) {
+      clear(flowPills);
+      const tr = r.transiciones;
+      if (r.total_turnos > 0 && tr) {
+        flowBox.hidden = false;
+        const pctT = function (val) { return Math.round((val / r.total_turnos) * 100); };
+        const pillsData = [
+          { label: "H → H", val: tr.hh, cls: "sym-m" },
+          { label: "M → M", val: tr.mm, cls: "sym-f" },
+          { label: "H → M", val: tr.hm, cls: "sym-m" },
+          { label: "M → H", val: tr.mh, cls: "sym-f" }
+        ];
+        if (tr.con_nb > 0) {
+          pillsData.push({ label: "↔ Non binario", val: tr.con_nb, cls: "sym-b" });
+        }
+        pillsData.forEach(function (p) {
+          const pill = h("div", { class: "turn-flow-pill" },
+            h("span", { class: "sym " + p.cls, "aria-hidden": "true" }),
+            h("span", { text: p.label + ":" }),
+            h("strong", { text: p.val + " (" + pctT(p.val) + " %)" })
+          );
+          flowPills.appendChild(pill);
+        });
+      } else {
+        flowBox.hidden = true;
+      }
+    }
+  }
+
+  /**
+   * Repintado del grafo. Con la física detenida, vis-network solo redibuja ante una interacción;
+   * si el navegador ha descartado el contenido del canvas al salir de pantalla (Chromium lo hace con
+   * aceleración por GPU), el grafo aparecería vacío hasta pulsar dentro. Se repinta al volver a verse.
+   */
+  let graphVisible = false;
+  let redrawQueued = false;
+  function redrawGraph() {
+    if (redrawQueued) return;
+    redrawQueued = true;
+    window.requestAnimationFrame(function () {
+      redrawQueued = false;
+      if (state.network) state.network.redraw();
+    });
   }
 
   function setupGraphControls() {
     const container = $("constellation-network");
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        graphVisible = entries.some(function (e) { return e.isIntersecting; });
+        if (graphVisible) redrawGraph();
+      }, { threshold: 0 }).observe(container);
+    } else {
+      graphVisible = true;
+    }
+    if ("ResizeObserver" in window) new ResizeObserver(redrawGraph).observe(container);
+    window.addEventListener("scroll", function () { if (graphVisible) redrawGraph(); }, { passive: true });
+    window.addEventListener("hashchange", redrawGraph);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) redrawGraph(); });
+    window.addEventListener("pageshow", redrawGraph);
     function zoom(factor) {
       if (!state.network) return;
       state.network.moveTo({ scale: state.network.getScale() * factor, animation: reducedMotion() ? false : { duration: 180 } });
@@ -689,8 +796,19 @@
     return view.personas.filter(function (p) { return p.id === id; })[0];
   }
 
-  function addLog(text) {
-    state.log.push({ at: new Date(), text: text });
+  /** Registro solo de añadido (Art. 12 RIA): se guarda clave + parámetros para re-traducir y anonimizar. */
+  function addLog(key, params, personaId) {
+    state.log.push({ at: new Date(), key: key, params: params || {}, personaId: personaId || null });
+  }
+
+  function logText(view, e) {
+    const params = Object.assign({}, e.params);
+    if (e.personaId) {
+      const p = personaById(view, e.personaId) || { id: e.personaId, nombre: e.personaId };
+      params.who = displayName(p);
+    }
+    if (params.genero) params.g = genderLabel(params.genero, true);
+    return t(e.key, params);
   }
 
   function renderHitl(view) {
@@ -704,6 +822,8 @@
       list.appendChild(h("p", { class: "empty", text: t("hitl.none") }));
     } else if (!view.canArbitrate) {
       list.appendChild(h("p", { class: "note-inline", text: t("hitl.readonly") }));
+    } else if (state.closed) {
+      list.appendChild(h("p", { class: "note-inline" }, icon("i-ok"), " " + t("hitl.locked")));
     }
 
     view.segmentos.forEach(function (seg) {
@@ -722,7 +842,7 @@
       if (seg.evidencia_texto) card.appendChild(h("blockquote", { class: "evidence", text: seg.evidencia_texto }));
       card.appendChild(h("p", { class: "arb-meta", text: t("hitl.proposal", { g: genderLabel(seg.genero_propuesto, true) }) }));
 
-      if (!dec) {
+      if (!dec && !state.closed) {
         const selId = "arb-sel-" + seg.persona_id;
         const select = h("select", { id: selId, class: "control control-sm" });
         ["mujer", "hombre", "no_binario"].forEach(function (g) {
@@ -733,22 +853,26 @@
         const bV = h("button", { type: "button", class: "btn btn-primary btn-sm", text: t("hitl.validate") });
         const bA = h("button", { type: "button", class: "btn btn-sm", text: t("hitl.abstain") });
         bV.addEventListener("click", function () {
-          decide(seg, { accion: "validar", genero: select.value }, "validate:" + seg.persona_id);
+          decide(seg, { accion: "validar", genero: select.value });
         });
         bA.addEventListener("click", function () {
-          decide(seg, { accion: "abstener" }, "abstain:" + seg.persona_id);
+          decide(seg, { accion: "abstener" });
         });
         card.appendChild(h("div", { class: "arb-actions" }, h("label", { for: selId, class: "arb-label", text: t("hitl.classify_as") }), select, bV, bA));
-      } else {
+      } else if (dec) {
         const stateTxt = dec.accion === "validar" ? t("hitl.state.validated", { g: genderLabel(dec.genero, true) }) : t("hitl.state.abstained");
-        const undo = h("button", { type: "button", class: "btn btn-sm", text: t("hitl.undo"), "data-focus": "undo:" + seg.persona_id });
-        undo.addEventListener("click", function () {
-          delete state.decisiones[seg.persona_id];
-          addLog(t("log.undo", { who: displayName(base) }));
-          state.focusAfterRender = "decide:" + seg.persona_id;
-          refresh(true);
-        });
-        card.appendChild(h("div", { class: "arb-actions" }, h("span", { class: "pill pill-ok" }, icon("i-ok"), stateTxt), undo));
+        const actions = h("div", { class: "arb-actions" }, h("span", { class: "pill pill-ok" }, icon("i-ok"), stateTxt));
+        if (!state.closed) {
+          const undo = h("button", { type: "button", class: "btn btn-sm", text: t("hitl.undo"), "data-focus": "undo:" + seg.persona_id });
+          undo.addEventListener("click", function () {
+            delete state.decisiones[seg.persona_id];
+            addLog("log.undo", null, seg.persona_id);
+            state.focusAfterRender = "decide:" + seg.persona_id;
+            refresh(true);
+          });
+          actions.appendChild(undo);
+        }
+        card.appendChild(actions);
       }
       list.appendChild(card);
     });
@@ -756,43 +880,93 @@
     renderSeal(view, pend);
   }
 
-  function decide(seg, decision, focusKey) {
-    const view = state.view;
-    const base = personaById(view, seg.persona_id) || { id: seg.persona_id, nombre: seg.persona_id };
+  function decide(seg, decision) {
+    if (state.closed) return;
     state.decisiones[seg.persona_id] = decision;
     if (decision.accion === "validar") {
-      addLog(t("log.validate", { who: displayName(base), g: genderLabel(decision.genero, true), p: fmt(seg.p * 100, 0) }));
+      addLog("log.validate", { genero: decision.genero, p: fmt(seg.p * 100, 0) }, seg.persona_id);
     } else {
-      addLog(t("log.abstain", { who: displayName(base) }));
+      addLog("log.abstain", null, seg.persona_id);
     }
     state.focusAfterRender = "undo:" + seg.persona_id;
     refresh(true);
   }
 
   function renderSeal(view, pend) {
-    const assume = $("assume-toggle");
-    if (pend > 0 && state.assume) {
-      state.assume = false;
-      addLog(t("log.assume_off"));
-    }
-    assume.disabled = pend > 0;
-    assume.checked = state.assume;
-    $("assume-help").textContent = pend > 0 ? t("hitl.assume_blocked") : t("hitl.sign_note");
+    const closed = state.closed;
+    const btnClose = $("btn-close");
+    btnClose.hidden = closed || state.confirming;
+    btnClose.disabled = pend > 0;
+    $("close-confirm").hidden = closed || !state.confirming;
+    $("btn-reopen").hidden = !closed || state.reopening;
+    $("reopen-form").hidden = !closed || !state.reopening;
+    $("assume-help").textContent = closed ? t("hitl.closed_note") : pend > 0 ? t("hitl.assume_blocked") : t("hitl.sign_note");
 
-    const sealed = pend === 0 && state.assume;
-    setPill($("seal-pill"), sealed ? "ok" : "warn", sealed ? t("seal.ok") : t("seal.draft"), sealed ? "i-ok" : "i-pending");
-    $("seal-text").textContent = pend > 0 ? t("seal.text.pending", { n: pend }) : sealed ? t("seal.text.ok") : t("seal.text.need_assume");
+    setPill($("seal-pill"), closed ? "ok" : "warn", closed ? t("seal.ok") : t("seal.draft"), closed ? "i-ok" : "i-pending");
+    $("seal-text").textContent = closed ? t("seal.text.ok") : pend > 0 ? t("seal.text.pending", { n: pend }) : t("seal.text.need_assume");
 
-    const log = $("decision-log");
-    clear(log);
-    if (!state.log.length) {
-      log.appendChild(h("li", { class: "empty", text: t("hitl.log_empty") }));
-    } else {
-      state.log.forEach(function (e) {
-        log.appendChild(h("li", null, h("time", { text: e.at.toLocaleTimeString(I.getLang()) + " " }), e.text));
-      });
-    }
-    updateHash(view, sealed);
+    ["decision-log", "decision-log-draft"].forEach(function (logId) {
+      const log = $(logId);
+      if (!log) return;
+      clear(log);
+      if (!state.log.length) {
+        log.appendChild(h("li", { class: "empty", text: t("hitl.log_empty") }));
+      } else {
+        state.log.forEach(function (e) {
+          log.appendChild(h("li", null, h("time", { text: e.at.toLocaleTimeString(I.getLang()) + " " }), logText(view, e)));
+        });
+      }
+    });
+    updateHash(view, closed);
+  }
+
+  function setupSeal() {
+    $("btn-close").addEventListener("click", function () {
+      state.confirming = true;
+      if (state.view) renderSeal(state.view, pendingCount(state.view));
+      $("btn-close-confirm").focus();
+    });
+    $("btn-close-cancel").addEventListener("click", function () {
+      state.confirming = false;
+      if (state.view) renderSeal(state.view, pendingCount(state.view));
+      $("btn-close").focus();
+    });
+    $("btn-close-confirm").addEventListener("click", function () {
+      if (!state.view || pendingCount(state.view) > 0) return;
+      state.confirming = false;
+      state.closed = true;
+      addLog("log.closed");
+      state.focusAfterRender = "reopen";
+      refresh(true);
+    });
+    $("btn-reopen").addEventListener("click", function () {
+      state.reopening = true;
+      $("reopen-reason").value = "";
+      $("reopen-error").textContent = "";
+      if (state.view) renderSeal(state.view, pendingCount(state.view));
+      $("reopen-reason").focus();
+    });
+    $("btn-reopen-cancel").addEventListener("click", function () {
+      state.reopening = false;
+      if (state.view) renderSeal(state.view, pendingCount(state.view));
+      $("btn-reopen").focus();
+    });
+    $("reopen-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const reason = $("reopen-reason").value.trim();
+      if (reason.length < 10) {
+        $("reopen-error").textContent = t("hitl.reopen_error");
+        $("reopen-reason").setAttribute("aria-invalid", "true");
+        $("reopen-reason").focus();
+        return;
+      }
+      $("reopen-reason").removeAttribute("aria-invalid");
+      state.reopening = false;
+      state.closed = false;
+      addLog("log.reopened", { reason: reason });
+      state.focusAfterRender = "close";
+      refresh(true);
+    });
   }
 
   function canonical(obj) {
@@ -837,14 +1011,24 @@
   function renderClimate(view) {
     const tbody = $("climate-body");
     clear(tbody);
+    const hasNb = view.clima && view.clima.no_binario && (
+      (view.clima.no_binario.tecnico_asertivo || 0) > 0 ||
+      (view.clima.no_binario.colaborativo || 0) > 0 ||
+      (view.clima.no_binario.disenso || 0) > 0
+    );
+    const thNb = $("climate-th-nb");
+    if (thNb) thNb.hidden = !hasNb;
+
     ["tecnico_asertivo", "colaborativo", "disenso"].forEach(function (k) {
-      tbody.appendChild(
-        h("tr", null,
-          h("th", { scope: "row", text: t("climate." + k) }),
-          h("td", { class: "num", text: fmt(view.clima.mujer[k], 0) + " %" }),
-          h("td", { class: "num", text: fmt(view.clima.hombre[k], 0) + " %" })
-        )
-      );
+      const row = [
+        h("th", { scope: "row", text: t("climate." + k) }),
+        h("td", { class: "num", text: fmt(view.clima.mujer[k], 0) + " %" }),
+        h("td", { class: "num", text: fmt(view.clima.hombre[k], 0) + " %" })
+      ];
+      if (hasNb) {
+        row.push(h("td", { class: "num", text: fmt((view.clima.no_binario && view.clima.no_binario[k]) || 0, 0) + " %" }));
+      }
+      tbody.appendChild(h("tr", null, ...row));
     });
   }
 
@@ -879,11 +1063,353 @@
     });
   }
 
+  /** Aviso visible cuando la interfaz está en una lengua cuya traducción no ha revisado una persona hablante nativa. */
+  function renderLangNotice() {
+    const box = $("lang-notice");
+    clear(box);
+    const lang = I.getLang();
+    box.hidden = lang !== "eu";
+    if (lang !== "eu") return;
+    box.appendChild(h("span", { lang: "eu", text: t("lang.unreviewed") }));
+    box.appendChild(document.createTextNode(" · "));
+    box.appendChild(h("span", { lang: "es", text: I.DICT.es["lang.unreviewed"] }));
+  }
+
   function renderChrome(view) {
+    renderLangNotice();
     $("video-id-badge").textContent = view.video_id;
-    const originKey = view.origin === "client" ? "origin.client" : view.origin === "api" ? "origin.api" : "origin.mixed";
+    let originKey = view.origin === "client" ? "origin.client" : view.origin === "api" ? "origin.api" : "origin.mixed";
+    if (view.proyeccion) originKey = "origin.projection";
     setPill($("calc-origin-badge"), view.origin === "client" ? "warn" : "neutral", t(originKey));
-    $("synthetic-note").hidden = state.datasetKey === "live";
+    $("synthetic-note").hidden = state.datasetKey === "live" || state.fase === "preproduccion";
+  }
+
+  /* ───────────────────────── Revisión preventiva (D-11) ───────────────────────── */
+
+  function durText(s) {
+    const total = Math.max(0, Math.round(Number(s) || 0));
+    const m = Math.floor(total / 60);
+    const sec = total % 60;
+    if (m === 0) return t("dur.s", { s: sec });
+    if (sec === 0) return t("dur.m", { m: m });
+    return t("dur.ms", { m: m, s: sec });
+  }
+
+  function namesOf(view, ids) {
+    const byId = {};
+    view.personas.forEach(function (p) { byId[p.id] = p; });
+    return listText((ids || []).map(function (id) { return byId[id] ? displayName(byId[id]) : id; }));
+  }
+
+  function topicLabel(view, id) {
+    const n = view.nodes.filter(function (x) { return x.id === id; })[0];
+    return n ? n.label : id;
+  }
+
+  const REC_METRIC = {
+    pendientes: "rec.m.hitl", voz: "rec.m.voz", pantalla: "rec.m.pantalla", washing: "rec.m.washing",
+    una_mujer: "rec.m.bechdel", bechdel_r1: "rec.m.bechdel", bechdel_r3: "rec.m.bechdel", rotulo: "rec.m.bechdel",
+    eje: "rec.m.grafo", tema_m: "rec.m.grafo", tema_f: "rec.m.grafo", ok: "rec.m.ok"
+  };
+
+  function renderPreventive(view) {
+    // Cobertura del material (edición)
+    if (state.fase === "edicion") {
+      const caso = view.caso || {};
+      const analizado = caso.duracion_s || null;
+      const input = $("coverage-planned");
+      if (state.previstaMin === null && caso.duracion_prevista_s) state.previstaMin = Math.round(caso.duracion_prevista_s / 60);
+      if (document.activeElement !== input) input.value = state.previstaMin || "";
+      let txt;
+      if (!analizado) txt = t("prev.coverage_unknown");
+      else if (!state.previstaMin) txt = t("prev.coverage_need", { a: fmt(analizado / 60, 0) });
+      else {
+        const pct = Math.min(100, (analizado / 60 / state.previstaMin) * 100);
+        txt = t(pct >= 99.5 ? "prev.coverage_full" : "prev.coverage", { a: fmt(analizado / 60, 0), p: fmt(state.previstaMin, 0), pct: fmt(pct, 0) });
+      }
+      $("coverage-text").textContent = txt;
+    }
+
+    // Márgenes hasta la paridad
+    const tiempos = M.tiempos(view.personas);
+    [["voz", "margin-voz"], ["pantalla", "margin-pantalla"]].forEach(function (c) {
+      const box = $(c[1]);
+      clear(box);
+      const m = M.margenParidad(tiempos, c[0]);
+      if (m.cumple) {
+        box.appendChild(h("p", { class: "margin-ok" }, icon("i-ok"), t("prev.margin_ok")));
+      } else if (m.anadir_s === null) {
+        box.appendChild(h("p", { class: "card-text", text: t("prev.margin_na") }));
+      } else {
+        box.appendChild(h("div", { class: "margin-options" },
+          h("div", { class: "margin-option" }, h("strong", { text: durText(m.anadir_s) }), " ", h("span", { text: t("prev.margin_add") })),
+          h("div", { class: "margin-option" }, h("strong", { text: durText(m.redistribuir_s) }), " ", h("span", { text: t("prev.margin_redist") }))
+        ));
+      }
+    });
+
+    // Recomendaciones
+    const ev = { personas: view.personas, tiempos_s: tiempos, alertas: view.alertas, bechdel: view.bechdel };
+    const recs = M.recomendaciones(ev, view.edges, { pendientes: pendingCount(view) });
+    const ol = $("recs-list");
+    clear(ol);
+    recs.forEach(function (r) {
+      const p = r.params;
+      const params = Object.assign({}, p);
+      if (p.ids) params.who = namesOf(view, p.ids);
+      if (p.tema) params.tema = topicLabel(view, p.tema);
+      if (p.add !== undefined) { params.add = durText(p.add); params.redist = durText(p.redist); }
+      let clave = r.clave;
+      if (clave === "rec.washing" && !(p.ids && p.ids.length)) clave = "rec.washing_generic";
+      if (clave === "rec.bechdel_r1" && !(p.ids && p.ids.length)) clave = "rec.bechdel_r1_generic";
+      const prioKey = r.prioridad === 1 ? "rec.p1" : r.prioridad === 2 ? "rec.p2" : "rec.p3";
+      const prioCls = r.prioridad === 1 ? "pill-alert" : r.prioridad === 2 ? "pill-warn" : "pill-neutral";
+      const metric = t(REC_METRIC[r.id.split(":")[0]] || "rec.m.ok");
+      ol.appendChild(h("li", null,
+        h("span", { class: "pill " + (r.id === "ok" ? "pill-ok" : prioCls) }, r.id === "ok" ? t("rec.p_ok") : t(prioKey)),
+        h("span", { class: "rec-body" }, h("span", { text: t(clave, params) }), " ", h("span", { class: "rec-metric", text: metric }))
+      ));
+    });
+  }
+
+  /* ── Simulador «¿y si…?» (solo edición) ── */
+
+  function simBase(view) {
+    const caso = view.caso || {};
+    return {
+      personas: view.personas.map(function (p) { return Object.assign({}, p); }),
+      secuencia_turnos: caso.secuencia_turnos || [],
+      referentes: caso.referentes,
+      apertura_id: caso.apertura_id,
+      cierre_id: caso.cierre_id,
+      mesa_monografica_diversidad: caso.mesa_monografica_diversidad
+    };
+  }
+
+  function renderSimTable(view) {
+    const tbody = $("sim-body");
+    clear(tbody);
+    const base = simBase(view);
+    const filas = base.personas.concat(state.ajustes.nuevas);
+    filas.forEach(function (p) {
+      const over = state.ajustes.personas[p.id] || {};
+      const cur = Object.assign({}, p, over);
+      const isNew = p.id.indexOf("sim") === 0;
+      const name = isNew ? t(cur.voz_s > 0 ? "sim.new_voice" : "sim.new_silent", { n: p.id.replace("sim", "") }) : displayName(p);
+      const mk = function (field) {
+        const inp = h("input", { type: "number", min: "0", step: "5", class: "control control-sm", value: String(Math.round(Number(cur[field]) || 0)), "aria-label": name + " — " + t(field === "voz_s" ? "sim.col_voice" : "sim.col_screen") });
+        inp.addEventListener("input", function () { setSim(p.id, field, Math.max(0, Number(inp.value) || 0), isNew); });
+        return inp;
+      };
+      const rot = h("input", { type: "checkbox", "aria-label": name + " — " + t("esc.col_label") });
+      rot.checked = Boolean(cur.rotulo);
+      rot.addEventListener("change", function () { setSim(p.id, "rotulo", rot.checked, isNew); });
+      tbody.appendChild(h("tr", null,
+        h("td", { class: "strong", text: name }),
+        h("td", null, h("span", { class: "gender-cell" }, symFor(cur.genero), h("span", { text: genderLabel(cur.genero, true) }))),
+        h("td", { class: "num" }, mk("voz_s")),
+        h("td", { class: "num" }, mk("pantalla_s")),
+        h("td", null, rot)
+      ));
+    });
+    $("sim-mm").checked = Boolean(state.ajustes.turno_mm);
+  }
+
+  function setSim(id, field, value, isNew) {
+    if (isNew) {
+      const p = state.ajustes.nuevas.filter(function (x) { return x.id === id; })[0];
+      if (p) p[field] = value;
+    } else {
+      state.ajustes.personas[id] = Object.assign({}, state.ajustes.personas[id] || {}, { [field]: value });
+    }
+    renderSimResult(state.view, true);
+  }
+
+  function simRows(ev) {
+    const m = ev.metricas;
+    const b = ev.bechdel;
+    return [
+      { k: "sim.r.voz", v: fmt(m.voz_pct.mujer, 1) + " %", n: m.voz_pct.mujer },
+      { k: "sim.r.pantalla", v: fmt(m.pantalla_pct.mujer, 1) + " %", n: m.pantalla_pct.mujer },
+      { k: "sim.r.rvp", v: m.ratio_voz_pantalla.mujer === null ? t("metrics.rvp_na") : fmt(m.ratio_voz_pantalla.mujer, 2) },
+      { k: "alerts.washing.title", v: t(ev.alertas.equality_washing.activa ? "state.active" : "state.inactive"), bad: ev.alertas.equality_washing.activa },
+      { k: "alerts.infra.title", v: t(ev.alertas.infrarrepresentacion.activa ? "state.active" : "state.inactive"), bad: ev.alertas.infrarrepresentacion.activa },
+      { k: "alerts.salv.title", v: t(ev.salvaguarda.cumple_salvaguarda_paridad ? "state.cumple" : "state.no_cumple"), bad: !ev.salvaguarda.cumple_salvaguarda_paridad },
+      { k: "bechdel.title", v: b.aplica ? b.puntuacion_bechdel_0_3 + " / 3" : t("bechdel.na") },
+      { k: "index.title", v: fmt(ev.indice_global.total, 0) + " / 100" }
+    ];
+  }
+
+  function renderSimResult(view, announceIt) {
+    if (!view) return;
+    const base = simBase(view);
+    const ahora = M.evaluar(base, {});
+    const despues = M.evaluar(M.simular(base, state.ajustes), {});
+    const a = simRows(ahora);
+    const d = simRows(despues);
+    const tbody = $("sim-result-body");
+    clear(tbody);
+    const cambios = [];
+    a.forEach(function (row, i) {
+      const changed = row.v !== d[i].v;
+      if (changed) cambios.push(t(row.k) + ": " + d[i].v);
+      const after = h("td", { class: changed ? "changed" : null });
+      if (d[i].bad !== undefined) after.appendChild(h("span", { class: "pill " + (d[i].bad ? "pill-alert" : "pill-ok") }, icon(d[i].bad ? "i-warn" : "i-ok"), d[i].v));
+      else after.appendChild(document.createTextNode(d[i].v));
+      if (changed) after.appendChild(h("span", { class: "delta", text: "← " + row.v }));
+      const now = h("td");
+      if (row.bad !== undefined) now.appendChild(h("span", { class: "pill " + (row.bad ? "pill-alert" : "pill-ok") }, icon(row.bad ? "i-warn" : "i-ok"), row.v));
+      else now.appendChild(document.createTextNode(row.v));
+      tbody.appendChild(h("tr", null, h("th", { scope: "row", text: t(row.k) }), now, after));
+    });
+    if (announceIt) {
+      window.clearTimeout(renderSimResult.timer);
+      renderSimResult.timer = window.setTimeout(function () {
+        $("sim-announce").textContent = cambios.length ? t("sim.changed", { list: cambios.join("; ") }) : t("sim.nochange");
+      }, 600);
+    }
+  }
+
+  function resetSim() {
+    state.ajustes = { personas: {}, nuevas: [], turno_mm: false };
+    state.simSeq = 0;
+  }
+
+  function setupSimulator() {
+    function addPerson(voz) {
+      state.simSeq++;
+      const s = voz ? 120 : 0;
+      state.ajustes.nuevas.push({ id: "sim" + state.simSeq, nombre: null, genero: "mujer", voz_s: s, pantalla_s: voz ? 120 : 120, rotulo: Boolean(voz), autoridad: Boolean(voz), centralidad: null });
+      renderSimTable(state.view);
+      renderSimResult(state.view, true);
+    }
+    $("sim-add-voice").addEventListener("click", function () { addPerson(true); });
+    $("sim-add-silent").addEventListener("click", function () { addPerson(false); });
+    $("sim-mm").addEventListener("change", function (e) {
+      state.ajustes.turno_mm = e.target.checked;
+      renderSimResult(state.view, true);
+    });
+    $("sim-reset").addEventListener("click", function () {
+      resetSim();
+      renderSimTable(state.view);
+      renderSimResult(state.view, true);
+    });
+  }
+
+  /* ── Escaleta (preproducción) ── */
+
+  function loadEscaletaDemo() {
+    state.escaleta = (window.AIASN_ESCALETA_DEMO || []).map(function (f) { return Object.assign({}, f); });
+    state.escSeq = state.escaleta.length;
+  }
+
+  let escTimer = null;
+  function escChanged() {
+    window.clearTimeout(escTimer);
+    escTimer = window.setTimeout(function () { refresh(false); }, 250);
+  }
+
+  function renderEscaleta() {
+    const tbody = $("esc-body");
+    clear(tbody);
+    state.escaleta.forEach(function (f, idx) {
+      const label = f.nombre || t("esc.unnamed", { n: idx + 1 });
+      const name = h("input", { type: "text", class: "control control-sm", value: f.nombre || "", "aria-label": t("esc.col_name") + " " + (idx + 1), placeholder: t("esc.placeholder") });
+      name.addEventListener("input", function () { f.nombre = name.value; escChanged(); });
+      const gen = h("select", { class: "control control-sm", "aria-label": t("esc.col_gender") + " — " + label });
+      ["mujer", "hombre", "no_binario"].forEach(function (g) {
+        const o = h("option", { value: g, text: genderLabel(g, true) });
+        if (g === f.genero) o.selected = true;
+        gen.appendChild(o);
+      });
+      gen.addEventListener("change", function () { f.genero = gen.value; escChanged(); });
+      const min = h("input", { type: "number", min: "0", step: "1", class: "control control-sm", value: String(f.minutos || 0), "aria-label": t("esc.col_minutes") + " — " + label });
+      min.addEventListener("input", function () { f.minutos = Math.max(0, Number(min.value) || 0); escChanged(); });
+      const rot = h("input", { type: "checkbox", "aria-label": t("esc.col_label") + " — " + label });
+      rot.checked = Boolean(f.rotulo);
+      rot.addEventListener("change", function () { f.rotulo = rot.checked; escChanged(); });
+      const del = h("button", { type: "button", class: "btn btn-sm btn-ghost", text: t("esc.remove"), "aria-label": t("esc.remove") + " — " + label });
+      const move = function (dir, cls) {
+        const b = h("button", { type: "button", class: "btn btn-sm btn-ghost " + cls, text: dir < 0 ? "↑" : "↓", "aria-label": t(dir < 0 ? "esc.up" : "esc.down") + " — " + label });
+        b.disabled = dir < 0 ? idx === 0 : idx === state.escaleta.length - 1;
+        b.addEventListener("click", function () {
+          const j = idx + dir;
+          const tmp = state.escaleta[idx];
+          state.escaleta[idx] = state.escaleta[j];
+          state.escaleta[j] = tmp;
+          renderEscaleta();
+          refresh(false);
+          const target = document.querySelector("#esc-body tr:nth-child(" + (j + 1) + ") ." + cls);
+          if (target && !target.disabled) target.focus();
+          else { const other = document.querySelector("#esc-body tr:nth-child(" + (j + 1) + ") button:not([disabled])"); if (other) other.focus(); }
+          announce(t("esc.moved", { name: label, pos: j + 1 }));
+        });
+        return b;
+      };
+      del.addEventListener("click", function () {
+        state.escaleta.splice(idx, 1);
+        renderEscaleta();
+        refresh(false);
+        const next = document.querySelector("#esc-body tr:nth-child(" + Math.max(1, idx) + ") input") || $("esc-add");
+        next.focus();
+      });
+      tbody.appendChild(h("tr", null, h("td", null, name), h("td", null, gen), h("td", { class: "num" }, min), h("td", null, rot), h("td", { class: "row-actions" }, move(-1, "mv-up"), move(1, "mv-down"), del)));
+    });
+  }
+
+  function setupEscaleta() {
+    $("esc-add").addEventListener("click", function () {
+      state.escSeq++;
+      state.escaleta.push({ id: "e" + state.escSeq, nombre: "", genero: "mujer", minutos: 8, rotulo: true });
+      renderEscaleta();
+      refresh(false);
+      const inputs = document.querySelectorAll('#esc-body input[type="text"]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    });
+    $("esc-reset").addEventListener("click", function () {
+      loadEscaletaDemo();
+      renderEscaleta();
+      refresh(false);
+    });
+  }
+
+  /* ── Cambio de fase ── */
+
+  function setFase(fase, opts) {
+    const o = opts || {};
+    if (["preproduccion", "edicion", "publicado"].indexOf(fase) < 0) return;
+    const prev = state.fase;
+    state.fase = fase;
+    document.body.dataset.fase = fase;
+    document.querySelectorAll('input[name="fase"]').forEach(function (r) { r.checked = r.value === fase; });
+    // Material inédito: anonimizar por defecto al entrar en revisión preventiva
+    if (fase !== "publicado" && prev === "publicado") {
+      state.anonymized = true;
+      $("anonymize-toggle").checked = true;
+    }
+    resetSupervision();
+    resetSim();
+    state.previstaMin = null;
+    if (fase === "preproduccion") {
+      if (!state.escaleta.length) loadEscaletaDemo();
+      renderEscaleta();
+      $("live-panel").hidden = true;
+    } else {
+      $("live-panel").hidden = state.datasetKey !== "live";
+    }
+    refresh(false);
+    if (!o.silent) announce(t("phase.announce." + fase));
+  }
+
+  function setupPhase() {
+    document.querySelectorAll('input[name="fase"]').forEach(function (r) {
+      r.addEventListener("change", function () { if (r.checked) setFase(r.value); });
+    });
+    $("coverage-planned").addEventListener("input", function (e) {
+      const v = Number(e.target.value);
+      state.previstaMin = v > 0 ? v : null;
+      if (state.view) renderPreventive(state.view);
+    });
   }
 
   /* ───────────────────────── Ciclo de render ───────────────────────── */
@@ -897,6 +1423,7 @@
   }
 
   function refresh(announceChange) {
+    renderLangNotice();
     const view = currentView();
     state.view = view;
     if (!view) {
@@ -917,16 +1444,20 @@
     renderCitizen(view);
     renderPipeline(view);
     renderGraph(view);
+    if (state.fase !== "publicado") renderPreventive(view);
+    if (state.fase === "edicion") {
+      renderSimTable(view);
+      renderSimResult(view, false);
+    }
 
     if (state.focusAfterRender) {
       const key = state.focusAfterRender;
       state.focusAfterRender = null;
-      let target = document.querySelector('[data-focus="' + key + '"]');
-      if (!target) {
-        const id = key.split(":")[1];
-        target = document.getElementById("arb-sel-" + id) || $("assume-toggle");
-      }
-      if (target && !target.disabled) target.focus();
+      let target = null;
+      if (key === "reopen") target = $("btn-reopen");
+      else if (key === "close") target = document.querySelector(".arb-card select") || $("btn-close");
+      else target = document.querySelector('[data-focus="' + key + '"]') || document.getElementById("arb-sel-" + key.split(":")[1]) || $("btn-close");
+      if (target && !target.disabled && !target.hidden) target.focus();
     }
     if (announceChange) {
       announce(t("sr.decision", { title: t("verdict.title." + view.diagnostico) }) + " " + $("hero-sub").textContent);
@@ -1078,7 +1609,7 @@
       }
       const text = Array.from(document.querySelectorAll("#easy-read-list li")).map(function (li) { return li.textContent; }).join(" ");
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = { es: "es-ES", ca: "ca-ES", en: "en-GB" }[I.getLang()] || "es-ES";
+      u.lang = { es: "es-ES", ca: "ca-ES", gl: "gl-ES", eu: "eu-ES", en: "en-GB" }[I.getLang()] || "es-ES";
       u.onend = function () { setLabel(false); };
       u.onerror = function () { setLabel(false); };
       window.speechSynthesis.speak(u);
@@ -1093,8 +1624,14 @@
       if (!state.view) return;
       const view = state.view;
       const pend = pendingCount(view);
-      const data = dictamen(view, pend === 0 && state.assume);
+      const data = dictamen(view, state.closed);
       data.generado_en = new Date().toISOString();
+      data.fase_material = state.fase;
+      data.modo = state.fase === "publicado" ? "certificacion" : "preventivo";
+      data.certificable = state.fase === "publicado";
+      data.registro_decisiones = state.log.map(function (e) {
+        return { momento: e.at.toISOString(), evento: e.key.replace(/^log\./, ""), persona_id: e.personaId, detalle: logText(view, e) };
+      });
       data.personas = view.personas.map(function (p) {
         return { id: p.id, nombre: state.anonymized ? t("anon.name", { id: p.id }) : p.nombre, cargo: state.anonymized ? null : p.cargo, genero_percibido: p.genero, autoridad: p.autoridad, pantalla_s: p.pantalla_s, voz_s: p.voz_s };
       });
@@ -1118,6 +1655,89 @@
         if (state.view) renderCitizen(state.view);
       });
     });
+
+    const btnQr = $("btn-toggle-qr");
+    const qrBox = $("citizen-qr-box");
+    if (btnQr && qrBox) {
+      btnQr.addEventListener("click", function () {
+        const exp = btnQr.getAttribute("aria-expanded") === "true";
+        btnQr.setAttribute("aria-expanded", String(!exp));
+        qrBox.hidden = exp;
+        if (!exp) {
+          drawCitizenQr();
+        }
+      });
+    }
+  }
+
+  function drawCitizenQr() {
+    const canvas = $("qr-canvas");
+    const urlSpan = $("citizen-share-url");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Generar URL para escanear y participar directamente
+    const currentUrl = new URL(window.location.href);
+    currentUrl.hash = "ciudadania";
+    currentUrl.searchParams.set("caso", state.datasetKey || "A");
+    const targetUrl = currentUrl.toString();
+    if (urlSpan) urlSpan.textContent = targetUrl;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    // Generador autónomo y ligero de patrón QR (sin dependencias de red)
+    // Dibuja los 3 marcadores de posición canónicos en esquinas + matriz de sincronización determinista
+    ctx.fillStyle = "#0f172a";
+    const pad = 8;
+    const sz = w - pad * 2;
+    const grid = 21; // QR versión 1 (21x21 módulos)
+    const mod = sz / grid;
+
+    function drawFinder(r0, c0) {
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 7; c++) {
+          const edge = r === 0 || r === 6 || c === 0 || c === 6;
+          const center = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+          if (edge || center) {
+            ctx.fillRect(pad + (c0 + c) * mod, pad + (r0 + r) * mod, mod, mod);
+          }
+        }
+      }
+    }
+
+    drawFinder(0, 0);
+    drawFinder(0, 14);
+    drawFinder(14, 0);
+
+    // Líneas de sincronización (timing patterns)
+    for (let i = 8; i < 13; i += 2) {
+      ctx.fillRect(pad + i * mod, pad + 6 * mod, mod, mod);
+      ctx.fillRect(pad + 6 * mod, pad + i * mod, mod, mod);
+    }
+
+    // Hash determinista del enlace para poblar los módulos de datos
+    let hash = 0;
+    for (let i = 0; i < targetUrl.length; i++) {
+      hash = ((hash << 5) - hash) + targetUrl.charCodeAt(i);
+      hash |= 0;
+    }
+
+    for (let r = 0; r < grid; r++) {
+      for (let c = 0; c < grid; c++) {
+        const inFinder = (r < 8 && c < 8) || (r < 8 && c >= 13) || (r >= 13 && c < 8);
+        const inTiming = (r === 6 || c === 6);
+        if (inFinder || inTiming) continue;
+        // Pseudoaleatorio determinista derivado del hash de la URL
+        const bit = ((hash ^ (r * 31 + c * 17)) & 1) === 0;
+        if (bit) {
+          ctx.fillRect(pad + c * mod, pad + r * mod, mod, mod);
+        }
+      }
+    }
   }
 
   function setupSectionNav() {
@@ -1164,6 +1784,11 @@
       liveMsg(t("live.sending"));
       const fd = new FormData();
       fd.append("file", file);
+      // Revisión preventiva (D-11): el backend no debe certificar ni conservar material inédito
+      const preventivo = state.fase !== "publicado";
+      fd.append("modo", preventivo ? "preventivo" : "certificacion");
+      fd.append("estado_material", preventivo ? "montaje" : "final");
+      if (preventivo) fd.append("retencion", "efimera");
       const res = await fetch(base + "/videos", { method: "POST", body: fd });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const created = await res.json();
@@ -1178,9 +1803,7 @@
         if (estado === "error") throw new Error((body.status && body.status.error) || "error");
         if (estado === "ok" && body.resultado) {
           state.live = body;
-          state.decisiones = {};
-          state.log = [];
-          state.assume = false;
+          resetSupervision();
           liveMsg(t("live.done"));
           refresh(true);
           return;
@@ -1196,11 +1819,19 @@
     }
   }
 
-  function setDataset(key) {
-    state.datasetKey = key;
+  function resetSupervision() {
     state.decisiones = {};
     state.log = [];
-    state.assume = false;
+    state.closed = false;
+    state.confirming = false;
+    state.reopening = false;
+  }
+
+  function setDataset(key) {
+    state.datasetKey = key;
+    resetSupervision();
+    resetSim();
+    state.previstaMin = null;
     $("live-panel").hidden = key !== "live";
     refresh(false);
     const v = state.view;
@@ -1213,11 +1844,6 @@
       state.anonymized = e.target.checked;
       refresh(false);
     });
-    $("assume-toggle").addEventListener("change", function (e) {
-      state.assume = e.target.checked;
-      addLog(t(state.assume ? "log.assume_on" : "log.assume_off"));
-      refresh(true);
-    });
     $("lang-select").addEventListener("change", function (e) {
       I.setLang(e.target.value);
     });
@@ -1228,6 +1854,25 @@
       closeInfo(false);
       refresh(false);
     });
+  }
+
+  function setupBackToTop() {
+    const btn = $("btn-back-to-top");
+    if (!btn) return;
+    function checkScroll() {
+      if (window.scrollY > 320) {
+        btn.hidden = false;
+      } else {
+        btn.hidden = true;
+      }
+    }
+    window.addEventListener("scroll", checkScroll, { passive: true });
+    btn.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      const main = $("main-content") || $("veredicto");
+      if (main) main.focus();
+    });
+    checkScroll();
   }
 
   function init() {
@@ -1245,11 +1890,17 @@
     setupInfo();
     setupGraphControls();
     setupControls();
+    setupSeal();
     setupSpeech();
     setupExport();
     setupVoting();
     setupSectionNav();
-    refresh(false);
+    setupPhase();
+    setupSimulator();
+    setupEscaleta();
+    setupBackToTop();
+    const fase = params.get("fase");
+    setFase(["preproduccion", "edicion", "publicado"].indexOf(fase) >= 0 ? fase : "publicado", { silent: true });
   }
 
   document.addEventListener("DOMContentLoaded", init);

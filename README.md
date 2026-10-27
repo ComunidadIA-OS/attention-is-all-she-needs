@@ -28,10 +28,16 @@ SPDX-License-Identifier: Apache-2.0
 El nombre del proyecto rinde homenaje y resignifica el artículo fundacional de la arquitectura Transformer:  
 > **Vaswani, A. et al. (2017). *Attention Is All You Need*. NeurIPS.**
 
-En las redes neuronales, el mecanismo de **autoatención (*self-attention*)** calcula matemáticamente qué elementos de una secuencia merecen peso y cuáles constituyen ruido contextual.  
-En la esfera pública y mediática, históricamente los «pesos de atención» se han concedido de forma casi exclusiva a los hombres (reflejado en el escaso **14 % de habla femenina** registrado en el corpus de debate `Àgora` de la UPC), relegando a las mujeres a los márgenes (*aniquilación simbólica*) o a la presencia física muda (*equality-washing*).
+En nuestro código y arquitectura abierta, la **atención (*attention*)** opera en tres niveles complementarios:
 
-**AIASN** proclama que lo que las mujeres necesitan no es condescendencia ni cuotas cosméticas de imagen, sino que el foco de la atención algorítmica, mediática y social se pose con rigor objetivo sobre su **voz efectiva, rol experto y liderazgo real**.
+1. **Nivel Técnico-Matemático ($\\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$):**  
+   - **Audio (whisper-large-v3 en OVHcloud):** *Self-Attention* y *Cross-Attention* para aislar voces, transcribir y diarizar cambios de turno al milisegundo.
+   - **Visión (YOLO11m + ByteTrack + InsightFace):** Mecanismos de atención espacial que detectan rostros y encuadres en memoria RAM efímera (*Zero Facial Retention*).
+   - **Semántica (ge-m3 + Qwen3.5 / Llama-3.3):** Proyección vectorial para medir de qué habla cada género y auditar la segregación temática.
+2. **Nivel Algoritmos Verdes (*Green AI* / ADR-0003):**  
+   En lugar de procesar vídeo bruto continuo (108.000 fotogramas/hora), la inferencia visual se guía por los eventos de atención del audio (STRIDE adaptativo), reduciendo **más del 95 % del cómputo GPU**.
+3. **Nivel Epistémico y de Producto («El Peso de la Atención»):**  
+   En los medios, la atención es el recurso más escaso. Mientras a las mujeres se les ha asignado presencia estética muda, los hombres han acaparado la atención de micrófono (reflejado en el escaso **14 % de habla femenina** de Àgora). La **«Constelación del Protagonismo» (UMAP + Grafo)** y el ratio voz/pantalla auditan y visibilizan objetivamente el reparto del poder oratorio.
 
 ---
 
@@ -191,6 +197,7 @@ docker compose up --build
 En cumplimiento del **Reglamento (UE) 2024/1689 (Reglamento Europeo de IA)** y de la obligación legal vigente desde agosto de 2026:
 * Este prototipo utiliza sistemas de inteligencia artificial de código abierto para tareas de transcripción (`whisper-large-v3`), detección visual (`YOLO11m`), clasificación demográfica agregada (`miVOLO`) y embeddings (`bge-m3`).
 * **Uso de Asistentes y Copilotos de IA en el Desarrollo:** Conforme a las directrices de la Oficina Técnica de Código Abierto (`ComunidadIA-OS` / Jorge Teixeira) y la tecnoética de SEDIA, se declara explícitamente el uso de asistentes inteligentes de código y documentación (copilotos de IA) como herramientas de aceleración y soporte metodológico. El 100 % de la arquitectura, el código generado, las decisiones de diseño y la compatibilidad de licencias han sido supervisados, comprendidos, validados y auditados directamente por las desarrolladoras del equipo (*Human-in-the-Loop* en el ciclo de ingeniería).
+* **Traducciones de la interfaz:** castellano (equipo), galego (revisado por Alba Camiña García), catalán e inglés (asistidas por IA, sin revisión nativa registrada) y **euskara (asistida por IA, sin revisar por hablantes)**. La interfaz avisa de ello en euskara. Ver `MODEL_CARD.md` §4.
 * El sistema **no toma decisiones automatizadas vinculantes ni elabora perfiles biométricos individuales**. Su salida constituye una propuesta analítica sujeta a supervisión humana preceptiva (*Human-in-the-Loop*).
 * Los datos de prueba utilizados en fase de desarrollo proceden de corpus autorizados por la UPC (`Àgora`) y de grabaciones de divulgación pública tratadas al amparo del **Art. 67 del Real Decreto-ley 24/2021** (excepción de Minería de Textos y Datos con fines de investigación).
 

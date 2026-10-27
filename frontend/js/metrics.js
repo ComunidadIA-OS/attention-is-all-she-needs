@@ -103,7 +103,7 @@
     return {
       voz_pct: voz,
       pantalla_pct: pantalla,
-      ratio_voz_pantalla: { mujer: rvp("mujer"), hombre: rvp("hombre") }
+      ratio_voz_pantalla: { mujer: rvp("mujer"), hombre: rvp("hombre"), no_binario: rvp("no_binario") }
     };
   }
 
@@ -187,9 +187,30 @@
   }
 
   /**
+   * Condición previa del Test de Bechdel digital (decisión de equipo, 27/10/2026):
+   * solo tiene sentido si en la pieza APARECEN O HABLAN al menos 2 mujeres y 1 hombre.
+   * Con una sola mujer el resultado es trivial (efecto token, ya cubierto por las alertas);
+   * sin hombres no puede haber mediación masculina. Se cuenta presencia (voz o pantalla),
+   * no solo voz, para que el test detecte a la mujer presente que nunca toma la palabra.
+   */
+  function bechdelAplicabilidad(personas) {
+    const presente = function (p) {
+      return (Number(p.voz_s) || 0) > 0 || (Number(p.pantalla_s) || 0) > 0;
+    };
+    const mujeres = personas.filter(function (p) { return normGenero(p.genero) === "mujer" && presente(p); }).length;
+    const hombres = personas.filter(function (p) { return normGenero(p.genero) === "hombre" && presente(p); }).length;
+    let motivo = null;
+    if (mujeres === 0) motivo = "no_aplica_sin_mujeres";
+    else if (mujeres < 2) motivo = "no_aplica_una_mujer";
+    else if (hombres < 1) motivo = "no_aplica_sin_hombres";
+    return { aplica: motivo === null, motivo: motivo, mujeres_presentes: mujeres, hombres_presentes: hombres };
+  }
+
+  /**
    * Test de Bechdel Digital / Conversacional (spec 21 §1.5, `evaluar_bechdel_conversacional`).
    * Regla 1: ≥ 2 mujeres distintas con voz activa. Regla 2: ≥ 2 mujeres con rótulo OCR.
    * Regla 3: ≥ 1 transición directa de turno Mujer_A → Mujer_B (A ≠ B).
+   * Si no se cumple la condición previa (`bechdelAplicabilidad`), `aplica = false` y no se puntúa.
    */
   function bechdel(personas, secuenciaTurnos) {
     const porId = {};
@@ -213,21 +234,26 @@
     const r2 = rotuladas.length >= 2;
     const r3 = transiciones >= 1;
     const puntuacion = Number(r1) + Number(r2) + Number(r3);
+    const ap = bechdelAplicabilidad(personas);
     let diagnostico;
     if (!personas.length) diagnostico = "sin_datos";
+    else if (!ap.aplica) diagnostico = ap.motivo;
     else if (puntuacion === 3) diagnostico = "supera";
     else if (!r1) diagnostico = "efecto_token";
     else if (!r3) diagnostico = "aislamiento_relacional";
     else diagnostico = "parcial";
     return {
+      aplica: ap.aplica,
+      mujeres_presentes: ap.mujeres_presentes,
+      hombres_presentes: ap.hombres_presentes,
       mujeres_distintas_hablando: hablan.length,
       mujeres_con_rotulo_identificado: rotuladas.length,
       transiciones_mujer_a_mujer: transiciones,
       regla_1_pluralidad_femenina: r1,
       regla_2_identidad_propia: r2,
       regla_3_dialogo_horizontal: r3,
-      puntuacion_bechdel_0_3: puntuacion,
-      supera_bechdel_digital: puntuacion === 3,
+      puntuacion_bechdel_0_3: ap.aplica ? puntuacion : null,
+      supera_bechdel_digital: ap.aplica && puntuacion === 3,
       diagnostico_bechdel: diagnostico
     };
   }
@@ -308,6 +334,240 @@
     };
   }
 
+  /**
+   * Aristas del grafo a partir de una muestra local: turnos (secuencia), planos compartidos,
+   * menciones y temas tratados. Formato: { from, to, tipo, peso }.
+   */
+  function aristasDesdeCaso(caso) {
+    const edges = [];
+    const counts = {};
+    const seq = caso.secuencia_turnos || [];
+    for (let i = 0; i < seq.length - 1; i++) {
+      if (seq[i] === seq[i + 1]) continue;
+      const k = seq[i] + ">" + seq[i + 1];
+      counts[k] = (counts[k] || 0) + 1;
+    }
+    Object.keys(counts).forEach(function (k) {
+      const p = k.split(">");
+      edges.push({ from: p[0], to: p[1], tipo: "turno", peso: counts[k] });
+    });
+    [["planos_compartidos", "comparte_plano"], ["menciones", "menciona"], ["habla_de", "habla_de"]].forEach(function (d) {
+      (caso[d[0]] || []).forEach(function (e) {
+        edges.push({ from: e[0], to: e[1], tipo: d[1], peso: e[2] });
+      });
+    });
+    return edges;
+  }
+
+  /**
+   * Lectura textual del grafo (alternativa interpretativa, no solo descriptiva):
+   * quién articula la conversación, cuánto participan las mujeres en los cambios de turno,
+   * a quién se cita y qué temas quedan segregados por género.
+   */
+  function interpretarGrafo(personas, edges) {
+    const gen = {};
+    personas.forEach(function (p) {
+      gen[p.id] = normGenero(p.genero);
+    });
+    const w = function (e) {
+      return Number(e.peso) || 1;
+    };
+    const turnos = edges.filter(function (e) {
+      return e.tipo === "turno" && gen[e.from] && gen[e.to] && e.from !== e.to;
+    });
+    let total = 0;
+    let conMujer = 0;
+    let mujerMujer = 0;
+    const implicacion = {};
+    const transiciones = { mm: 0, hh: 0, mh: 0, hm: 0, con_nb: 0 };
+    turnos.forEach(function (e) {
+      const x = w(e);
+      total += x;
+      implicacion[e.from] = (implicacion[e.from] || 0) + x;
+      implicacion[e.to] = (implicacion[e.to] || 0) + x;
+      const gf = gen[e.from];
+      const gt = gen[e.to];
+      if (gf === "no_binario" || gt === "no_binario") transiciones.con_nb += x;
+      else if (gf === "mujer" && gt === "mujer") transiciones.mm += x;
+      else if (gf === "hombre" && gt === "hombre") transiciones.hh += x;
+      else if (gf === "mujer" && gt === "hombre") transiciones.mh += x;
+      else if (gf === "hombre" && gt === "mujer") transiciones.hm += x;
+      const fm = gf === "mujer";
+      const tm = gt === "mujer";
+      if (fm || tm) conMujer += x;
+      if (fm && tm) mujerMujer += x;
+    });
+    let eje = null;
+    personas.forEach(function (p) {
+      const n = implicacion[p.id] || 0;
+      if (n > 0 && (!eje || n > eje.turnos)) eje = { id: p.id, turnos: n };
+    });
+
+    const menciones = { mujer: 0, hombre: 0, total: 0 };
+    edges.forEach(function (e) {
+      if (e.tipo !== "menciona" || !gen[e.to]) return;
+      menciones.total += w(e);
+      if (gen[e.to] === "mujer") menciones.mujer += w(e);
+      if (gen[e.to] === "hombre") menciones.hombre += w(e);
+    });
+
+    const porTema = {};
+    edges.forEach(function (e) {
+      if (e.tipo !== "habla_de" || !gen[e.from]) return;
+      (porTema[e.to] = porTema[e.to] || {})[gen[e.from]] = true;
+    });
+    const temas = { solo_mujeres: [], solo_hombres: [], compartidos: [] };
+    Object.keys(porTema).forEach(function (id) {
+      const g = porTema[id];
+      if (g.mujer && g.hombre) temas.compartidos.push(id);
+      else if (g.mujer) temas.solo_mujeres.push(id);
+      else if (g.hombre) temas.solo_hombres.push(id);
+    });
+
+    const aislados = personas
+      .filter(function (p) {
+        return !implicacion[p.id];
+      })
+      .map(function (p) {
+        return p.id;
+      });
+
+    return {
+      total_turnos: total,
+      eje: eje,
+      turnos_con_mujer: conMujer,
+      turnos_mujer_mujer: mujerMujer,
+      transiciones: transiciones,
+      menciones: menciones,
+      temas: temas,
+      aislados: aislados
+    };
+  }
+
+  /* ─────────────── Revisión preventiva (material no publicado) — decisión D-11 ─────────────── */
+
+  /**
+   * Margen hasta el suelo de paridad (40 %) en un canal (voz o pantalla), sobre el total determinado.
+   * Dos vías con implicaciones distintas para la producción:
+   *  - añadir: segundos NUEVOS de mujeres necesarios (alarga la pieza): (0,4·T − F) / 0,6
+   *  - redistribuir: segundos a TRASLADAR de hombres a mujeres sin alargar: 0,4·T − F
+   */
+  function margenParidad(t, canal) {
+    const f = t[canal].mujer;
+    const total = t[canal].mujer + t[canal].hombre + t[canal].no_binario;
+    const suelo = THRESHOLDS.SUELO_PARIDAD / 100;
+    if (total <= 0) return { cumple: false, anadir_s: null, redistribuir_s: null };
+    const falta = suelo * total - f;
+    if (falta <= 1e-9) return { cumple: true, anadir_s: 0, redistribuir_s: 0 };
+    return {
+      cumple: false,
+      anadir_s: Math.ceil(falta / (1 - suelo)),
+      redistribuir_s: Math.ceil(falta)
+    };
+  }
+
+  /**
+   * Escenario «¿y si…?»: aplica ajustes sobre una copia del caso, sin mutarlo.
+   * ajustes = { personas: { id: { voz_s, pantalla_s, rotulo } }, nuevas: [persona], turno_mm: bool }
+   */
+  function simular(caso, ajustes) {
+    const a = ajustes || {};
+    const over = a.personas || {};
+    const personas = caso.personas.map(function (p) {
+      return Object.assign({}, p, over[p.id] || {});
+    }).concat((a.nuevas || []).map(function (p) { return Object.assign({}, p); }));
+    let seq = (caso.secuencia_turnos || []).slice();
+    if (a.turno_mm) {
+      const hablan = personas.filter(function (p) { return normGenero(p.genero) === "mujer" && (Number(p.voz_s) || 0) > 0; });
+      if (hablan.length >= 2) seq = seq.concat([hablan[0].id, hablan[1].id]);
+    }
+    return Object.assign({}, caso, { personas: personas, secuencia_turnos: seq });
+  }
+
+  /**
+   * Proyección desde una escaleta (preproducción, sin vídeo). Cada fila: { id, nombre, genero, minutos, rotulo }.
+   * Supuestos explícitos: la voz es el tiempo previsto de intervención; la presencia en pantalla se iguala
+   * a la voz (RVP = 1, sin planos de escucha) y el orden de la escaleta es el orden de turnos.
+   */
+  function escaletaACaso(escaleta) {
+    const filas = (escaleta || []).filter(function (f) { return (Number(f.minutos) || 0) > 0; });
+    const personas = filas.map(function (f) {
+      const s = Math.round((Number(f.minutos) || 0) * 60);
+      return {
+        id: f.id,
+        nombre: f.nombre || f.id,
+        cargo: f.cargo || null,
+        rotulo: Boolean(f.rotulo),
+        genero: normGenero(f.genero),
+        autoridad: Boolean(f.rotulo),
+        voz_s: s,
+        pantalla_s: s,
+        centralidad: null
+      };
+    });
+    return {
+      video_id: "escaleta",
+      personas: personas,
+      secuencia_turnos: filas.map(function (f) { return f.id; }),
+      segmentos_dudosos: [],
+      temas: [],
+      habla_de: [],
+      planos_compartidos: [],
+      menciones: [],
+      proyeccion: true
+    };
+  }
+
+  /**
+   * Recomendaciones de producción, cada una ligada a la métrica que la dispara (trazabilidad).
+   * Devuelve [{ id, prioridad: 1 (alta) | 2 | 3, clave, params }]; los textos se resuelven en la interfaz.
+   */
+  function recomendaciones(ev, edges, opciones) {
+    const op = opciones || {};
+    const out = [];
+    const add = function (id, prioridad, clave, params) { out.push({ id: id, prioridad: prioridad, clave: clave, params: params || {} }); };
+    const personas = ev.personas;
+    const t = ev.tiempos_s;
+
+    if (op.pendientes > 0) add("pendientes", 1, "rec.pendientes", { n: op.pendientes });
+
+    const mv = margenParidad(t, "voz");
+    if (!mv.cumple && mv.anadir_s !== null) add("voz", 1, "rec.voz", { add: mv.anadir_s, redist: mv.redistribuir_s });
+    const mp = margenParidad(t, "pantalla");
+    if (!mp.cumple && mp.anadir_s !== null) add("pantalla", 2, "rec.pantalla", { add: mp.anadir_s, redist: mp.redistribuir_s });
+
+    if (ev.alertas.equality_washing.activa) {
+      const mudas = personas.filter(function (p) {
+        return p.genero === "mujer" && (Number(p.pantalla_s) || 0) > 0 && (Number(p.voz_s) || 0) / Math.max(1, Number(p.pantalla_s)) < THRESHOLDS.RVP_FIGURACION;
+      }).map(function (p) { return p.id; });
+      add("washing", 1, "rec.washing", { ids: mudas });
+    }
+
+    const b = ev.bechdel;
+    if (b.diagnostico_bechdel === "no_aplica_una_mujer") add("una_mujer", 1, "rec.una_mujer");
+    if (b.aplica) {
+      if (!b.regla_1_pluralidad_femenina) {
+        const calladas = personas.filter(function (p) { return p.genero === "mujer" && !(Number(p.voz_s) > 0); }).map(function (p) { return p.id; });
+        add("bechdel_r1", 2, "rec.bechdel_r1", { ids: calladas });
+      }
+      if (!b.regla_3_dialogo_horizontal) add("bechdel_r3", 2, "rec.bechdel_r3");
+    }
+    personas.filter(function (p) {
+      return p.genero === "mujer" && !p.rotulo && ((Number(p.voz_s) || 0) > 0 || (Number(p.pantalla_s) || 0) > 0);
+    }).forEach(function (p) { add("rotulo:" + p.id, 2, "rec.rotulo", { ids: [p.id] }); });
+
+    const g = interpretarGrafo(personas, edges || []);
+    if (g.eje && g.total_turnos >= 4 && g.eje.turnos / g.total_turnos > 0.6) {
+      add("eje", 3, "rec.eje", { ids: [g.eje.id], n: g.eje.turnos, total: g.total_turnos });
+    }
+    g.temas.solo_hombres.forEach(function (id) { add("tema_m:" + id, 3, "rec.tema_m", { tema: id }); });
+    g.temas.solo_mujeres.forEach(function (id) { add("tema_f:" + id, 3, "rec.tema_f", { tema: id }); });
+
+    out.sort(function (x, y) { return x.prioridad - y.prioridad; });
+    if (!out.length) add("ok", 3, "rec.ok");
+    return out;
+  }
+
   /** Diagnóstico principal para el titular del veredicto. */
   function diagnosticoPrincipal(al, sal) {
     if (al.equality_washing.activa) return "washing";
@@ -350,8 +610,16 @@
     alertas: alertas,
     salvaguarda: salvaguarda,
     bechdel: bechdel,
+    bechdelAplicabilidad: bechdelAplicabilidad,
     indiceGlobal: indiceGlobal,
     diagnosticoPrincipal: diagnosticoPrincipal,
+    aristasDesdeCaso: aristasDesdeCaso,
+    interpretarGrafo: interpretarGrafo,
+    margenParidad: margenParidad,
+    simular: simular,
+    escaletaACaso: escaletaACaso,
+    recomendaciones: recomendaciones,
     evaluar: evaluar
   };
 });
+

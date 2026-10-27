@@ -17,6 +17,7 @@
     A: {
       video_id: "demo-A",
       duracion_s: 600,
+      duracion_prevista_s: 1800,
       status: { estado: "ok", pasos: { audio: "ok", nlp: "ok", video: "ok", captions: "ok", silver: "ok", gold: "ok" }, error: null },
       personas: [
         { id: "p1", nombre: "Dra. Irene Valls", cargo: "Investigadora principal", rotulo: true, genero: "mujer", genero_p: 0.97, autoridad: true, pantalla_s: 161, voz_s: 95, centralidad: 0.72 },
@@ -49,6 +50,34 @@
       duracion_s: 600,
       status: { estado: "ok", pasos: { audio: "ok", nlp: "ok", video: "ok", captions: "ok", silver: "ok", gold: "ok" }, error: null },
       personas: [
+        { id: "p1", nombre: "Dra. Clara Ruiz", cargo: "Investigadora en Bioética", rotulo: true, genero: "mujer", genero_p: 0.98, autoridad: true, pantalla_s: 140, voz_s: 120, centralidad: 0.82 },
+        { id: "p2", nombre: "Alex Morante", cargo: "Especialista en Derechos Digitales", rotulo: true, genero: "no_binario", genero_p: 0.96, autoridad: true, pantalla_s: 120, voz_s: 45, centralidad: 0.74 },
+        { id: "p3", nombre: "Dr. Sergio Blanco", cargo: "Coordinador del Encuentro", rotulo: true, genero: "hombre", genero_p: 0.99, autoridad: true, pantalla_s: 160, voz_s: 135, centralidad: 0.85 }
+      ],
+      segmentos_dudosos: [],
+      secuencia_turnos: ["p3", "p1", "p2", "p1", "p3", "p2", "p3", "p1"],
+      referentes: { mujer: 2, hombre: 1 },
+      apertura_id: "p3",
+      cierre_id: "p1",
+      temas: [
+        { id: "tema:derechos", label: "Derechos y diversidad" },
+        { id: "tema:gobernanza", label: "Gobernanza de la IA" }
+      ],
+      habla_de: [["p1", "tema:derechos", 4], ["p2", "tema:derechos", 3], ["p3", "tema:gobernanza", 4]],
+      planos_compartidos: [["p1", "p2", 30], ["p3", "p2", 25], ["p3", "p1", 28]],
+      menciones: [["p2", "p1", 2], ["p1", "p2", 1]],
+      clima: {
+        mujer: { tecnico_asertivo: 65, colaborativo: 30, disenso: 5 },
+        hombre: { tecnico_asertivo: 60, colaborativo: 30, disenso: 10 },
+        no_binario: { tecnico_asertivo: 70, colaborativo: 30, disenso: 0 }
+      }
+    },
+
+    C: {
+      video_id: "demo-C",
+      duracion_s: 600,
+      status: { estado: "ok", pasos: { audio: "ok", nlp: "ok", video: "ok", captions: "ok", silver: "ok", gold: "ok" }, error: null },
+      personas: [
         { id: "p1", nombre: "Marta Roig", cargo: "Directora de Comunicación", rotulo: true, genero: "mujer", genero_p: 0.96, autoridad: true, pantalla_s: 150, voz_s: 36, centralidad: 0.55 },
         { id: "p2", nombre: "Laia Serra", cargo: "Responsable de Sostenibilidad", rotulo: true, genero: "mujer", genero_p: 0.95, autoridad: true, pantalla_s: 120, voz_s: 24, centralidad: 0.48 },
         { id: "p3", nombre: "Albert Pons", cargo: "Consejero delegado", rotulo: true, genero: "hombre", genero_p: 0.99, autoridad: true, pantalla_s: 200, voz_s: 250, centralidad: 0.92 },
@@ -69,8 +98,8 @@
       clima: { mujer: { tecnico_asertivo: 40, colaborativo: 60, disenso: 0 }, hombre: { tecnico_asertivo: 80, colaborativo: 10, disenso: 10 } }
     },
 
-    C: {
-      video_id: "demo-C",
+    D: {
+      video_id: "demo-D",
       duracion_s: 600,
       status: { estado: "ok", pasos: { audio: "ok", nlp: "ok", video: "ok", captions: "ok", silver: "ok", gold: "ok" }, error: null },
       personas: [
@@ -98,4 +127,17 @@
 
   root.AIASN_DEMO = DEMO_CASES;
   if (typeof module === "object" && module.exports) module.exports = DEMO_CASES;
+
+  /**
+   * Escaleta de ejemplo para la fase de preproducción (ficticia). El orden es el orden de turnos previsto.
+   * Con una sola mujer y 8 de 38 minutos, la proyección dispara la infrarrepresentación: el ejemplo invita
+   * a editarla y ver cómo cambian las alertas antes de grabar.
+   */
+  root.AIASN_ESCALETA_DEMO = [
+    { id: "e1", nombre: "Moderador", genero: "hombre", minutos: 6, rotulo: true },
+    { id: "e2", nombre: "Dra. Laura Pons", genero: "mujer", minutos: 8, rotulo: true },
+    { id: "e3", nombre: "Dr. Joan Riera", genero: "hombre", minutos: 12, rotulo: true },
+    { id: "e4", nombre: "Prof. Pau Vidal", genero: "hombre", minutos: 12, rotulo: true }
+  ];
+  if (typeof module === "object" && module.exports) module.exports.ESCALETA_DEMO = root.AIASN_ESCALETA_DEMO;
 })(typeof self !== "undefined" ? self : this);

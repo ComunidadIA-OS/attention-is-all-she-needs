@@ -42,6 +42,13 @@ Se adopta la **Opción C** para el prototipo del reto, con estas reglas:
 2. **Lógica separada de la presentación:** Las reglas de la especificación 21 (alertas, Test de Bechdel, salvaguarda ADR-0006, Índice Global, lectura del grafo, arbitraje HitL) viven en `frontend/js/metrics.js` como **funciones puras sin DOM**, cubiertas por pruebas ejecutables con `node frontend/tests/run.mjs` sin instalar paquetes. Esta capa es independiente del framework y se reutilizaría íntegra en una migración.
 3. **Seguridad del renderizado:** El contenido se inserta con `textContent` y nodos DOM (función `h()`), nunca con `innerHTML`, para evitar inyección de HTML desde los datos de la API.
 4. **Accesibilidad e idiomas sin dependencias:** WCAG 2.2 AA (foco visible, objetivos ≥ 24 px, alternativa tabular del grafo, `prefers-reduced-motion`) e interfaz en `es`, `ca`, `gl`, `eu` y `en` mediante un diccionario propio (`frontend/js/i18n.js`) con pruebas de completitud.
+5. **Visualización en Canvas 2D Isométrico frente a Esferas 3D (WebGL / Three.js):**
+   * *Anti-oclusión pericial:* En 3D los nodos grandes de oradores dominantes ocultan físicamente a los nodos situados detrás según la rotación de cámara. En auditoría pericial es inadmisible ocultar ponentes mujeres o no binarias por perspectiva.
+   * *Isometría métrica:* En 3D el tamaño del nodo ($\text{voz} + 0{,}5 \times \text{pantalla}$) se falsea visualmente por el punto de fuga; en Canvas 2D la escala es isométrica y matemáticamente fidedigna.
+   * *Accesibilidad (ADR-0010):* WebGL es una caja negra para lectores de pantalla (`NVDA`/`JAWS`), mientras que el Canvas 2D se traduce de forma biunívoca a una tabla accesible alternativa.
+   * *Algoritmos Verdes (Green AI):* Frente al consumo continuo de 30–70 W en la GPU del cliente que provocan los bucles a 60 fps en 3D, el Canvas 2D congela la física tras estabilizarse (*cooling*), consumiendo **0 W en reposo**.
+   * *Avance interactivo 3D Fase 2 (Galaxia 3D):* Se incorpora un modo alternativo conmutable («🔭 Galaxia 3D») desarrollado en Canvas 2D puro mediante proyección matemática trigonométrica (cero dependencias externas, cero npm/CDN). Permite rotar en 360°, viajar por las capas de profundidad y ver los impulsos luminosos de diálogo para divulgación y pitch, desactivando el bucle de renderizado automáticamente al volver al Planisferio 2D o cuando la pestaña no es visible (cumplimiento estricto de Green AI).
+   * *Fundamentación científica:* Tamara Munzner (*Visualization Analysis and Design*) y McInnes et al. (UMAP, 2018) demuestran que el 3D introduce fatiga cognitiva y no aporta separación interpretable para grafos de menos de 50 entidades.
 
 ### Tamaño actual (27/10/2026)
 

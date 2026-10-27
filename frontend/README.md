@@ -47,6 +47,7 @@ Todo es determinista (spec 21 §8): no hay modelos predictivos. En modo en vivo,
 - **ADR-0009:** el clima conversacional es agregado, sobre texto, nunca por persona.
 - **ADR-0010 / WCAG 2.2 AA:** icono + texto + forma (nunca solo color), objetivos ≥ 24 px, foco visible, alternativa tabular del grafo, `prefers-reduced-motion`, Lectura Fácil con lectura en voz alta.
 - **Green AI / RGPD:** sin CDN ni fuentes remotas; la física del grafo se detiene tras estabilizar.
+- **Canvas 2D Isométrico frente a 3D (WebGL / Three.js):** se prioriza el 2D para evitar la oclusión pericial (que nodos grandes tapen a mujeres u oradores situados detrás), la distorsión por perspectiva del tamaño del nodo (que codifica exactamente el volumen de atención) y el consumo continuo de 30–70 W de GPU en el cliente. Canvas 2D congela la física al estabilizar (0 W en reposo), garantiza escala métrica isométrica y se mapea directamente a tabla accesible (WCAG 2.2 AA / ADR-010). Como anticipo de fascinación para el pitch y roadmap de Fase 2, se incluye el selector «🔭 Galaxia 3D», proyectado con matemáticas trigonométricas en Canvas puro (sin paquetes externos ni WebGL) con desconexión Green AI garantizada.
 
 ## Pendiente con backend
 

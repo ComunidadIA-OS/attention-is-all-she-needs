@@ -482,12 +482,21 @@ SPDX-License-Identifier: Apache-2.0
       </div>
 
       <div class="graph-frame">
-        <div class="graph-controls" role="group" aria-label="Zoom" data-i18n-aria="graph.controls">
+        <div class="graph-view-switcher" role="tablist" aria-label="Modo de visualización de la constelación" data-i18n-aria="graph.switcher_aria">
+          <button type="button" id="btn-mode-2d" class="btn-mode active" role="tab" aria-selected="true" data-i18n="graph.mode_2d">🗺️ Planisferio 2D (Pericial)</button>
+          <button type="button" id="btn-mode-3d" class="btn-mode" role="tab" aria-selected="false" data-i18n="graph.mode_3d">🔭 Galaxia 3D (Fase 2)</button>
+        </div>
+        <div class="graph-controls" id="graph-controls-2d" role="group" aria-label="Zoom" data-i18n-aria="graph.controls">
           <button type="button" id="graph-zoom-in" class="icon-btn" data-i18n-title="graph.zoom_in" aria-label="Acercar" data-i18n-aria="graph.zoom_in"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
           <button type="button" id="graph-zoom-out" class="icon-btn" data-i18n-title="graph.zoom_out" aria-label="Alejar" data-i18n-aria="graph.zoom_out"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
           <button type="button" id="graph-zoom-fit" class="icon-btn" data-i18n-title="graph.fit" aria-label="Encajar" data-i18n-aria="graph.fit"><svg class="icon" aria-hidden="true"><use href="#i-fit"/></svg></button>
         </div>
         <div id="constellation-network" class="graph-canvas" role="img" aria-describedby="graph-desc graph-reading"></div>
+        <div id="constellation-3d-wrap" class="graph-canvas-3d" hidden>
+          <canvas id="galaxy-3d-canvas" class="galaxy-canvas"></canvas>
+          <div class="galaxy-3d-badge" data-i18n="graph.mode_3d_badge">🔭 Vista preliminar · Roadmap Fase 2 — Para dictamen pericial use el Planisferio 2D</div>
+          <div class="galaxy-3d-hint" data-i18n="graph.mode_3d_hint">Arrastra para rotar la galaxia en 360° · Rueda para zoom · Clic en estrellas para detalles</div>
+        </div>
       </div>
       <ul class="legend-lines" aria-label="Tipos de línea" data-i18n-aria="graph.lines">
         <li><svg viewBox="0 0 34 10" aria-hidden="true"><line x1="1" y1="5" x2="26" y2="5" class="ln"/><path d="M25 1.5 32 5l-7 3.5Z" class="ln-head"/></svg><span data-i18n="graph.type.turno">Turno de palabra</span></li>

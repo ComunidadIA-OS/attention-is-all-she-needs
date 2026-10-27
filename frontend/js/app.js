@@ -653,6 +653,7 @@
     });
 
     renderGraphReading(view, byId);
+    syncGalaxyData(view);
   }
 
   function listText(items) {
@@ -734,21 +735,521 @@
     });
   }
 
+  /* ── Galaxia 3D (Roadmap Fase 2 · Vista preliminar interactiva) ── */
+
+  const galaxyState = {
+    mode: "2d",
+    animId: null,
+    width: 0,
+    height: 0,
+    dpr: 1,
+    nodes: [],
+    edges: [],
+    stars: [],
+    projectedNodes: [],
+    rotX: 0.22,
+    rotY: 0.38,
+    targetRotX: 0.22,
+    targetRotY: 0.38,
+    zoom: 1.0,
+    targetZoom: 1.0,
+    dragging: false,
+    pointerStartX: 0,
+    pointerStartY: 0,
+    lastMouseX: 0,
+    lastMouseY: 0,
+    selectedId: null,
+    hoveredId: null,
+    pulses: []
+  };
+
+  function initGalaxyStars() {
+    if (galaxyState.stars.length) return;
+    const n = 160;
+    const stars = [];
+    for (let i = 0; i < n; i++) {
+      const radius = 600 + Math.random() * 800;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = (Math.random() - 0.5) * Math.PI;
+      stars.push({
+        x: radius * Math.cos(phi) * Math.cos(theta),
+        y: radius * Math.sin(phi),
+        z: radius * Math.cos(phi) * Math.sin(theta),
+        size: 0.7 + Math.random() * 1.5,
+        alpha: 0.25 + Math.random() * 0.65,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    galaxyState.stars = stars;
+  }
+
+  function syncGalaxyData(view) {
+    if (!view || !view.nodes) return;
+    initGalaxyStars();
+    const pos = (state.network && typeof state.network.getPositions === "function") ? state.network.getPositions() : {};
+    const nTotal = view.nodes.length;
+
+    galaxyState.nodes = view.nodes.map(function (n, idx) {
+      let x = 0, y = 0, z = 0;
+      if (pos[n.id]) {
+        x = pos[n.id].x * 0.65;
+        y = pos[n.id].y * 0.65;
+      } else {
+        const angle = (idx / Math.max(1, nTotal)) * Math.PI * 2 * 1.618;
+        const rad = 110 + (idx % 3) * 65;
+        x = rad * Math.cos(angle);
+        y = rad * Math.sin(angle) * 0.7;
+      }
+
+      let shape = "circle";
+      let color = "#d97706";
+      let glowColor = "rgba(217, 119, 6, 0.45)";
+      let baseRadius = 14;
+
+      if (n.tipo === "participante") {
+        const p = n.persona;
+        const g = p.genero;
+        if (g === "mujer") {
+          shape = "circle";
+          color = "#9333ea";
+          glowColor = "rgba(192, 132, 252, 0.55)";
+          z = 40 + (p.centralidad || 0) * 80;
+        } else if (g === "hombre") {
+          shape = "square";
+          color = "#0284c7";
+          glowColor = "rgba(56, 189, 248, 0.55)";
+          z = -40 - (p.centralidad || 0) * 80;
+        } else if (g === "no_binario") {
+          shape = "diamond";
+          color = "#d97706";
+          glowColor = "rgba(251, 191, 36, 0.6)";
+          z = 10;
+        } else {
+          shape = "triangle";
+          color = "#64748b";
+          glowColor = "rgba(148, 163, 184, 0.5)";
+          z = 0;
+        }
+        const weight = (Number(p.voz_s) || 0) + (Number(p.pantalla_s) || 0) * 0.5;
+        baseRadius = Math.max(12, Math.min(26, 9 + Math.sqrt(weight) * 0.9));
+      } else {
+        shape = "hexagon";
+        color = "#f59e0b";
+        glowColor = "rgba(245, 158, 11, 0.5)";
+        z = (idx % 2 === 0 ? 80 : -80);
+        baseRadius = 13;
+      }
+
+      return {
+        id: n.id,
+        raw: n,
+        label: nodeLabel(n),
+        tipo: n.tipo,
+        persona: n.persona,
+        x: x,
+        y: y,
+        z: z,
+        baseRadius: baseRadius,
+        shape: shape,
+        color: color,
+        glowColor: glowColor
+      };
+    });
+
+    galaxyState.edges = (view.edges || []).map(function (e) {
+      return {
+        from: e.from,
+        to: e.to,
+        tipo: e.tipo,
+        peso: Number(e.peso) || 1
+      };
+    });
+
+    if (galaxyState.edges.length > 0) {
+      const pulseCount = Math.min(10, Math.max(4, galaxyState.edges.length));
+      galaxyState.pulses = [];
+      for (let i = 0; i < pulseCount; i++) {
+        galaxyState.pulses.push({
+          edgeIdx: Math.floor(Math.random() * galaxyState.edges.length),
+          progress: Math.random(),
+          speed: 0.005 + Math.random() * 0.009
+        });
+      }
+    } else {
+      galaxyState.pulses = [];
+    }
+  }
+
+  function projectGalaxy3D(x, y, z, rotX, rotY, zoom, cx, cy) {
+    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+
+    const x1 = x * cosY + z * sinY;
+    const z1 = -x * sinY + z * cosY;
+
+    const y2 = y * cosX - z1 * sinX;
+    const z2 = y * sinX + z1 * cosX;
+
+    const focal = 520;
+    const dist = 600 / Math.max(0.2, zoom) + z2;
+    if (dist <= 30) return null;
+
+    const scale = focal / dist;
+    return {
+      sx: cx + x1 * scale,
+      sy: cy + y2 * scale,
+      scale: scale,
+      z: z2
+    };
+  }
+
+  function updateGalaxyDimensions() {
+    const canvas = $("galaxy-3d-canvas");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (galaxyState.width !== rect.width || galaxyState.height !== rect.height || galaxyState.dpr !== dpr) {
+      galaxyState.width = rect.width;
+      galaxyState.height = rect.height;
+      galaxyState.dpr = dpr;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+    }
+  }
+
+  function drawGalaxyShape(ctx, shape, x, y, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    if (shape === "circle") {
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    } else if (shape === "square") {
+      ctx.rect(x - r * 0.85, y - r * 0.85, r * 1.7, r * 1.7);
+    } else if (shape === "diamond") {
+      ctx.moveTo(x, y - r * 1.15);
+      ctx.lineTo(x + r * 1.15, y);
+      ctx.lineTo(x, y + r * 1.15);
+      ctx.lineTo(x - r * 1.15, y);
+      ctx.closePath();
+    } else if (shape === "triangle") {
+      ctx.moveTo(x, y - r * 1.15);
+      ctx.lineTo(x + r * 1.05, y + r * 0.85);
+      ctx.lineTo(x - r * 1.05, y + r * 0.85);
+      ctx.closePath();
+    } else {
+      for (let a = 0; a < 6; a++) {
+        const rad = (a * Math.PI) / 3;
+        const hx = x + r * Math.cos(rad);
+        const hy = y + r * Math.sin(rad);
+        if (a === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+    }
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(2, r * 0.3), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function selectGalaxyNode(id) {
+    galaxyState.selectedId = id;
+    if (!id || !state.view) {
+      $("graph-selected").textContent = "";
+      return;
+    }
+    const n = state.view.nodes.filter(function (x) { return x.id === id; })[0];
+    if (!n) return;
+    $("graph-selected").textContent =
+      n.tipo === "tema"
+        ? t("graph.selected_topic", { name: n.label })
+        : t("graph.selected_person", { name: displayName(n.persona), voz: fmt(n.persona.voz_s || 0, 0), pantalla: fmt(n.persona.pantalla_s || 0, 0) });
+  }
+
+  function getGalaxyNodeAt(clientX, clientY) {
+    const canvas = $("galaxy-3d-canvas");
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const mx = clientX - rect.left;
+    const my = clientY - rect.top;
+
+    for (let i = galaxyState.projectedNodes.length - 1; i >= 0; i--) {
+      const pn = galaxyState.projectedNodes[i];
+      const hitRadius = Math.max(16, pn.r + 10);
+      const dx = mx - pn.sx;
+      const dy = my - pn.sy;
+      if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+        return pn.node;
+      }
+    }
+    return null;
+  }
+
+  function renderGalaxyFrame(now) {
+    const canvas = $("galaxy-3d-canvas");
+    if (!canvas) return;
+    updateGalaxyDimensions();
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const w = galaxyState.width;
+    const h = galaxyState.height;
+    if (w <= 0 || h <= 0) return;
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const rm = reducedMotion();
+
+    galaxyState.rotX += (galaxyState.targetRotX - galaxyState.rotX) * 0.12;
+    galaxyState.rotY += (galaxyState.targetRotY - galaxyState.rotY) * 0.12;
+    galaxyState.zoom += (galaxyState.targetZoom - galaxyState.zoom) * 0.12;
+
+    if (!galaxyState.dragging && !rm) {
+      galaxyState.targetRotY += 0.0016;
+    }
+
+    ctx.save();
+    ctx.scale(galaxyState.dpr, galaxyState.dpr);
+
+    const grad = ctx.createRadialGradient(cx, cy, 30, cx, cy, Math.max(w, h) * 0.75);
+    grad.addColorStop(0, "#0b1226");
+    grad.addColorStop(0.65, "#060914");
+    grad.addColorStop(1, "#020408");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    for (let i = 0; i < galaxyState.stars.length; i++) {
+      const s = galaxyState.stars[i];
+      const p = projectGalaxy3D(s.x, s.y, s.z, galaxyState.rotX * 0.45, galaxyState.rotY * 0.45, 0.9, cx, cy);
+      if (!p) continue;
+      const alpha = s.alpha * (0.6 + 0.4 * Math.sin(s.phase + now * 0.0022));
+      ctx.fillStyle = "rgba(224, 231, 255, " + alpha.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, s.size * Math.min(1.4, Math.max(0.6, p.scale * 1.2)), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const projectedMap = {};
+    const projectedNodes = [];
+    galaxyState.nodes.forEach(function (n) {
+      const p = projectGalaxy3D(n.x, n.y, n.z, galaxyState.rotX, galaxyState.rotY, galaxyState.zoom, cx, cy);
+      if (p) {
+        const item = {
+          node: n,
+          sx: p.sx,
+          sy: p.sy,
+          scale: p.scale,
+          z: p.z,
+          r: n.baseRadius * p.scale
+        };
+        projectedMap[n.id] = item;
+        projectedNodes.push(item);
+      }
+    });
+    galaxyState.projectedNodes = projectedNodes;
+
+    galaxyState.edges.forEach(function (e) {
+      const p1 = projectedMap[e.from];
+      const p2 = projectedMap[e.to];
+      if (!p1 || !p2) return;
+
+      const avgScale = (p1.scale + p2.scale) / 2;
+      const isTopic = e.tipo === "habla_de";
+      const edgeAlpha = Math.min(0.85, Math.max(0.18, avgScale * 0.65));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(p1.sx, p1.sy);
+      ctx.lineTo(p2.sx, p2.sy);
+      ctx.strokeStyle = isTopic
+        ? "rgba(245, 158, 11, " + edgeAlpha.toFixed(2) + ")"
+        : "rgba(148, 163, 184, " + edgeAlpha.toFixed(2) + ")";
+      ctx.lineWidth = Math.min(4, Math.max(1, Math.sqrt(e.peso) * avgScale * 1.4));
+      if (e.tipo === "comparte_plano") {
+        ctx.setLineDash([5, 5]);
+      } else if (e.tipo === "menciona") {
+        ctx.setLineDash([2, 4]);
+      }
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    if (!rm && galaxyState.pulses.length > 0) {
+      ctx.save();
+      galaxyState.pulses.forEach(function (pulse) {
+        const edge = galaxyState.edges[pulse.edgeIdx];
+        if (!edge) return;
+        const n1 = galaxyState.nodes.filter(function (x) { return x.id === edge.from; })[0];
+        const n2 = galaxyState.nodes.filter(function (x) { return x.id === edge.to; })[0];
+        if (!n1 || !n2) return;
+
+        pulse.progress += pulse.speed;
+        if (pulse.progress >= 1) {
+          pulse.progress = 0;
+          pulse.edgeIdx = Math.floor(Math.random() * galaxyState.edges.length);
+        }
+
+        const tx = n1.x + (n2.x - n1.x) * pulse.progress;
+        const ty = n1.y + (n2.y - n1.y) * pulse.progress;
+        const tz = n1.z + (n2.z - n1.z) * pulse.progress;
+        const pt = projectGalaxy3D(tx, ty, tz, galaxyState.rotX, galaxyState.rotY, galaxyState.zoom, cx, cy);
+        if (pt) {
+          const pr = Math.max(2, 3.5 * pt.scale);
+          ctx.fillStyle = edge.tipo === "habla_de" ? "#fbbf24" : "#e0e7ff";
+          ctx.shadowColor = edge.tipo === "habla_de" ? "#f59e0b" : "#c084fc";
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(pt.sx, pt.sy, pr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.restore();
+    }
+
+    const sorted = projectedNodes.slice().sort(function (a, b) { return a.z - b.z; });
+
+    sorted.forEach(function (item) {
+      const n = item.node;
+      const sx = item.sx;
+      const sy = item.sy;
+      const r = item.r;
+      const isSelected = n.id === galaxyState.selectedId;
+      const isHovered = n.id === galaxyState.hoveredId;
+
+      ctx.save();
+
+      const auraRad = r * (isSelected || isHovered ? 3.2 : 2.5);
+      const aura = ctx.createRadialGradient(sx, sy, r * 0.3, sx, sy, auraRad);
+      aura.addColorStop(0, n.glowColor);
+      aura.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(sx, sy, auraRad, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawGalaxyShape(ctx, n.shape, sx, sy, r, n.color);
+
+      if (isSelected) {
+        ctx.strokeStyle = "#a855f7";
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = "#c084fc";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (item.scale > 0.45 || isSelected || isHovered) {
+        const fontSize = Math.round(Math.max(10, 13 * Math.min(item.scale, 1.25)));
+        ctx.font = "600 " + fontSize + "px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#080c18";
+        ctx.fillStyle = isSelected ? "#f3e8ff" : isHovered ? "#ffffff" : "#e2e8f0";
+        ctx.strokeText(n.label, sx, sy + r + 6);
+        ctx.fillText(n.label, sx, sy + r + 6);
+      }
+
+      ctx.restore();
+    });
+
+    ctx.restore();
+  }
+
+  function startGalaxyLoop() {
+    if (galaxyState.animId || galaxyState.mode !== "3d" || document.hidden) return;
+    function tick(now) {
+      if (galaxyState.mode !== "3d" || document.hidden) {
+        galaxyState.animId = null;
+        return;
+      }
+      renderGalaxyFrame(now);
+      galaxyState.animId = window.requestAnimationFrame(tick);
+    }
+    galaxyState.animId = window.requestAnimationFrame(tick);
+  }
+
+  function stopGalaxyLoop() {
+    if (galaxyState.animId) {
+      window.cancelAnimationFrame(galaxyState.animId);
+      galaxyState.animId = null;
+    }
+  }
+
+  function setConstellationMode(mode) {
+    galaxyState.mode = mode;
+    const btn2d = $("btn-mode-2d");
+    const btn3d = $("btn-mode-3d");
+    const container2d = $("constellation-network");
+    const controls2d = $("graph-controls-2d");
+    const wrap3d = $("constellation-3d-wrap");
+
+    if (mode === "3d") {
+      if (btn2d) { btn2d.classList.remove("active"); btn2d.setAttribute("aria-selected", "false"); }
+      if (btn3d) { btn3d.classList.add("active"); btn3d.setAttribute("aria-selected", "true"); }
+      if (container2d) container2d.hidden = true;
+      if (controls2d) controls2d.hidden = true;
+      if (wrap3d) wrap3d.hidden = false;
+
+      updateGalaxyDimensions();
+      startGalaxyLoop();
+    } else {
+      if (btn3d) { btn3d.classList.remove("active"); btn3d.setAttribute("aria-selected", "false"); }
+      if (btn2d) { btn2d.classList.add("active"); btn2d.setAttribute("aria-selected", "true"); }
+      if (wrap3d) wrap3d.hidden = true;
+      if (container2d) container2d.hidden = false;
+      if (controls2d) controls2d.hidden = false;
+
+      stopGalaxyLoop();
+      redrawGraph();
+    }
+  }
+
   function setupGraphControls() {
     const container = $("constellation-network");
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (entries) {
         graphVisible = entries.some(function (e) { return e.isIntersecting; });
-        if (graphVisible) redrawGraph();
+        if (graphVisible) {
+          if (galaxyState.mode === "3d") startGalaxyLoop();
+          else redrawGraph();
+        } else {
+          if (galaxyState.mode === "3d") stopGalaxyLoop();
+        }
       }, { threshold: 0 }).observe(container);
     } else {
       graphVisible = true;
     }
-    if ("ResizeObserver" in window) new ResizeObserver(redrawGraph).observe(container);
-    window.addEventListener("scroll", function () { if (graphVisible) redrawGraph(); }, { passive: true });
-    window.addEventListener("hashchange", redrawGraph);
-    document.addEventListener("visibilitychange", function () { if (!document.hidden) redrawGraph(); });
-    window.addEventListener("pageshow", redrawGraph);
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(function () {
+        if (galaxyState.mode === "3d") updateGalaxyDimensions();
+        else redrawGraph();
+      }).observe(container);
+    }
+    window.addEventListener("scroll", function () { if (graphVisible && galaxyState.mode !== "3d") redrawGraph(); }, { passive: true });
+    window.addEventListener("hashchange", function () {
+      if (galaxyState.mode === "3d") updateGalaxyDimensions();
+      else redrawGraph();
+    });
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        stopGalaxyLoop();
+      } else {
+        if (galaxyState.mode === "3d") startGalaxyLoop();
+        else redrawGraph();
+      }
+    });
+    window.addEventListener("pageshow", function () {
+      if (galaxyState.mode === "3d") startGalaxyLoop();
+      else redrawGraph();
+    });
+    window.addEventListener("resize", function () {
+      if (galaxyState.mode === "3d") updateGalaxyDimensions();
+    });
+
     function zoom(factor) {
       if (!state.network) return;
       state.network.moveTo({ scale: state.network.getScale() * factor, animation: reducedMotion() ? false : { duration: 180 } });
@@ -758,12 +1259,77 @@
     $("graph-zoom-fit").addEventListener("click", function () {
       if (state.network) state.network.fit({ animation: reducedMotion() ? false : { duration: 250 } });
     });
-    // Ctrl + rueda: zoom intencionado. Sin Ctrl, la rueda hace scroll normal de la página.
     container.addEventListener("wheel", function (e) {
       if (!e.ctrlKey) return;
       e.preventDefault();
       zoom(e.deltaY < 0 ? 1.15 : 0.87);
     }, { passive: false });
+
+    // Selector de modo 2D Planisferio / 3D Galaxia
+    const btn2d = $("btn-mode-2d");
+    const btn3d = $("btn-mode-3d");
+    if (btn2d && btn3d) {
+      btn2d.addEventListener("click", function () { setConstellationMode("2d"); });
+      btn3d.addEventListener("click", function () { setConstellationMode("3d"); });
+      btn2d.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight") { btn3d.focus(); setConstellationMode("3d"); }
+      });
+      btn3d.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowLeft") { btn2d.focus(); setConstellationMode("2d"); }
+      });
+    }
+
+    // Interacciones del lienzo 3D
+    const canvas3d = $("galaxy-3d-canvas");
+    if (canvas3d) {
+      canvas3d.addEventListener("pointerdown", function (e) {
+        galaxyState.dragging = true;
+        galaxyState.pointerStartX = e.clientX;
+        galaxyState.pointerStartY = e.clientY;
+        galaxyState.lastMouseX = e.clientX;
+        galaxyState.lastMouseY = e.clientY;
+        try { canvas3d.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+
+      canvas3d.addEventListener("pointermove", function (e) {
+        if (galaxyState.dragging) {
+          const dx = e.clientX - galaxyState.lastMouseX;
+          const dy = e.clientY - galaxyState.lastMouseY;
+          galaxyState.lastMouseX = e.clientX;
+          galaxyState.lastMouseY = e.clientY;
+          galaxyState.targetRotY += dx * 0.008;
+          galaxyState.targetRotX = Math.max(-1.4, Math.min(1.4, galaxyState.targetRotX + dy * 0.008));
+        } else {
+          const hit = getGalaxyNodeAt(e.clientX, e.clientY);
+          const newHover = hit ? hit.id : null;
+          if (galaxyState.hoveredId !== newHover) {
+            galaxyState.hoveredId = newHover;
+            canvas3d.style.cursor = newHover ? "pointer" : "grab";
+          }
+        }
+      });
+
+      function onPointerEnd(e) {
+        if (galaxyState.dragging) {
+          const moved = Math.hypot(e.clientX - galaxyState.pointerStartX, e.clientY - galaxyState.pointerStartY);
+          if (moved < 6) {
+            const hit = getGalaxyNodeAt(e.clientX, e.clientY);
+            selectGalaxyNode(hit ? hit.id : null);
+          }
+          galaxyState.dragging = false;
+        }
+        try { canvas3d.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+
+      canvas3d.addEventListener("pointerup", onPointerEnd);
+      canvas3d.addEventListener("pointercancel", onPointerEnd);
+
+      canvas3d.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.15 : 0.87;
+        galaxyState.targetZoom = Math.max(0.45, Math.min(2.5, galaxyState.targetZoom * factor));
+      }, { passive: false });
+    }
   }
 
   /* ── Personas ── */

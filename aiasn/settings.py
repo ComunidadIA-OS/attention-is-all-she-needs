@@ -156,12 +156,18 @@ class BiasSettings(BaseModel):
 
 class SilverSettings(BaseModel):
     gender_threshold: float = Field(0.80, ge=0.5, le=1)   # below it, no_determinado (ADR-0005); also used by the fusion
+    # A person whose face shows in fewer of their detections (back turned, only hands) gets no gender from the video:
+    # from the body alone it is unreliable, and without a face they cannot be told apart from others either
+    min_face_share: float = Field(0.5, ge=0, le=1)
     max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
     speaking_threshold: float = 0.0                        # speaking_score (TalkNet) above it: speaking
     speaking_window_s: float = Field(1.0, ge=0)            # rolling majority of the speaking state; 0: no smoothing
     # A speaker is a person on screen if both talk at the same time for at least this long and this share of their speech
     min_link_s: float = Field(1.0, ge=0)
     min_link_share: float = Field(0.3, ge=0, le=1)
+    # A voice still unlinked (the lip model missed it: profile, a microphone in front) is the one person alone on
+    # screen for at least this share of its speech, if their genders do not contradict each other
+    min_copresence_share: float = Field(0.6, ge=0, le=1)
     name_similarity: float = Field(0.8, ge=0, le=1)        # two spellings of a word count as the same name from here
     authority_roles: list[str] = ["host", "expert", "voice-over narrator"]   # roles that speak from authority
     caption_grants_authority: bool = True                  # a caption title showing authority does too, whatever the role
@@ -181,6 +187,9 @@ class StorageSettings(BaseModel):
             return {}
         options = {"key": self.access_key, "secret": self.secret_key}
         options = {k: v.get_secret_value() for k, v in options.items() if v is not None}
+        # No cached listings: the API and the workers write the same lake, and a stale listing makes s3fs read a
+        # rewritten manifest with its old ETag (FileExpired)
+        options["use_listings_cache"] = False
         return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
 
 

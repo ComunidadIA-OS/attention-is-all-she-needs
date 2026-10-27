@@ -21,18 +21,26 @@ class Launcher(Protocol):
     def busy(self) -> bool:
         """A video is being processed."""
 
+    def running(self, video_id: str) -> bool:
+        """The worker of `video_id` is alive."""
+
 
 class ProcessLauncher:
     """The worker as a child process of the API, in the same environment (no Docker)."""
 
     def __init__(self):
         self._process: subprocess.Popen | None = None
+        self._video_id: str | None = None
 
     def launch(self, video_id: str) -> None:
         self._process = subprocess.Popen([sys.executable, "-m", "aiasn.run_pipelines", "--video-id", video_id])
+        self._video_id = video_id
 
     def busy(self) -> bool:
         return self._process is not None and self._process.poll() is None
+
+    def running(self, video_id: str) -> bool:
+        return self.busy() and self._video_id == video_id
 
 
 class DockerLauncher:
@@ -60,6 +68,9 @@ class DockerLauncher:
 
     def busy(self) -> bool:
         return bool(self.client.containers.list(filters={"label": LABEL, "status": "running"}))
+
+    def running(self, video_id: str) -> bool:
+        return bool(self.client.containers.list(filters={"label": f"{LABEL}={video_id}", "status": "running"}))
 
 
 def worker_env(names: list[str], environ: dict[str, str]) -> dict[str, str]:

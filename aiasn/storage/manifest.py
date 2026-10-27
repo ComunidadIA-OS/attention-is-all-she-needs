@@ -25,6 +25,11 @@ class Manifest:
             self._save()
 
     @staticmethod
+    def video_ids(lake: Lake) -> list[str]:
+        """Every video with a manifest in the lake."""
+        return sorted(p.rsplit("video_id=", 1)[1].split("/")[0] for p in lake.fs.glob(f"{lake.root}/runs/video_id=*/manifest.json"))
+
+    @staticmethod
     def load(lake: Lake, video_id: str) -> dict | None:
         """The manifest of `video_id` as stored, None if the video is unknown; unlike Manifest(), creates nothing."""
         path = f"{lake.root}/runs/video_id={video_id}/manifest.json"
@@ -42,6 +47,15 @@ class Manifest:
         """Status of the whole video: QUEUED, RUNNING, OK or ERROR (with the error)."""
         with self._lock:
             self.data |= {"status": status, "error": repr(error) if error else None}
+            self._save()
+
+    def interrupt(self, error: Exception) -> None:
+        """The run stopped without recording it (its worker was killed): the steps left running and the video failed."""
+        with self._lock:
+            for step in self.data["steps"].values():
+                if step.get("status") == "running":
+                    step |= {"status": "error", "error": repr(error)}
+            self.data |= {"status": ERROR, "error": repr(error)}
             self._save()
 
     def step_done(self, step: str) -> bool:

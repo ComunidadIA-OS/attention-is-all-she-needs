@@ -79,6 +79,7 @@ def test_gold_pipeline_writes_the_lake(tmp_path):
     GoldPipeline(settings)(ctx)
     assert len(ctx.lake.read("gold", "quadrants", "vid1")) > 0 and len(ctx.lake.read("gold", "summary", "vid1")) == 1
     assert set(ctx.lake.read("gold", "kpis", "vid1").kpi) == set(KPIS)
+    assert 0 <= ctx.lake.read("gold", "index", "vid1").indice[0] <= 100
     assert ctx.manifest.read()["steps"]["gold"]["status"] == "ok"
 
 
@@ -160,6 +161,17 @@ def test_tone_aggregated_by_gender():
     t = kpi_rows("tone", labels=True)
     assert t.loc[("mujer", "technical_assertive")].tolist() == [1.0, 1.0, "técnico/asertivo"]   # untoned turn left out
     assert t.loc[("hombre", "dissent")].tolist() == [1.0, 1.0, "disenso"]
+
+
+def test_parity_shares_leave_out_undetermined_time():
+    events = pd.DataFrame({"genero": ["mujer", "hombre", "no_determinado"], "cuadrante": [1, 1, 3],
+                           "duracion_s": [10.0, 10.0, 20.0], "tiempo_i": [0.0, 10.0, 20.0], "tiempo_f": [10.0, 20.0, 40.0],
+                           "area": [0.3, 0.3, None], "centrality": [0.8, 0.8, None], "hablante_id": [0, 1, 2],
+                           "track_id": ["person_1", "person_2", None], "rotulo_nombre": [None] * 3,
+                           "rotulo_cargo": [None] * 3})
+    voice = kpis_module.parity({"gold/quadrants": events}, Settings()).query("categoria == 'voz_s'").set_index("genero")
+    assert voice.loc["mujer", "valor"] / voice.loc["mujer", "base"] == 0.5          # of the 20 s of known gender
+    assert voice.loc["no_determinado", "valor"] / voice.loc["no_determinado", "base"] == 0.5   # of all the 40 s
 
 
 def test_kpis_registry(monkeypatch):
@@ -249,3 +261,37 @@ def test_graph_nodes_carry_the_bias():
     nodes = graph()["graph_nodes"].set_index("node_id")
     assert nodes.sesgo["tema:care"] == pytest.approx(0.16) and pd.isna(nodes.sesgo["tema:history"])
     assert nodes.sesgo["p1"] == pytest.approx(0.09) and pd.isna(nodes.sesgo["v1"])   # her title, researcher
+
+
+# Representation index
+
+def index_kpis(screen_f=0.2, voice_f=0.3, central=(0.6, 0.8), area=(0.2, 0.2), authority=(0.5, 1.0), refs=(1, 3)):
+    """gold/kpis rows the index reads; women first in each pair."""
+    rows = [("parity", "mujer", "pantalla_s", screen_f, 1), ("parity", "hombre", "pantalla_s", 1 - screen_f, 1),
+            ("parity", "mujer", "voz_s", voice_f, 1), ("parity", "hombre", "voz_s", 1 - voice_f, 1),
+            ("parity", "mujer", "centralidad", central[0], 1), ("parity", "hombre", "centralidad", central[1], 1),
+            ("parity", "mujer", "area", area[0], 1), ("parity", "hombre", "area", area[1], 1),
+            ("authority", "mujer", None, authority[0], 1), ("authority", "hombre", None, authority[1], 1),
+            ("references", "mujer", None, refs[0], refs[0]), ("references", "hombre", None, refs[1], refs[1])]
+    return pd.DataFrame(rows, columns=["kpi", "genero", "categoria", "valor", "base"]).assign(categoria_es=None)
+
+
+def test_representation_index_of_the_spec():
+    from aiasn.core.gold.index import representation_index
+    i = representation_index(index_kpis())
+    assert i["pantalla"] == pytest.approx(50)            # 20 % of the screen, the floor is 40 %
+    assert i["voz"] == pytest.approx(75)                 # 30 % of the voice
+    assert i["espacio"] == pytest.approx((75 + 100) / 2) # centrality 0.6 against 0.8; same area
+    assert i["autoridad"] == pytest.approx((50 + 50) / 2)   # half the authority share; 1 of 4 references (25 % / 50 %)
+    assert i["indice"] == pytest.approx(0.3 * 50 + 0.2 * 75 + 0.25 * 87.5 + 0.25 * 50)
+    assert i["provisional"] is True
+
+
+def test_representation_index_without_references_or_men():
+    from aiasn.core.gold.index import representation_index
+    no_refs = index_kpis().query("kpi != 'references'")
+    assert representation_index(no_refs)["autoridad"] == pytest.approx(50)   # only the authority share
+    parity = representation_index(index_kpis(screen_f=0.5, voice_f=0.5, central=(0.8, 0.8), authority=(1, 1), refs=(2, 2)))
+    assert parity["indice"] == pytest.approx(100)
+    empty = representation_index(index_kpis().iloc[:0])
+    assert empty["indice"] is None

@@ -25,6 +25,13 @@ import pandas as pd
 LENGUAS_COOFICIALES_SOPORTADAS: Sequence[str] = ("es", "ca", "gl", "eu", "en")
 
 
+# Equality-washing (spec 21 §3.1): a critical mass on screen (Kanter 1977) whose voice does not follow, by the ratio
+# of shares or by a voice share as low as the media average (GMMP 2020: 19 %; Gender Gap Tracker: 21 %)
+EW_PANTALLA_MIN, EW_RVP_MAX, EW_VOZ_MAX = 35.0, 0.30, 20.0
+# Under-representation (spec 21 §3.2): below the legal floor on screen (LO 2/2024) and no more voice than presence
+INFRA_PANTALLA_MAX, INFRA_RVP_MAX = 40.0, 1.0
+
+
 def calcular_solape_temporal(
     inicio_a: float, fin_a: float, inicio_b: float, fin_b: float
 ) -> float:
@@ -141,6 +148,8 @@ def generar_resumen_lectura_facil(
     pct_pantalla_mujer: float,
     alerta_equality_washing: bool,
     cumple_salvaguarda: bool,
+    alerta_infrarrepresentacion: bool = False,
+    pct_voz_no_determinado: float = 0.0,
 ) -> str:
     """
     Genera un resumen textual estructurado en Lectura Facil (UNE 153101 EX / WCAG 2.2 AA, ADR-010)
@@ -150,46 +159,49 @@ def generar_resumen_lectura_facil(
         estado_texto = (
             "ALERTA DE PRESENCIA FIGURATIVA: Las mujeres aparecen en pantalla pero tienen muy poca voz activa."
         )
+    elif alerta_infrarrepresentacion:
+        estado_texto = (
+            "INFRARREPRESENTACION: Las mujeres salen menos del 40% del tiempo en pantalla y no hablan mas de lo que salen."
+        )
     elif cumple_salvaguarda:
         estado_texto = (
             "CUMPLE PARIDAD: La participacion de las mujeres alcanza el umbral de equilibrio."
         )
     else:
         estado_texto = (
-            "INFRARREPRESENTACION: La participacion de las mujeres esta por debajo del minimo del 40%."
+            "PARIDAD NO ALCANZADA: El tiempo de voz de las mujeres no llega al reparto minimo del 40%."
         )
+    cobertura = (
+        f" En un {pct_voz_no_determinado:.0f}% del tiempo de voz no se pudo saber el genero."
+        if pct_voz_no_determinado >= 0.5 else ""
+    )
 
     return (
         f"Lectura Facil (UNE 153101): {estado_texto} "
         f"Tiempo de voz de mujeres: {pct_voz_mujer:.1f}%. "
-        f"Tiempo en pantalla de mujeres: {pct_pantalla_mujer:.1f}%."
+        f"Tiempo en pantalla de mujeres: {pct_pantalla_mujer:.1f}%.{cobertura}"
     )
 
 
 def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
     """
-    Evalua deterministamente el Test de Bechdel Digital / Conversacional (Bechdel-Wallace 1985
-    adaptado a medios digitales y audiovisuales de no-ficcion):
-    1. Regla 1 (Pluralidad femenina): Intervienen con voz activa al menos 2 mujeres distintas
-       (rompiendo el 'Efecto Token' o sindrome de la mujer unica de Kanter, 1977).
-    2. Regla 2 (Identidad y autoridad propia): Al menos 2 mujeres estan acreditadas con nombre
-       propio, cargo o identificador diferenciado (rotulo OCR o hablante nominal).
-    3. Regla 3 (Interlocucion horizontal directa Mujer_A -> Mujer_B): Existe al menos una
-       transicion directa de turno de palabra entre dos mujeres distintas sin intermediacion
-       masculina como eje obligatorio del debate.
+    Test de Interlocucion Femenina (TIF), adaptacion AIASN del Test de Bechdel-Wallace (1985) a la no ficcion
+    audiovisual (doc 26 §5). Mide el aislamiento relacional: mujeres presentes que solo hablan a traves de un hombre.
+
+    Aplicabilidad, en orden (M: mujeres presentes con voz o pantalla; H: hombres presentes; V: personas con voz, de
+    cualquier genero, porque que haya conversacion no depende del genero; no_determinado no cuenta en M ni en H):
+    sin datos determinados, V < 2 o H = 0 -> no_evaluable; M = 0 o M = 1 -> no_supera; si no, evaluado.
+
+    Reglas (solo si evaluado):
+    1. Pluralidad femenina: al menos 2 mujeres distintas con voz activa (Cuadrantes 1 y 3).
+    2. Identidad acreditada: al menos 2 mujeres con rotulo de nombre o cargo (OCR).
+    3. Interlocucion horizontal: al menos una transicion directa de turno Mujer_A -> Mujer_B (A != B).
+    Supera solo con 3/3.
     """
+    vacio = {"mujeres_presentes": 0, "hombres_presentes": 0, "personas_con_voz": 0, "mujeres_distintas_hablando": 0,
+             "mujeres_con_rotulo_identificado": 0, "transiciones_mujer_a_mujer": 0}
     if df_eventos.empty:
-        return {
-            "mujeres_distintas_hablando": 0,
-            "mujeres_con_rotulo_identificado": 0,
-            "transiciones_mujer_a_mujer": 0,
-            "regla_1_pluralidad_femenina": False,
-            "regla_2_identidad_propia": False,
-            "regla_3_dialogo_horizontal": False,
-            "puntuacion_bechdel_0_3": 0,
-            "supera_bechdel_digital": False,
-            "diagnostico_bechdel": "SIN_DATOS: DataFrame de eventos vacio.",
-        }
+        return _resultado_tif("no_evaluable", "sin_datos", vacio)
 
     # Filtrar turnos con voz activa (Cuadrantes 1 y 3) ordenados cronologicamente
     if "cuadrante" in df_eventos.columns:
@@ -247,38 +259,89 @@ def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
     puntuacion = int(regla_1) + int(regla_2) + int(regla_3)
     supera = bool(puntuacion == 3)
 
-    if supera:
-        diagnostico = (
-            "SUPERA BECHDEL DIGITAL (3/3): Pluralidad femenina acreditada e interlocucion "
-            f"horizontal directa ({transiciones_m_a_m} transicion(es) Mujer-Mujer sin intermediacion masculina)."
-        )
-    elif not regla_1:
-        diagnostico = (
-            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Efecto Token / mujer unica "
-            f"(solo {mujeres_distintas_hablando} mujer(es) con voz activa en la pieza)."
-        )
-    elif not regla_3:
-        diagnostico = (
-            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Aislamiento relacional "
-            "(participan >=2 mujeres pero todos sus turnos estan mediados por hombres)."
-        )
-    else:
-        diagnostico = (
-            f"CUMPLIMIENTO PARCIAL BECHDEL DIGITAL ({puntuacion}/3): Interlocucion directa "
-            "detectada pero falta rotulacion nominal/cargo completa en pantalla."
-        )
+    # Quien es cada evento: su persona en pantalla, o su voz (enlazada a su persona si alguna vez habla en pantalla)
+    pista_de_voz = {
+        h: t for h, t in zip(df_eventos.get("hablante_id", pd.Series(dtype=float)), df_eventos.get("track_id", pd.Series(dtype=object)))
+        if pd.notna(h) and pd.notna(t) and t
+    }
 
-    return {
+    def _persona(row: Any) -> str:
+        track, hablante = row.get("track_id"), row.get("hablante_id")
+        if pd.notna(track) and track:
+            return f"t:{track}"
+        if pd.notna(hablante):
+            return f"t:{pista_de_voz[hablante]}" if hablante in pista_de_voz else f"h:{hablante}"
+        return _id_participante(row)
+
+    personas = {g: {_persona(r) for r in df_eventos[df_eventos["genero"] == g].to_dict("records")}
+                for g in ("mujer", "hombre", "no_binario")}
+    conteos = {
+        "mujeres_presentes": len(personas["mujer"]),
+        "hombres_presentes": len(personas["hombre"]),
+        "personas_con_voz": len({_persona(r) for r in df_voz.to_dict("records")}),
         "mujeres_distintas_hablando": mujeres_distintas_hablando,
         "mujeres_con_rotulo_identificado": mujeres_con_rotulo,
         "transiciones_mujer_a_mujer": transiciones_m_a_m,
-        "regla_1_pluralidad_femenina": regla_1,
-        "regla_2_identidad_propia": regla_2,
-        "regla_3_dialogo_horizontal": regla_3,
-        "puntuacion_bechdel_0_3": puntuacion,
-        "supera_bechdel_digital": supera,
-        "diagnostico_bechdel": diagnostico,
     }
+    m, h, v = conteos["mujeres_presentes"], conteos["hombres_presentes"], conteos["personas_con_voz"]
+    if not any(personas.values()):
+        return _resultado_tif("no_evaluable", "sin_datos", conteos)
+    if v < 2:
+        return _resultado_tif("no_evaluable", "sin_conversacion", conteos)
+    if h == 0:
+        return _resultado_tif("no_evaluable", "sin_hombres", conteos)
+    if m == 0:
+        return _resultado_tif("no_supera", "sin_mujeres", conteos)
+    if m == 1:
+        return _resultado_tif("no_supera", "una_mujer", conteos)
+
+    regla_1 = mujeres_distintas_hablando >= 2
+    regla_2 = mujeres_con_rotulo >= 2
+    regla_3 = transiciones_m_a_m >= 1
+    return _resultado_tif("evaluado", None, conteos, (regla_1, regla_2, regla_3))
+
+
+evaluar_interlocucion_femenina = evaluar_bechdel_conversacional
+
+MOTIVOS_TIF = {
+    "sin_datos": "NO EVALUABLE: no hay tramos de genero determinado.",
+    "sin_conversacion": "NO EVALUABLE: solo habla una persona; no hay conversacion.",
+    "sin_hombres": "NO EVALUABLE: solo participan mujeres; el test mide la mediacion masculina.",
+    "sin_mujeres": "NO SUPERA: no aparece ninguna mujer.",
+    "una_mujer": "NO SUPERA: solo aparece una mujer; no puede dialogar con otra.",
+}
+
+
+def _resultado_tif(estado: str, motivo: Optional[str], conteos: Dict[str, int],
+                   reglas: Optional[Tuple[bool, bool, bool]] = None) -> Dict[str, Any]:
+    """Contrato de salida del TIF (doc 26 §5.5); las reglas y la puntuacion solo cuando se evalua."""
+    if reglas is None:
+        return {"estado": estado, "motivo": motivo, "aplica": False, **conteos,
+                "regla_1_pluralidad_femenina": None, "regla_2_identidad_propia": None,
+                "regla_3_dialogo_horizontal": None, "puntuacion_bechdel_0_3": None, "supera_bechdel_digital": False,
+                "diagnostico_tif": motivo, "diagnostico_bechdel": MOTIVOS_TIF[motivo]}
+    regla_1, regla_2, regla_3 = reglas
+    puntuacion = int(regla_1) + int(regla_2) + int(regla_3)
+    if puntuacion == 3:
+        diagnostico, texto = "supera", (
+            "SUPERA EL TEST DE INTERLOCUCION FEMENINA (3/3): pluralidad femenina acreditada e interlocucion "
+            f"horizontal directa ({conteos['transiciones_mujer_a_mujer']} transicion(es) Mujer-Mujer sin intermediacion masculina).")
+    elif not regla_1:
+        diagnostico, texto = "mujer_sin_voz", (
+            f"NO SUPERA ({puntuacion}/3): hay {conteos['mujeres_presentes']} mujeres presentes, pero solo "
+            f"{conteos['mujeres_distintas_hablando']} con voz activa.")
+    elif not regla_3:
+        diagnostico, texto = "aislamiento_relacional", (
+            f"NO SUPERA ({puntuacion}/3): aislamiento relacional; hablan >=2 mujeres pero todos sus turnos "
+            "estan mediados por hombres.")
+    else:
+        diagnostico, texto = "parcial", (
+            f"CUMPLIMIENTO PARCIAL ({puntuacion}/3): interlocucion directa detectada, pero falta rotulacion "
+            "nominal o de cargo de al menos dos mujeres.")
+    return {"estado": estado, "motivo": None, "aplica": True, **conteos,
+            "regla_1_pluralidad_femenina": regla_1, "regla_2_identidad_propia": regla_2,
+            "regla_3_dialogo_horizontal": regla_3, "puntuacion_bechdel_0_3": puntuacion,
+            "supera_bechdel_digital": puntuacion == 3, "diagnostico_tif": diagnostico, "diagnostico_bechdel": texto}
 
 
 def normalizar_tabla_audio(df_audio: pd.DataFrame, umbral_etico: float = 0.80) -> pd.DataFrame:
@@ -585,7 +648,8 @@ def calcular_kpis_paridad(
         tiempo_voz_total = c1_s + c3_s
         tiempo_pantalla_total = c1_s + c2_s
 
-        ratio_vp = (
+        # Share of the screen time spent speaking (C1 / screen, Vilaplana); not the RVP, which compares shares
+        voz_activa_en_pantalla = (
             c1_s / max(0.01, tiempo_pantalla_total) if tiempo_pantalla_total > 0 else 0.0
         )
 
@@ -602,21 +666,40 @@ def calcular_kpis_paridad(
             "c1_voz_activa_s": round(c1_s, 2),
             "c2_presencia_muda_s": round(c2_s, 2),
             "c3_voz_off_s": round(c3_s, 2),
-            "ratio_voz_pantalla": round(ratio_vp, 3),
+            "voz_activa_en_pantalla": round(voz_activa_en_pantalla, 3),
             "area_media": round(area_media, 3),
             "centralidad_media": round(centrality_media, 3),
         }
 
     total_voz = sum(kpis_genero[g]["tiempo_voz_s"] for g in generos_validos)
     total_pantalla = sum(kpis_genero[g]["tiempo_pantalla_s"] for g in generos_validos)
+    # Shares over the time of determined gender only (spec 21 §5.3, ADR-0005); the undetermined part is reported
+    # apart, as how much of the piece could not be measured
+    total_voz_det = total_voz - kpis_genero["no_determinado"]["tiempo_voz_s"]
+    total_pantalla_det = total_pantalla - kpis_genero["no_determinado"]["tiempo_pantalla_s"]
 
     pct_voz_mujer = (
-        (kpis_genero["mujer"]["tiempo_voz_s"] / total_voz * 100.0) if total_voz > 0 else 0.0
+        (kpis_genero["mujer"]["tiempo_voz_s"] / total_voz_det * 100.0) if total_voz_det > 0 else 0.0
     )
     pct_pantalla_mujer = (
-        (kpis_genero["mujer"]["tiempo_pantalla_s"] / total_pantalla * 100.0)
-        if total_pantalla > 0
+        (kpis_genero["mujer"]["tiempo_pantalla_s"] / total_pantalla_det * 100.0)
+        if total_pantalla_det > 0
         else 0.0
+    )
+    # RVP (spec 21 §1.3): share of voice over share of screen of each gender; None without screen time
+    for gen in ("mujer", "hombre", "no_binario"):
+        g = kpis_genero[gen]
+        pct_v = g["tiempo_voz_s"] / total_voz_det * 100.0 if total_voz_det > 0 else 0.0
+        pct_p = g["tiempo_pantalla_s"] / total_pantalla_det * 100.0 if total_pantalla_det > 0 else 0.0
+        g["ratio_voz_pantalla"] = round(pct_v / pct_p, 3) if pct_p > 0 else None
+    kpis_genero["no_determinado"]["ratio_voz_pantalla"] = None
+    rvp_mujer = kpis_genero["mujer"]["ratio_voz_pantalla"]
+
+    pct_voz_no_determinado = (
+        kpis_genero["no_determinado"]["tiempo_voz_s"] / total_voz * 100.0 if total_voz > 0 else 0.0
+    )
+    pct_pantalla_no_determinado = (
+        kpis_genero["no_determinado"]["tiempo_pantalla_s"] / total_pantalla * 100.0 if total_pantalla > 0 else 0.0
     )
 
     # Salvaguarda matematica progresiva en 3 fases (ADR-006)
@@ -631,14 +714,26 @@ def calcular_kpis_paridad(
     # Alta presencia en pantalla pero deficit severo de voz activa
     alerta_equality_washing = False
     motivo_alerta = ""
-    if pct_pantalla_mujer >= 35.0 and (
-        kpis_genero["mujer"]["ratio_voz_pantalla"] < 0.40 or pct_voz_mujer < 25.0
+    if pct_pantalla_mujer >= EW_PANTALLA_MIN and (
+        (rvp_mujer is not None and rvp_mujer < EW_RVP_MAX) or pct_voz_mujer < EW_VOZ_MAX
     ):
         alerta_equality_washing = True
         motivo_alerta = (
             f"Presencia figurativa detectada: Mujeres representan {pct_pantalla_mujer:.1f}% de pantalla, "
-            f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {kpis_genero['mujer']['ratio_voz_pantalla']:.2f})."
+            f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {rvp_mujer:.2f})."
         )
+
+    # Without women on screen there is no RVP: that is under-representation too, if there is screen time at all
+    alerta_infrarrepresentacion = bool(
+        total_pantalla_det > 0
+        and pct_pantalla_mujer < INFRA_PANTALLA_MAX
+        and (rvp_mujer is None or rvp_mujer < INFRA_RVP_MAX)
+    )
+    motivo_infrarrepresentacion = (
+        f"Las mujeres ocupan el {pct_pantalla_mujer:.1f}% del tiempo en pantalla, por debajo del 40%, "
+        f"y su voz ({pct_voz_mujer:.1f}%) no compensa esa presencia."
+        if alerta_infrarrepresentacion else ""
+    )
 
     test_bechdel = evaluar_bechdel_conversacional(df_eventos)
 
@@ -647,16 +742,24 @@ def calcular_kpis_paridad(
         pct_pantalla_mujer=pct_pantalla_mujer,
         alerta_equality_washing=alerta_equality_washing,
         cumple_salvaguarda=bool(salvaguarda_paridad["cumple_salvaguarda_paridad"]),
+        alerta_infrarrepresentacion=alerta_infrarrepresentacion,
+        pct_voz_no_determinado=pct_voz_no_determinado,
     )
 
     return {
         "duracion_total_analizada_s": round(duracion_total_s, 2),
         "total_voz_segundos": round(total_voz, 2),
         "total_pantalla_segundos": round(total_pantalla, 2),
+        "total_voz_determinado_s": round(total_voz_det, 2),
+        "total_pantalla_determinado_s": round(total_pantalla_det, 2),
         "pct_voz_mujer": round(pct_voz_mujer, 2),
         "pct_pantalla_mujer": round(pct_pantalla_mujer, 2),
+        "pct_voz_no_determinado": round(pct_voz_no_determinado, 2),
+        "pct_pantalla_no_determinado": round(pct_pantalla_no_determinado, 2),
         "alerta_equality_washing": alerta_equality_washing,
         "motivo_alerta": motivo_alerta,
+        "alerta_infrarrepresentacion": alerta_infrarrepresentacion,
+        "motivo_infrarrepresentacion": motivo_infrarrepresentacion,
         "salvaguarda_paridad": salvaguarda_paridad,
         "test_bechdel_digital": test_bechdel,
         "resumen_lectura_facil": resumen_lectura_facil,

@@ -20,9 +20,10 @@ from aiasn.api import schemas
 from aiasn.api.jobs import Launcher, make_launcher
 from aiasn.settings import Settings
 from aiasn.storage.lake import Lake
-from aiasn.storage.manifest import ERROR, OK, QUEUED, Manifest
+from aiasn.storage.manifest import ERROR, OK, QUEUED, RUNNING, Manifest
 
 VIDEO_ID = re.compile(r"[A-Za-z0-9_-]+")
+INTERRUPTED = "El procesado se interrumpió: el worker se detuvo antes de terminar. Vuelve a subir el vídeo."
 
 
 def new_video_id(filename: str) -> str:
@@ -72,9 +73,26 @@ def create_app(settings: Settings | None = None, launcher: Launcher | None = Non
                 raise HTTPException(500, f"The worker could not start: {e!r}")
         return {"video_id": video_id}
 
+    def checked(video_id: str, manifest: dict | None) -> dict | None:
+        """The manifest, marked as failed if it says processing but its worker is gone (stopped or killed before it
+        could record an error): otherwise it would stay processing for ever."""
+        if manifest and manifest["status"] == RUNNING and not launcher.running(video_id):
+            Manifest(lake, video_id).interrupt(RuntimeError(INTERRUPTED))
+            manifest = Manifest.load(lake, video_id)
+        return manifest
+
+    @app.get("/videos")
+    def videos() -> list[dict]:
+        """Every video in the lake with its status, latest first: a video already analysed opens without processing
+        it again."""
+        found = [(video_id, checked(video_id, Manifest.load(lake, video_id))) for video_id in Manifest.video_ids(lake)]
+        started = lambda m: max((s.get("started_at") or "" for s in m["steps"].values()), default="")
+        found.sort(key=lambda vm: started(vm[1]), reverse=True)
+        return [{"video_id": video_id, "estado": m["status"], "inicio": started(m) or None} for video_id, m in found]
+
     @app.get("/videos/{video_id}")
     def video(video_id: str) -> dict:
-        manifest = Manifest.load(lake, video_id) if VIDEO_ID.fullmatch(video_id) else None
+        manifest = checked(video_id, Manifest.load(lake, video_id)) if VIDEO_ID.fullmatch(video_id) else None
         if manifest is None:
             raise HTTPException(404, "Unknown video")
         done = manifest["status"] == OK

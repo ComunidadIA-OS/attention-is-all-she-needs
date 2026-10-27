@@ -12,12 +12,13 @@ from aiasn.core.transform import Transform
 
 # English keys (stable, word2vec) and their Spanish labels (`_es`, for the UI)
 TABLES = {
-    "nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"],
+    "nlp_topics": ["participant_id", "topic", "topic_es", "evidence"],   # one row per topic and participant
     "nlp_references": ["participant_id", "turn", "name", "genero"],   # genero: of the person cited
     "nlp_roles": ["participant_id", "role", "role_es", "authority", "authority_source"],   # source: rol, rotulo, ambos
     "nlp_ideas": ["idea_id", "idea", "participant_id"],
     "nlp_tone": ["participant_id", "turn", "tone", "tone_es", "score"],   # per turn; only aggregated in gold (ADR-0009)
 }
+NARRATOR = "voice-over narrator"
 TONE_ES = {"technical_assertive": "técnico/asertivo", "collaborative": "colaborativo", "dissent": "disenso"}
 
 
@@ -51,10 +52,21 @@ class NlpSilver(Transform):
             "nlp_topics": topics.assign(topic_es=spanish(topics.topic, nlp_cfg.topics_guide, topics.get("topic_es"))),
             "nlp_references": self._not_participants(references, tables["silver/person_names"]).assign(
                 genero=lambda r: r.gender.map(from_model)),
-            "nlp_roles": self._authority(roles, tables["silver/people"]),
+            "nlp_roles": self._authority(self._narrator_on_screen(roles, tables["silver/people"]), tables["silver/people"]),
             "nlp_ideas": bronze["nlp_ideas"], "nlp_tone": tone.assign(tone_es=tone.tone.map(TONE_ES)),
         }
         return {t: out[t][columns].reset_index(drop=True) for t, columns in TABLES.items()}
+
+    def _narrator_on_screen(self, roles: pd.DataFrame, people: pd.DataFrame) -> pd.DataFrame:
+        """A voice-over narrator is never on screen, but the model only reads the transcript: someone it calls so who
+        speaks on screen (a `p…` participant) is an expert if their caption shows authority, else the host."""
+        guide = self.settings.nlp.roles_guide
+        on_screen = roles.participant_id.astype("string").str.startswith("p").fillna(False)
+        wrong = roles.role.astype("string").str.lower().eq(NARRATOR).fillna(False) & on_screen
+        captioned = roles.participant_id.map(people.set_index("participant_id").title_authority)
+        fixed = ["expert" if bool(a) else "host" for a in captioned.astype("boolean").fillna(False)]
+        role = roles.role.where(~wrong, pd.Series(fixed, index=roles.index))
+        return roles.assign(role=role, role_es=roles.role_es.where(~wrong, role.map(guide)))
 
     def _authority(self, roles: pd.DataFrame, people: pd.DataFrame) -> pd.DataFrame:
         """Whether each participant speaks from authority: their role is one of `authority_roles`, or the title of

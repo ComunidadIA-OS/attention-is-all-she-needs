@@ -6,7 +6,7 @@
 import numpy as np
 import pandas as pd
 
-from aiasn.core.silver.gender import decide_gender, female_prob
+from aiasn.core.silver.gender import UNDETERMINED, decide_gender, female_prob
 from aiasn.core.transform import Transform
 
 PEOPLE = ["person_id", "genero", "prob_mujer", "age", "screen_time_s", "speaking_time_s", "area", "centrality"]
@@ -34,8 +34,9 @@ class VideoSilver(Transform):
     def run(self, tables: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
         d = tables["bronze/video_detections"].sort_values(["person_id", "frame"])
         area, centrality = geometry(d)
-        d = d.assign(female=female_prob(d.gender, d.gender_prob), area=area, centrality=centrality,
-                     speaking=self._speaking(d))
+        face = d.face_x1.notna() if "face_x1" in d else pd.Series(True, index=d.index)
+        d = d.assign(female=female_prob(d.gender, d.gender_prob).where(face), face=face, area=area,
+                     centrality=centrality, speaking=self._speaking(d))   # gender only where the face shows
         return {"video_people": self._people(d), "video_presence": self._presence(d)}
 
     def _speaking(self, d: pd.DataFrame) -> pd.Series:
@@ -51,11 +52,13 @@ class VideoSilver(Transform):
         return votes > 0.5
 
     def _people(self, d: pd.DataFrame) -> pd.DataFrame:
-        """Gender by vote, median age, seconds on screen and speaking, mean area and centrality."""
+        """Gender by vote of the detections with a face, median age, seconds on screen and speaking, mean area and
+        centrality. Too few faces (`min_face_share`): no gender."""
         step = self.settings.video.stride / self.settings.video.fps   # seconds each detection stands for
         rows = []
         for person, g in d.groupby("person_id"):
-            gender, p = decide_gender(g.female, self.settings.silver.gender_threshold)
+            gender, p = ((UNDETERMINED, np.nan) if g.face.mean() < self.settings.silver.min_face_share
+                         else decide_gender(g.female, self.settings.silver.gender_threshold))
             rows.append([person, gender, p, g.age.median(), len(g) * step, g.speaking.sum() * step,
                          g.area.mean(), g.centrality.mean()])
         return pd.DataFrame(rows, columns=PEOPLE).astype({"person_id": "Int64"})

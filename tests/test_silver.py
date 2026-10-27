@@ -259,11 +259,35 @@ def test_each_speaker_links_to_the_person_speaking_meanwhile():
     presence = spans((1, 0, 4.2, True), (1, 4.2, 12, False), (2, 0, 4, False), (2, 4.5, 10, True),
                      (1, 10, 12, True), (3, 12, 12.5, True), (3, 12.5, 20, False))
     links = link(t, presence)
-    assert list(links.reset_index().columns) == ["speaker_id", "person_id", "overlap_s", "share"]
-    assert links.person_id[0] == 1 and links.person_id[1] == 2
+    assert list(links.reset_index().columns) == ["speaker_id", "person_id", "overlap_s", "share", "fuente"]
+    assert links.person_id[0] == 1 and links.person_id[1] == 2 and links.fuente[0] == "talknet"
     assert links.overlap_s[0] == pytest.approx(6.0) and links.share[0] == pytest.approx(1.0)
-    # Speaker 2 overlaps person 3 speaking for only 0.5 s: a voice off screen, but the candidate is kept for review
-    assert pd.isna(links.person_id[2]) and links.overlap_s[2] == pytest.approx(0.5)
+    # Speaker 2 overlaps person 3 speaking for only 0.5 s, too little for the lips; but person 3 is alone on screen all
+    # the time speaker 2 talks, and only then: the second chance links them
+    assert links.person_id[2] == 3 and links.fuente[2] == "copresencia"
+
+
+def test_a_voice_the_lips_missed_links_to_the_one_person_alone_on_screen():
+    # The man speaks in profile behind a microphone: the lip model never sees him speaking (a real case)
+    t = turns((0, 0, 38), (1, 39.3, 53.2), (0, 54, 60))
+    presence = spans((2, 0, 38, True), (1, 39.7, 53.6, False), (2, 54, 60, True))
+    links = link(t, presence)
+    assert links.person_id[1] == 1 and links.fuente[1] == "copresencia" and links.share[1] == pytest.approx(13.5 / 13.9)
+    out = identity(t, presence, speaker_genders={1: "hombre"}, person_genders={1: "hombre"})
+    assert "v1" not in out["people"].participant_id.tolist()   # his voice is now his
+
+
+def test_no_copresence_link_for_a_narrator_over_shots_or_contradicting_genders():
+    # A narrator talks over three shots of three different people: none of them holds 60 % of the voice
+    narrator = turns((0, 0, 30))
+    over_shots = spans((1, 0, 10, False), (2, 10, 20, False), (3, 20, 30, False))
+    assert pd.isna(link(narrator, over_shots).person_id[0])
+    # Alone on screen while the voice talks, but a woman's face and a man's voice
+    t, presence = turns((0, 0, 10)), spans((1, 0, 10, False))
+    assert pd.isna(identity(t, presence, speaker_genders={0: "hombre"}, person_genders={1: "mujer"})
+                   ["speaker_person"].person_id[0])
+    # Someone on screen for a long time while a voice talks over only a short part of it
+    assert pd.isna(link(turns((0, 0, 10)), spans((1, 0, 60, False))).person_id[0])
 
 
 def test_link_needs_a_share_of_the_speech():
@@ -458,7 +482,7 @@ def S(*speakers) -> pd.arrays.IntegerArray:
 
 
 NLP_BRONZE = {   # bronze nlp_* of a speaker 0 on screen (person 1) and a voice off screen (speaker 1)
-    "nlp_topics": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "topic": [" Technology", "robots", "health"],
+    "nlp_topics": pd.DataFrame({"speaker": S(0, 1, 0), "topic": [" Technology", "robots", "health"],
                                 "topic_es": ["Tecnologia", " robots ", "salud"],
                                 "evidence": ["la IA", "cuidar", "inventado"], "found": [True, True, False]}),
     "nlp_references": pd.DataFrame({"turn": [0, 2], "speaker": S(0, 0), "name": ["Ada Lovelace", "Alan Turing"],
@@ -517,6 +541,18 @@ def test_a_caption_title_with_authority_gives_authority_whatever_the_role():
     assert off.authority.tolist() == [False, True]
 
 
+def test_a_narrator_on_screen_is_an_expert_or_the_host():
+    # The model reads only the transcript: experts heard over footage look like voice-over narrators
+    roles = pd.DataFrame({"speaker": S(0, 1), "role": ["voice-over narrator", "voice-over narrator"]})
+    def run(title_authority):
+        people = NLP_PEOPLE.assign(title_authority=pd.array([title_authority, pd.NA], dtype="boolean"))
+        tables = {f"bronze/{t}": df for t, df in (NLP_BRONZE | {"nlp_roles": roles}).items()} | {
+            "silver/speaker_person": LINKS, "silver/person_names": PARTICIPANT_NAMES, "silver/people": people}
+        return NlpSilver(Settings()).run(tables)["nlp_roles"]
+    assert run(True).role_es.tolist() == ["experto/a", "narrador/a en off"]   # v1 is only a voice: stays narrator
+    assert run(pd.NA).role.tolist() == ["host", "voice-over narrator"]       # on screen, no title of authority
+
+
 def test_zero_shot_tone_has_nothing_to_check():
     tone = NLP_BRONZE["nlp_tone"].assign(score=[0.95, 0.4, 0.91], evidence=None,
                                          found=pd.array([pd.NA] * 3, dtype="boolean"))
@@ -526,7 +562,7 @@ def test_zero_shot_tone_has_nothing_to_check():
 def test_nlp_silver_without_rows():
     out = nlp({t: df.iloc[:0] for t, df in NLP_BRONZE.items()})
     assert all(out[t].empty and list(out[t].columns) == cols for t, cols in
-               {"nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"]}.items())
+               {"nlp_topics": ["participant_id", "topic", "topic_es", "evidence"]}.items())
 
 
 def test_references_leave_out_the_participants():
@@ -562,3 +598,16 @@ def test_term_bias_without_terms_does_not_load_the_model(tmp_path):
     out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": []}),
                                         "silver/people": pd.DataFrame({"title_en": []})})
     assert out["term_bias"].empty and not (tmp_path / "missing.bin.gz").exists()
+
+
+def test_no_gender_from_the_body_alone():
+    # Seen from behind or only the hands: the model still guesses a gender from the body
+    back = detections(1, range(3, 80, 4), "F", 0.95).assign(face_x1=np.nan)
+    one_face = back.copy(); one_face.loc[one_face.index[0], "face_x1"] = 10.0   # a face in 1 of 20 detections
+    faces = detections(2, range(3, 80, 4), "F", 0.95).assign(face_x1=10.0)
+    people = VideoSilver(Settings()).run({"bronze/video_detections": pd.concat([back, faces])})["video_people"]
+    assert people.genero.tolist() == ["no_determinado", "mujer"] and pd.isna(people.prob_mujer[0])
+    few = VideoSilver(Settings()).run({"bronze/video_detections": one_face})["video_people"]
+    assert few.genero.tolist() == ["no_determinado"]
+    loose = VideoSilver(Settings(silver={"min_face_share": 0})).run({"bronze/video_detections": one_face})["video_people"]
+    assert loose.genero.tolist() == ["mujer"]   # decided on the frames with a face only

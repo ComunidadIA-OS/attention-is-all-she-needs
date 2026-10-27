@@ -17,7 +17,7 @@ from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
 from aiasn.model_adapters.nlp import tone
 from aiasn.model_adapters.nlp.tone import (LlmToneClassifier, Tones, TurnTone, ZeroShotToneClassifier,
                                            make_tone_classifier)
-from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics
+from aiasn.model_adapters.nlp.topics import Topic, TopicExtractor, Topics, TopicSpeaker
 from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.nlp import NlpPipeline
@@ -59,14 +59,19 @@ MENTIONS = Mentions(mentions=[
     Mention(turn=99, literal="Luis", name="Luis", title=None, gender="M", referred_speaker="Speaker_0"),
 ])
 TOPICS = Topics(topics=[
-    Topic(turn=3, topic="science and research", topic_es="ciencia e investigación", evidence="Empecé gracias a Ada Lovelace"),
-    Topic(turn=0, topic="Diversity and equality ", topic_es="Diversidad e igualdad ", evidence="mujeres en la ciencia"),
-    Topic(turn=42, topic="history", topic_es="historia", evidence="Ada Lovelace"),
+    Topic(topic="science and research", topic_es="ciencia e investigación", speakers=[
+        TopicSpeaker(speaker="Speaker_1", evidence="Empecé gracias a Ada Lovelace"),
+        TopicSpeaker(speaker="Speaker_0", evidence="cómo empezó todo")]),
+    Topic(topic="Diversity and equality ", topic_es="Diversidad e igualdad ", speakers=[
+        TopicSpeaker(speaker="Speaker_0", evidence="mujeres en la ciencia"),
+        TopicSpeaker(speaker="Speaker_9", evidence="Ada Lovelace")]),          # no such speaker
+    Topic(topic="Science and research", topic_es="ciencia e investigación", speakers=[
+        TopicSpeaker(speaker="Speaker_1", evidence="Ada Lovelace")]),           # the same topic and speaker again
 ])
 REFERENCES = References(references=[
-    Reference(turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
-    Reference(turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
-    Reference(turn=8, name="Alan Turing", literal="Turing", gender="M"),
+    Reference(reasoning="pionera de la informática, citada como inspiración", is_reference=True, turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
+    Reference(reasoning="inventora citada como ejemplo", is_reference=True, turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
+    Reference(reasoning="matemático citado como referente", is_reference=True, turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
 PIECE = Piece(format="interview", roles=[
     SpeakerRole(speaker="Speaker_0", role="interviewer", role_es="entrevistador/a"),
@@ -119,15 +124,25 @@ def test_mentions_keep_only_speakers_of_the_conversation():
     assert llm.calls[0][1] == transcript(TURNS)
 
 
-def test_topics_take_the_speaker_of_their_turn():
+def test_topics_by_speaker_over_the_whole_piece():
     llm = FakeLLM({Topics: TOPICS})
     t = TopicExtractor(llm, NlpSettings(topics_guide={"care": "cuidados", "technology": "tecnología"})).extract(TURNS)
-    assert list(t.columns) == ["turn", "speaker", "topic", "topic_es", "evidence", "found"]
-    assert t.topic_es.tolist() == ["ciencia e investigación", "Diversidad e igualdad"]
-    assert t.turn.tolist() == [3, 0] and t.speaker.tolist() == [1, 0]   # turn 42 does not exist
-    assert t.topic.tolist() == ["science and research", "Diversity and equality"]
-    assert t.found.tolist() == [True, False]
+    assert list(t.columns) == ["speaker", "topic", "topic_es", "evidence", "found"]   # no turn: topics are per speaker
+    assert list(zip(t.speaker, t.topic)) == [(1, "science and research"), (0, "science and research"),
+                                             (0, "Diversity and equality")]   # Speaker_9 and the repeat left out
+    assert t.topic_es.tolist()[2] == "Diversidad e igualdad"
+    assert t.found.tolist() == [True, True, False]   # checked against everything that speaker says
+    assert llm.calls[0][1] == transcript(TURNS)      # one call with the whole transcript
     assert "care (cuidados), technology (tecnología)" in llm.calls[0][0]
+
+
+def test_references_reason_first_and_keep_only_those_the_reasoning_accepts():
+    assert list(Reference.model_fields)[:2] == ["reasoning", "is_reference"]   # the model reasons, then decides
+    called = Reference(reasoning="se le habla directamente: no es un referente", is_reference=False, turn=0,
+                       name="Pepe", literal="Pepe", gender="M")
+    refs = References(references=[*REFERENCES.references, called])
+    r = ReferenceExtractor(FakeLLM({References: refs}), NlpSettings()).extract(TURNS)
+    assert "Pepe" not in r.name.tolist() and "reasoning" not in r.columns
 
 
 def test_references_take_the_speaker_who_mentions_them():
@@ -202,7 +217,7 @@ def test_nlp_pipeline_writes_bronze_tables(tmp_path):
 
     assert ctx.manifest.read()["steps"]["nlp"]["status"] == "ok"
     assert len(ctx.lake.read("bronze", "nlp_mentions", "vid1")) == 3
-    assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 2
+    assert len(ctx.lake.read("bronze", "nlp_topics", "vid1")) == 3
     assert len(ctx.lake.read("bronze", "nlp_references", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_roles", "vid1")) == 2
     assert len(ctx.lake.read("bronze", "nlp_ideas", "vid1")) == 3

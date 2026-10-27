@@ -16,6 +16,7 @@ from aiasn.core.fusion import calcular_kpis_paridad
 from aiasn.core.transform import Transform
 from aiasn.settings import Settings
 
+UNDETERMINED = "no_determinado"
 COLUMNS = ["kpi", "genero", "categoria", "categoria_es", "valor", "base"]   # categoria_es: Spanish label, for the UI
 Tables = dict[str, pd.DataFrame]
 KPIS: dict[str, Callable[[Tables, Settings], pd.DataFrame]] = {}
@@ -45,8 +46,9 @@ def with_gender(df: pd.DataFrame, people: pd.DataFrame, column: str = "participa
 def parity(tables: Tables, settings: Settings) -> pd.DataFrame:
     """Seconds of voice, screen and each quadrant by gender, from the fusion (calcular_kpis_paridad).
 
-    `voz_activa_en_pantalla` over the screen time is the voice/screen ratio; `area` and `centralidad` are weighted by
-    screen time.
+    Voice and screen are shares of the time of determined gender (spec 21 §5.3, ADR-0005); for no_determinado, of all
+    the time: how much could not be measured. `voz_activa_en_pantalla` is the screen time spent speaking (C1 over
+    screen); `area` and `centralidad` are weighted by screen time.
     """
     events = tables["gold/quadrants"]
     if events.empty:
@@ -57,9 +59,10 @@ def parity(tables: Tables, settings: Settings) -> pd.DataFrame:
                       for q in ("c1_voz_activa_s", "c2_presencia_muda_s", "c3_voz_off_s")}
     records = []
     for gender, g in by_gender.items():
-        screen = g["tiempo_pantalla_s"]
-        records += [(gender, "voz_s", g["tiempo_voz_s"], k["total_voz_segundos"]),
-                    (gender, "pantalla_s", screen, k["total_pantalla_segundos"]),
+        screen, det = g["tiempo_pantalla_s"], gender != UNDETERMINED
+        records += [(gender, "voz_s", g["tiempo_voz_s"], k["total_voz_determinado_s" if det else "total_voz_segundos"]),
+                    (gender, "pantalla_s", screen,
+                     k["total_pantalla_determinado_s" if det else "total_pantalla_segundos"]),
                     *[(gender, q.removesuffix("_s"), g[q], quadrant_total[q]) for q in quadrant_total],
                     (gender, "voz_activa_en_pantalla", g["c1_voz_activa_s"], screen),
                     (gender, "area", g["area_media"] * screen, screen),
@@ -81,7 +84,8 @@ def authority(tables: Tables, settings: Settings) -> pd.DataFrame:
 
 @kpi("topics")
 def topics(tables: Tables, settings: Settings) -> pd.DataFrame:
-    """Turns on each topic by the gender of who speaks, over all the topic turns of that gender."""
+    """Participants of each gender who talk about each topic, over all the topics the participants of that gender talk
+    about (each participant counts once per topic)."""
     t = with_gender(tables["silver/nlp_topics"], tables["silver/people"])
     counts = t.groupby(["genero", "topic"]).size()
     totals = t.groupby("genero").size()
@@ -133,8 +137,8 @@ def tone(tables: Tables, settings: Settings) -> pd.DataFrame:
 
 @kpi("stereotype")
 def stereotype(tables: Tables, settings: Settings) -> pd.DataFrame:
-    """Mean word2vec gender bias (> 0: towards "she") of the topics each gender talks about, per topic turn, and of
-    their caption titles, per participant. Only terms in the vocabulary count."""
+    """Mean word2vec gender bias (> 0: towards "she") of the topics each gender talks about, per participant and topic,
+    and of their caption titles, per participant. Only terms in the vocabulary count."""
     people, bias = tables["silver/people"], tables["silver/term_bias"]
     score = {(t.tipo, t.termino): t.sesgo for t in bias.dropna(subset=["sesgo"]).itertuples()}
     topics = with_gender(tables["silver/nlp_topics"], people)

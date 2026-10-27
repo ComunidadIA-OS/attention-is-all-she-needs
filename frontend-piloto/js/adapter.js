@@ -170,7 +170,13 @@
       expertVoice: totVoice && (experts.f !== undefined || experts.m !== undefined)
         ? { f: round1(((experts.f || 0) / totVoice) * 100), m: round1(((experts.m || 0) / totVoice) * 100) }
         : null,
-      clima: { f: tone("mujer"), m: tone("hombre") }
+      clima: { f: tone("mujer"), m: tone("hombre") },
+      authority: {   // shares within each gender, as the API gives them
+        voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),
+        title: byGender((r.autoridad || {}).presentacion_con_cargo_pct),
+        ideas: byGender(((r.autoridad || {}).ideas_aportadas_pct || {}).con),
+        ideasAlone: byGender(((r.autoridad || {}).ideas_aportadas_pct || {}).solo)
+      }
     };
   }
 

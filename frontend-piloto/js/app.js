@@ -259,6 +259,14 @@ function renderLive(v,empty=false){
     ?`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Tiempo de voz de quienes figuran como <b>experto/a</b>, sobre el total del vídeo:</div><div class="rg-pair"><div class="rg-cell"><div class="rg-num" style="color:var(--f-ink)">${es1(v.expertVoice.f)} %</div><div class="rg-lab">Expertas</div></div><div class="rg-vs">frente a</div><div class="rg-cell"><div class="rg-num" style="color:var(--m-ink)">${es1(v.expertVoice.m)} %</div><div class="rg-lab">Expertos</div></div></div>`
     :`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">${v.experts?'Quienes figuran como experto/a en este vídeo no tienen un género determinado: no hay comparación posible.':'En este vídeo nadie figura como experto/a.'}</div>`;
 
+  // iv · autoridad: from what each gender speaks, how they are introduced and what ideas they bring
+  const share=x=>x==null?'—':es1(x)+' %',arow=(label,sub,o)=>`<tr><td>${label}<span class="who">${sub}</span></td><td class="fig f">${empty?PEND:share(o.f)}</td><td class="fig m">${empty?PEND:share(o.m)}</td></tr>`;
+  $('role-gap').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
+    +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
+    +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)
+    +arow('Ideas clave aportadas','solas o junto a otras personas',v.authority.ideas)
+    +arow('Ideas clave en exclusiva','sin que nadie más las aporte',v.authority.ideasAlone)+'</tbody></table>');
+
   // v · clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;
   $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||`<div class="cl-note">${empty?'Sin datos.':'No hay turnos clasificados por tono en este vídeo.'}</div>`;

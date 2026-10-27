@@ -55,6 +55,8 @@ const PAYLOAD = {
              personas_distintas: { mujer: 1, hombre: 1, no_determinado: 1 }, veces_citado_como_referente: { hombre: 2 } },
     roles: [{ rol: "experto/a", genero: "mujer", voz_s: 25 }, { rol: "presentador/a", genero: "hombre", voz_s: 75 }],
     clima: { mujer: { "colaborativo": 50.0, "técnico/asertivo": 50.0 }, hombre: { "disenso": 100.0 } },
+    autoridad: { voz_con_autoridad_pct: { mujer: 100.0, hombre: 81.5 }, presentacion_con_cargo_pct: {},
+                 ideas_aportadas_pct: { con: { mujer: 60.0 }, solo: { mujer: 40.0 } } },
     constelacion: {
       nodos: [
         { id: "p1", tipo: "participante", label: "Ana Pérez" }, { id: "p2", tipo: "participante", label: "Persona 2" },
@@ -135,6 +137,8 @@ test("power, roles and climate", () => {
   assert.equal(v.undetermined, 1);
   assert.deepEqual(v.expertVoice, { f: 25, m: 0 });
   assert.equal(v.experts, true);
+  assert.deepEqual(v.authority, { voice: { f: 100, m: 81.5 }, title: { f: null, m: null }, ideas: { f: 60, m: null },
+                                  ideasAlone: { f: 40, m: null } });
   assert.deepEqual(v.clima, { f: { tec: 50, col: 50, dis: 0 }, m: { tec: 0, col: 0, dis: 100 } });
 });
 

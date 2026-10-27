@@ -345,6 +345,32 @@ function repaint(){resize();if(reduce)draw(performance.now())}
 requestAnimationFrame(repaint);addEventListener('load',repaint);
 setTimeout(repaint,180);setTimeout(repaint,600);setTimeout(repaint,1400);
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120)});
+/* ---- pestañas: la sección en la que está la lectura, y el alto de la cabecera fija para no taparla ---- */
+(function(){
+  const top=document.querySelector('.top'),links=[...document.querySelectorAll('.tabs a')];
+  const tabs=document.querySelector('.tabs'),root=document.documentElement.style;
+  const setTop=()=>{   // the fixed bars, so that a section does not land under them
+    root.setProperty('--top-h',(getComputedStyle(top).position==='sticky'?top.offsetHeight:0)+'px');
+    root.setProperty('--tabs-h',tabs.offsetHeight+'px');
+  };
+  setTop();addEventListener('resize',setTop);
+  // The current section: the last one whose start has gone past 40 % of the screen; the first one at the top
+  const sections=links.map(a=>[a,document.getElementById(a.getAttribute('href').slice(1))]).filter(([,el])=>el);
+  let shown=null,queued=false;
+  const mark=()=>{
+    queued=false;
+    const line=innerHeight*.4;
+    let current=sections[0];
+    for(const s of sections)if(s[1].getBoundingClientRect().top<=line)current=s;
+    if(current[0]===shown)return;
+    if(shown)shown.removeAttribute('aria-current');
+    shown=current[0];shown.setAttribute('aria-current','true');
+    shown.scrollIntoView({block:'nearest',inline:'nearest'});   // keep it visible in the tab strip on a phone
+  };
+  addEventListener('scroll',()=>{if(!queued){queued=true;requestAnimationFrame(mark)}},{passive:true});
+  addEventListener('resize',mark);mark();
+})();
+
 const params=new URLSearchParams(location.search),opened=params.get('video');
 if(!params.has('demo'))renderLive(AIASNAdapter.toView({resultado:{}}),true);   // ?demo: the mock-up with its sample data
 if(opened)openVideo(opened);

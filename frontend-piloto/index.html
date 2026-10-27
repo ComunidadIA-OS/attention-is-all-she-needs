@@ -22,6 +22,7 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Poder</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li><a href="#s-indice">Índice</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
@@ -33,7 +34,7 @@ SPDX-License-Identifier: Apache-2.0
     <ol class="steps" id="steps" aria-label="Progreso del análisis" style="display:none"></ol>
   </div>
 
-  <div class="obs">
+  <div class="obs" id="s-constelacion">
     <div class="obs-main">
       <div class="sky">
         <canvas id="cv" role="img" aria-label="Constelación del protagonismo: cada estrella es una persona de la mesa; su tamaño es su protagonismo y su color y forma, el género percibido. Los datos completos están en la tabla siguiente."></canvas>
@@ -49,7 +50,7 @@ SPDX-License-Identifier: Apache-2.0
       <div class="read" id="read" role="region" aria-label="Ficha de la persona seleccionada" aria-live="polite" aria-atomic="true"></div>
     </div>
     <h2 class="sr-only">Veredicto de la pieza</h2>
-    <div class="verdict">
+    <div class="verdict" id="s-veredicto">
       <div class="vgauge">
         <svg id="gauge" viewBox="0 0 118 72" aria-label="Índice de Representación 34 sobre 100">
           <path d="M11 62 A48 48 0 0 1 107 62" fill="none" stroke="#2a2550" stroke-width="9" stroke-linecap="round"/>
@@ -74,7 +75,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
   </div>
 
-  <section class="ez" aria-labelledby="ez-t">
+  <section class="ez" id="s-lectura" aria-labelledby="ez-t">
     <div class="ez-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/></svg><span id="ez-t">En palabras sencillas</span><span class="tag">Lectura fácil · UNE 153101</span></div>
     <ul id="ez-list">
       <li>En este vídeo hablan 7 personas: 3 mujeres y 4 hombres. A una persona no se la pudo identificar.</li>
@@ -92,7 +93,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block">
-      <div class="ex-head"><span class="ex-rn">i</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
+      <div class="ex-head" id="s-temas"><span class="ex-rn">i</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
       <div class="m-axislabels"><span class="ml">◂ Hombres</span><span class="mc" id="mirror-mc"></span><span class="mr">Mujeres ▸</span></div>
       <div class="mirror" id="mirror" role="img" aria-label="Segregación temática por género, como porcentaje del tiempo de voz de cada grupo. Mujeres: cuidados 46, ética 28, tecnología 18, liderazgo 5, financiación 3. Hombres: cuidados 6, ética 14, tecnología 34, liderazgo 24, financiación 22."></div>
     </div>
@@ -100,11 +101,11 @@ SPDX-License-Identifier: Apache-2.0
     <div class="ex-block">
       <div class="ex-cols">
         <div>
-          <div class="ex-head"><span class="ex-rn">ii</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
+          <div class="ex-head" id="s-voz"><span class="ex-rn">ii</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
           <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
         </div>
         <div>
-          <div class="ex-head"><span class="ex-rn">iii</span><div><h3>El reparto del poder</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
+          <div class="ex-head" id="s-poder"><span class="ex-rn">iii</span><div><h3>El reparto del poder</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
           <table class="ledger">
             <caption class="sr-only">Señales de reparto de poder en la pieza, por género</caption>
             <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
@@ -121,7 +122,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block">
-      <div class="ex-head"><span class="ex-rn">iv</span><div><h3>Jerarquía de rol: ¿expertas o testimonio?</h3><div class="ex-cap">No basta con contar quién aparece: importa en qué rol. El reparto de roles de la pieza y, con él, qué ocurre con la voz cuando la etiqueta —experta— es la misma.</div></div></div>
+      <div class="ex-head" id="s-roles"><span class="ex-rn">iv</span><div><h3>Jerarquía de rol: ¿expertas o testimonio?</h3><div class="ex-cap">No basta con contar quién aparece: importa en qué rol. El reparto de roles de la pieza y, con él, qué ocurre con la voz cuando la etiqueta —experta— es la misma.</div></div></div>
       <div class="role">
         <div class="role-ladder" id="ladder">
           <div class="rl-row">
@@ -155,7 +156,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block">
-      <div class="ex-head"><span class="ex-rn">v</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
+      <div class="ex-head" id="s-clima"><span class="ex-rn">v</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
       <div class="clima">
         <div id="clima-rows"><div class="cl-row">
           <div class="cl-top"><div class="cl-name"><i style="background:var(--f)"></i>Mujeres</div></div>
@@ -184,7 +185,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block" style="border-bottom:0">
-      <div class="ex-head"><span class="ex-rn">vi</span><div><h3>Cómo se compone el índice</h3><div class="ex-cap" id="cap-comp">Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Ponderación provisional, pendiente de validar con el equipo.</div></div></div>
+      <div class="ex-head" id="s-indice"><span class="ex-rn">vi</span><div><h3>Cómo se compone el índice</h3><div class="ex-cap" id="cap-comp">Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Ponderación provisional, pendiente de validar con el equipo.</div></div></div>
       <div class="comp" id="comp" role="img" aria-label="Composición del índice de representación sobre 100: presencia en pantalla 27, tiempo de voz 19, protagonismo visual 38, autoridad 13."></div>
     </div>
   </section>

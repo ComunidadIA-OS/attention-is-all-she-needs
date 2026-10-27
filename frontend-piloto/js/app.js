@@ -1,0 +1,296 @@
+// SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+// SPDX-License-Identifier: Apache-2.0
+
+/* Constelación del Protagonismo: the mock-up of the pilot, drawn with its sample data, and the same page filled with
+   the result of the API when a video is analysed (AIASNAdapter turns the API result into this page's data). */
+(function () {
+"use strict";
+document.documentElement.lang='es';
+const P={f:'#c06be0',fGlow:'205,150,245',m:'#74a0b4',mGlow:'140,175,195',u:'#9298b4',uGlow:'150,156,185',star:'235,235,255',edge:'150,140,215',edgeOn:'200,140,240',topic:'185,172,238',neb1:'124,90,220',neb2:'190,88,200'};
+const SAMPLE={
+  people:[
+    {id:"marc",name:"Marc Vidal",role:"Moderador",g:"m",protag:.92,screen:22,voice:24,nx:.80,ny:.22,topics:["Liderazgo","Tecnología"],note:"Abre y cierra el acto. La mayor centralidad argumental de la mesa."},
+    {id:"javier",name:"Prof. Javier Soto",role:"Experto",g:"m",protag:.86,screen:28,voice:31,nx:.57,ny:.46,topics:["Tecnología","Liderazgo","Financiación"],note:"El mayor tiempo de voz. Citado tres veces como referente."},
+    {id:"carlos",name:"Carlos Mena",role:"Experto",g:"m",protag:.52,screen:19,voice:22,nx:.83,ny:.60,topics:["Tecnología","Financiación"],note:"Interrumpe en cuatro ocasiones a lo largo del debate."},
+    {id:"elena",name:"Dra. Elena Ruiz",role:"Experta",g:"f",protag:.58,screen:15,voice:12,nx:.30,ny:.30,topics:["Ética","Tecnología"],note:"Experta en la materia, pero con menos voz que sus pares hombres."},
+    {id:"nuria",name:"Nuria Camps",role:"Experta",g:"f",protag:.26,screen:9,voice:4,nx:.17,ny:.66,topics:["Cuidados","Ética"],note:"Aparece en pantalla pero apenas habla: presencia figurativa."},
+    {id:"laura",name:"Laura Gil",role:"Testimonio",g:"f",protag:.2,screen:3,voice:3,nx:.41,ny:.80,topics:["Cuidados"],note:"Intervención breve, relegada al tramo final."},
+    {id:"desc",name:"Interviniente",role:"Sin identificar",g:"u",protag:.12,screen:4,voice:4,nx:.55,ny:.15,topics:[],note:"Confianza de clasificación por debajo del umbral → «desconocido»."}
+  ],
+  topics:{"Tecnología":[.50,.37],"Liderazgo":[.70,.42],"Financiación":[.72,.24],"Ética":[.39,.53],"Cuidados":[.26,.85]},
+  tlabel:{"Cuidados":"Cuidados / Conciliación"},
+  edges:[["marc","Tecnología"],["marc","Liderazgo"],["javier","Tecnología"],["javier","Liderazgo"],["javier","Financiación"],["carlos","Tecnología"],["carlos","Financiación"],["elena","Ética"],["elena","Tecnología"],["nuria","Cuidados"],["nuria","Ética"],["laura","Cuidados"]],
+  themes:[{t:"Cuidados / Conciliación",f:46,m:6},{t:"Ética",f:28,m:14},{t:"Tecnología",f:18,m:34},{t:"Liderazgo",f:5,m:24},{t:"Financiación",f:3,m:22}],
+  irm:[{k:"Presencia en pantalla",v:27,w:"peso 30 %"},{k:"Tiempo de voz",v:19,w:"peso 30 %"},{k:"Protagonismo visual",v:38,w:"peso 20 %"},{k:"Autoridad · citas, abre/cierra",v:13,w:"peso 20 %"}]
+};
+let DATA=SAMPLE,LIVE=false;
+const pr=id=>DATA.people.find(p=>p.id===id);
+const gname=g=>g==='f'?'MUJER':g==='m'?'HOMBRE':g==='n'?'NO BINARIO':'DESCONOCIDO';
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const $=id=>document.getElementById(id);
+// Names and texts of a real video come from OCR and the LLM: always escaped before going into the page
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const es1=x=>x==null?'—':(Math.round(x*10)/10).toString().replace('.',',');
+const es2=x=>x==null?'—':x.toFixed(2).replace('.',',');
+const PEND='<span class="pend" title="Pendiente: el backend aún no lo calcula">—</span>';
+
+/* ---- canvas ---- */
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W=0,H=0,dpr=1,hover=null;
+const field=Array.from({length:110},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.3,a:Math.random()*.5+.15,ph:Math.random()*6.28}));
+function resize(){const r=cv.getBoundingClientRect();dpr=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+const px=(x,y)=>[x*W,y*H];
+function neb(x,y,r,rgb,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${rgb},${a})`);g.addColorStop(1,`rgba(${rgb},0)`);ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  let bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#0b0e22');bg.addColorStop(1,'#070912');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  neb(W*.62,H*.3,Math.max(W,H)*.55,P.neb1,.14);neb(W*.24,H*.86,Math.max(W,H)*.4,P.neb2,.1);
+  for(const s of field){const[x,y]=px(s.x,s.y);const a=reduce?s.a:s.a*(.75+.25*Math.sin(t/900+s.ph));ctx.beginPath();ctx.arc(x,y,s.r,0,6.283);ctx.fillStyle=`rgba(${P.star},${a})`;ctx.fill()}
+  for(const[pid,top] of DATA.edges){const p=pr(pid),[tx,ty]=px(...DATA.topics[top]),[sx,sy]=px(p.nx,p.ny),on=hover===pid;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(tx,ty);ctx.strokeStyle=on?`rgba(${P.edgeOn},.6)`:`rgba(${P.edge},${hover?.07:.16})`;ctx.lineWidth=on?1.6:1;ctx.stroke()}
+  for(const key in DATA.topics){const[x,y]=px(...DATA.topics[key]);ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.strokeStyle=`rgba(${P.topic},${hover?.4:.6})`;ctx.lineWidth=1.3;ctx.strokeRect(-4,-4,8,8);ctx.restore()}
+  for(const p of DATA.people){
+    const[x,y]=px(p.nx,p.ny),base=7+p.protag*17,r=base*(hover===p.id?1.12:1),dim=hover&&hover!==p.id?.4:1;
+    const glow=p.g==='f'?P.fGlow:p.g==='m'?P.mGlow:P.uGlow,core=p.g==='f'?P.f:p.g==='m'?P.m:P.u,tw=reduce?1:(.9+.1*Math.sin(t/700+p.nx*9));
+    let b=ctx.createRadialGradient(x,y,0,x,y,r*3.4);b.addColorStop(0,`rgba(${glow},${.5*dim*tw})`);b.addColorStop(.4,`rgba(${glow},${.18*dim})`);b.addColorStop(1,`rgba(${glow},0)`);
+    ctx.fillStyle=b;ctx.beginPath();ctx.arc(x,y,r*3.4,0,6.283);ctx.fill();
+    let c=ctx.createRadialGradient(x-r*.3,y-r*.3,0,x,y,r);c.addColorStop(0,'#fff');c.addColorStop(.35,core);c.addColorStop(1,core);
+    ctx.globalAlpha=dim;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.fill();
+    if(p.g==='m'){ctx.lineWidth=Math.max(1,r*.09);ctx.strokeStyle='rgba(255,255,255,.62)';ctx.beginPath();ctx.arc(x,y,r,0,6.283);ctx.stroke();}
+    else if(p.g!=='f'){ctx.lineWidth=1.5;ctx.strokeStyle='rgba(240,238,255,.9)';ctx.setLineDash([3,2.5]);ctx.beginPath();ctx.arc(x,y,r+1.6,0,6.283);ctx.stroke();ctx.setLineDash([]);}
+    ctx.globalAlpha=1;
+  }
+}
+let raf;const loop=t=>{draw(t);raf=requestAnimationFrame(loop)};
+function start(){cancelAnimationFrame(raf);reduce?draw(0):raf=requestAnimationFrame(loop)}
+
+/* ---- overlay ---- */
+const ov=$('ov');
+function shortName(p){
+  if(LIVE)return p.name.length>22?p.name.slice(0,21)+'…':p.name;
+  return (p.name.startsWith('Dr')||p.name.startsWith('Prof'))?p.name:p.name.split(' ').slice(-1)[0];
+}
+function buildOverlay(){
+  ov.innerHTML='';
+  for(const key in DATA.topics){const[x,y]=DATA.topics[key];const l=document.createElement('div');l.className='tlabel';l.style.left=x*100+'%';l.style.top='calc('+y*100+'% + 10px)';l.textContent=DATA.tlabel[key]||key;ov.appendChild(l)}
+  DATA.people.forEach(p=>{
+    const base=7+p.protag*17,b=document.createElement('button');b.className='hit';b.type='button';
+    b.style.left=p.nx*100+'%';b.style.top=p.ny*100+'%';b.style.width=b.style.height=(base*2.6)+'px';
+    b.setAttribute('aria-label',LIVE?`${p.name}, ${gname(p.g).toLowerCase()}, ${es1(p.voice)} por ciento del tiempo de voz`:`${p.name}, ${gname(p.g).toLowerCase()}, protagonismo ${Math.round(p.protag*100)} por ciento`);
+    const set=()=>{hover=p.id;showPerson(p.id);if(reduce)draw(0)};
+    b.addEventListener('mouseenter',set);b.addEventListener('focus',set);b.addEventListener('click',set);ov.appendChild(b);
+    if(LIVE&&!p.labeled)return;   // people on screen who never speak and have no name: star only
+    const lab=document.createElement('div');lab.className='plabel';lab.style.left=p.nx*100+'%';lab.style.top='calc('+p.ny*100+'% + '+(base+9)+'px)';
+    lab.innerHTML=p.g==='u'?`${esc(shortName(p))}<small>sin identificar</small>`:esc(shortName(p));ov.appendChild(lab);
+  });
+}
+document.querySelector('.sky').addEventListener('mouseleave',()=>{hover=null;showDefault();if(reduce)draw(0)});
+
+/* ---- tarjeta ---- */
+const read=$('read');
+function showDefault(){
+  read.innerHTML=LIVE
+    ?`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su <b>tamaño</b> es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
+    :`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
+}
+function showPerson(id){
+  const p=pr(id),ratio=p.screen?p.voice/p.screen:null;
+  const gcss=p.g==='f'?'background:rgba(192,107,224,.18);color:#d08ce8':p.g==='m'?'background:rgba(116,160,180,.18);color:#93b8c9':'background:var(--sky-line);color:var(--sky-mut)';
+  const core=p.g==='f'?P.f:p.g==='m'?P.m:P.u,glow=p.g==='f'?P.fGlow:p.g==='m'?P.mGlow:P.uGlow;
+  const protag=LIVE?PEND:Math.round(p.protag*100);
+  const rcell=LIVE?PEND:`<span style="color:${ratio<.9?'#f0576e':'#6fcf9f'}">${ratio.toFixed(2)}</span>`;
+  read.innerHTML=`<div class="pc-head"><span class="pc-star" style="background:radial-gradient(circle at 35% 35%,#fff,${core});box-shadow:0 0 20px 2px rgba(${glow},.6)"></span><div style="min-width:0"><div class="pc-name">${esc(p.name)}</div><div class="pc-role">${esc(p.role)}</div></div><span class="pc-g" style="${gcss}">${gname(p.g)}</span></div>
+  <div class="pc-grid"><div class="pc-cell"><div class="ck">Tiempo en pantalla</div><div class="cv tnum">${LIVE?es1(p.screen):p.screen}%</div></div><div class="pc-cell"><div class="ck">Tiempo de voz</div><div class="cv tnum">${LIVE?es1(p.voice):p.voice}%</div></div><div class="pc-cell"><div class="ck">Protagonismo</div><div class="cv tnum">${protag}</div></div><div class="pc-cell"><div class="ck">Ratio voz / pantalla</div><div class="cv tnum">${rcell}</div></div></div>
+  <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div><div class="pc-note">${esc(p.note)}</div>`;
+}
+
+/* ---- segregación (espejo) ---- */
+const mirror=$('mirror');
+function renderMirror(){
+  mirror.innerHTML='';
+  const MAX=LIVE?Math.max(1,...DATA.themes.map(th=>Math.max(th.f,th.m))):46;
+  DATA.themes.forEach(th=>{
+    const row=document.createElement('div');row.className='mrow';
+    row.innerHTML=`<div class="mside l"><span class="bar" style="width:${th.m/MAX*100}%"></span><span class="bv">${LIVE?es1(th.m):th.m}</span></div><div class="mcat">${esc(th.t)}</div><div class="mside r"><span class="bar" style="width:${th.f/MAX*100}%"></span><span class="bv">${LIVE?es1(th.f):th.f}</span></div>`;
+    mirror.appendChild(row);
+  });
+}
+
+/* ---- mancuerna pantalla–voz ---- */
+const dumb=$('dumb');
+function renderDumb(rows){
+  dumb.innerHTML='';
+  rows.forEach(d=>{
+    const diff=d.voice-d.screen,neg=diff<0,dc=neg?'var(--crit)':'var(--good)';
+    const lo=Math.min(d.screen,d.voice),hi=Math.max(d.screen,d.voice);
+    const el=document.createElement('div');
+    el.innerHTML=`<div class="db-top"><span class="db-name"><i style="background:${d.col}"></i>${d.name}</span><span class="db-gap" style="color:${dc}">${neg?'−':'+'}${Math.abs(diff).toFixed(1).replace('.',',')} pp de voz</span></div>
+    <div class="db-track"><span class="db-seg" style="left:${lo}%;width:${hi-lo}%;background:color-mix(in srgb,${dc} 55%,transparent)"></span>
+    <span class="db-dot p" style="left:${d.screen}%;color:${d.col}"></span>
+    <span class="db-dot v" style="left:${d.voice}%;color:${d.col}"></span>
+    <span class="db-cap up" style="left:${d.screen}%"><span>pantalla </span><b>${d.screen.toString().replace('.',',')}%</b></span>
+    <span class="db-cap down" style="left:${d.voice}%"><b>${d.voice.toString().replace('.',',')}%</b><span> voz</span></span></div>`;
+    dumb.appendChild(el);
+  });
+}
+
+/* ---- composición índice ---- */
+const comp=$('comp');
+function renderComp(){
+  comp.innerHTML='';
+  if(!DATA.irm){comp.innerHTML='<div class="comp-pend">El índice de representación y sus cuatro señales aún no los calcula el backend: se mostrarán aquí cuando el equipo cierre su definición.</div>';return}
+  DATA.irm.forEach(r=>{
+    const c=r.v<40?'var(--crit)':r.v<70?'var(--warn)':'var(--good)';
+    const el=document.createElement('div');el.className='crow';
+    el.innerHTML=`<div><div class="cl">${r.k}</div><div class="cw">${r.w}</div></div><div class="cbar"><div class="cv" style="color:${c}">${r.v}</div><div class="ctrack"><i style="width:${r.v}%;background:${c}"></i></div></div>`;
+    comp.appendChild(el);
+  });
+}
+
+/* ---- tabla para lectores de pantalla ---- */
+function renderSr(){
+  const tb=$('srdata');tb.innerHTML='';
+  DATA.people.forEach(p=>{const tr=document.createElement('tr');tr.innerHTML=`<th scope="row">${esc(p.name)}</th><td>${gname(p.g).toLowerCase()}</td><td>${esc(p.role)}</td><td>${LIVE?es1(p.screen):p.screen}%</td><td>${LIVE?es1(p.voice):p.voice}%</td><td>${LIVE?'pendiente':Math.round(p.protag*100)}</td>`;tb.appendChild(tr)});
+}
+
+/* ---- tema ---- */
+const tb=$('theme');
+const curT=()=>document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+tb.addEventListener('click',()=>{const n=curT()==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('aiasn-t',n)}catch(e){}});
+try{const s=localStorage.getItem('aiasn-t');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}
+
+/* ---- la misma página con el resultado de la API ---- */
+const FLAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+const OK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+function flag(el,on,html){el.className='vflag'+(on?'':' ok');el.innerHTML=(on?FLAG_ICON:OK_ICON)+`<div>${html}</div>`}
+const pct=x=>es1(x)+'<span class="unit">%</span>';
+
+function renderLive(v){
+  LIVE=true;
+  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,themes:v.themes,irm:null};
+  const nf=v.people.filter(p=>p.g==='f').length,nm=v.people.filter(p=>p.g==='m').length;
+  const tag=$('src-tag');tag.textContent='Datos reales';tag.classList.add('real');
+  $('src-desc').textContent=`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
+  $('legend-size').textContent='El tamaño de cada estrella es su tiempo de voz';
+  cv.setAttribute('aria-label','Constelación del vídeo analizado: cada estrella es una persona; su tamaño es su tiempo de voz y su color y forma, el género percibido. Los datos completos están en la tabla siguiente.');
+
+  // veredicto
+  $('gauge').setAttribute('aria-label','Índice de Representación pendiente: el backend aún no lo calcula');
+  $('gauge-arc').style.display='none';$('gauge-num').textContent='—';
+  $('v-screen').innerHTML=pct(v.screen.f);$('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`;
+  $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
+  $('v-ratio-s').textContent=v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
+  $('v-refs').textContent=`${v.refs.f} : ${v.refs.m}`;
+  flag($('flag-1'),!v.parity.ok,v.parity.ok
+    ?`<b>Salvaguarda de paridad cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %.`
+    :`<b>Salvaguarda de paridad no cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %, por debajo del objetivo legal del 40 %.`);
+  flag($('flag-2'),v.washing.on,v.washing.on
+    ?`<b>Equality-washing activado.</b> ${esc(v.washing.text)}`
+    :'<b>Equality-washing</b> — <b>no activado</b>: la presencia en pantalla de las mujeres va acompañada de voz.');
+
+  // lectura fácil
+  $('ez-list').innerHTML=(v.easy.length?v.easy:['El resumen en lectura fácil no está disponible para este vídeo.']).map(s=>`<li>${esc(s)}</li>`).join('')
+    +'<li>Cuando el sistema no está seguro de quién es una persona, una persona del equipo lo revisa.</li>';
+
+  // i · temas
+  $('cap-themes').textContent='De qué habla cada género, como porcentaje de sus propios turnos con tema.';
+  mirror.setAttribute('aria-label','Segregación temática por género, como porcentaje de los turnos de cada grupo. '+v.themes.map(t=>`${t.t}: mujeres ${es1(t.f)}, hombres ${es1(t.m)}`).join('. ')+'.');
+  renderMirror();
+
+  // ii · pantalla–voz
+  const rows=[{name:'Mujeres',screen:v.screen.f||0,voice:v.voice.f||0,col:'var(--f)'},{name:'Hombres',screen:v.screen.m||0,voice:v.voice.m||0,col:'var(--m)'}];
+  dumb.setAttribute('aria-label','Brecha entre tiempo en pantalla y tiempo de voz. '+rows.map(d=>`${d.name}: ${es1(d.screen)} por ciento en pantalla y ${es1(d.voice)} por ciento de voz`).join('. ')+'.');
+  renderDumb(rows);
+
+  // iii · poder
+  const fig=(x,g)=>`<td class="fig ${g}">${x}</td>`;
+  $('power').innerHTML=
+    `<tr><td>Abre y cierra el acto<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
+    `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
+    `<tr><td>Centralidad media en plano</td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
+    `<tr><td>Interrupciones recibidas<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
+    `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
+
+  // iv · roles
+  const chip=p=>`<span class="rchip ${p.g==='f'||p.g==='m'?p.g:'u'}">${esc(p.name)}</span>`;
+  $('ladder').innerHTML=v.roles.map(r=>`<div class="rl-row"><div class="rl-tier">${esc(r.rol.charAt(0).toUpperCase()+r.rol.slice(1))}</div><div class="rl-people">${r.people.map(chip).join('')}</div></div>`).join('')
+    +(v.undetermined?`<div class="rl-row"><div class="rl-tier">Sin identificar<span class="rl-sub">confianza bajo umbral</span></div><div class="rl-people"><span class="rchip u">${v.undetermined} ${v.undetermined===1?'interviniente':'intervinientes'}</span><span class="hil">Human-in-the-Loop · revisión humana</span></div></div>`:'');
+  $('role-gap').innerHTML=v.expertVoice
+    ?`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Tiempo de voz de quienes figuran como <b>experto/a</b>, sobre el total del vídeo:</div><div class="rg-pair"><div class="rg-cell"><div class="rg-num" style="color:var(--f-ink)">${es1(v.expertVoice.f)} %</div><div class="rg-lab">Expertas</div></div><div class="rg-vs">frente a</div><div class="rg-cell"><div class="rg-num" style="color:var(--m-ink)">${es1(v.expertVoice.m)} %</div><div class="rg-lab">Expertos</div></div></div>`
+    :`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">${v.experts?'Quienes figuran como experto/a en este vídeo no tienen un género determinado: no hay comparación posible.':'En este vídeo nadie figura como experto/a.'}</div>`;
+
+  // v · clima
+  const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;
+  $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||'<div class="cl-note">No hay turnos clasificados por tono en este vídeo.</div>';
+  $('clima-note').innerHTML='Los registros <b>técnico-asertivo</b> y <b>disenso</b> son los que una mesa suele leer como autoridad. No se trata de que un registro valga más: lo relevante es cómo se reparten entre géneros.';
+
+  // vi · índice y cierre
+  $('cap-comp').textContent='Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Pendiente de definir con el equipo.';
+  renderComp();
+  const mk=$('mk-screen');   // the scale ends at 50 %: beyond it, at the edge with its figure
+  mk.style.left=Math.min(97,Math.max(0,(v.screen.f||0)*2))+'%';mk.querySelector('.num').textContent=es1(v.screen.f)+' %';
+  $('foot-data').innerHTML=`<b>Datos reales</b> del vídeo ${esc(v.videoId)}, procesados por el backend de AIASN. Lo que el backend aún no calcula se marca con «—». Proyecto de código abierto.`;
+
+  hover=null;buildOverlay();showDefault();renderSr();repaint();
+}
+
+/* ---- análisis de un vídeo con la API ---- */
+const API=(new URLSearchParams(location.search).get('api')||'http://localhost:8000').replace(/\/+$/,'');
+const STEPS={audio:'audio',nlp:'lenguaje',video:'vídeo',captions:'rótulos',silver:'unificación',gold:'indicadores'};
+const POLL_MS=3000,POLL_MAX_MS=60*60*1000,BUSY_RETRIES=3,BUSY_WAIT_MS=5000;
+const sleep=ms=>new Promise(ok=>setTimeout(ok,ms));
+const msg=t=>{$('live-msg').textContent=t};
+function running(status){
+  const pasos=(status&&status.pasos)||{},keys=Object.keys(STEPS);
+  const run=keys.filter(k=>pasos[k]==='running'),next=keys.filter(k=>pasos[k]!=='ok')[0];
+  return (run.length?run:next?[next]:[]).map(k=>STEPS[k]).join(' + ');
+}
+$('live-file').addEventListener('change',e=>{const f=e.target.files[0];$('live-name').textContent=f?f.name:'Elegir vídeo'});
+$('live').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const file=$('live-file').files[0];
+  if(!file){msg('Elige primero un vídeo.');return}
+  const go=$('live-go');go.disabled=true;
+  try{
+    msg('Enviando el vídeo…');
+    const fd=new FormData();fd.append('file',file);
+    let res=await fetch(API+'/videos',{method:'POST',body:fd});
+    for(let i=0;res.status===409&&i<BUSY_RETRIES;i++){await sleep(BUSY_WAIT_MS);res=await fetch(API+'/videos',{method:'POST',body:fd})}
+    if(res.status===409){msg('Ya se está procesando otro vídeo. Vuelve a intentarlo en unos minutos.');return}
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const id=(await res.json()).video_id,started=Date.now();
+    for(;;){
+      if(Date.now()-started>POLL_MAX_MS)throw new Error('el análisis tarda demasiado');
+      const r=await fetch(API+'/videos/'+encodeURIComponent(id));
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const body=await r.json(),estado=body.status&&body.status.estado;
+      if(estado==='error')throw new Error((body.status&&body.status.error)||'error');
+      if(estado==='ok'&&body.resultado){renderLive(AIASNAdapter.toView(body));msg('Análisis completado.');const u=new URL(location.href);u.searchParams.set('video',id);history.replaceState(null,'',u);return}
+      msg(estado==='en_cola'?'En cola…':'Procesando: '+running(body.status)+'…');
+      await sleep(POLL_MS);
+    }
+  }catch(err){
+    msg(err instanceof TypeError?`No se pudo conectar con la API (${API}).`:'No se pudo completar el análisis: '+err.message);
+  }finally{go.disabled=false}
+});
+
+// ?video=ID opens a video already processed (to share or reload its result) without uploading it again
+async function openVideo(id){
+  try{
+    msg('Cargando el resultado…');
+    const r=await fetch(API+'/videos/'+encodeURIComponent(id));
+    if(!r.ok)throw new Error(r.status===404?'vídeo desconocido':'HTTP '+r.status);
+    const body=await r.json();
+    if(body.status&&body.status.estado==='ok'&&body.resultado){renderLive(AIASNAdapter.toView(body));msg('')}
+    else msg('Ese vídeo aún no tiene resultado: '+((body.status&&body.status.estado)||'')+'.');
+  }catch(err){msg(err instanceof TypeError?`No se pudo conectar con la API (${API}).`:'No se pudo abrir el vídeo: '+err.message)}
+}
+
+renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderComp();renderSr();
+buildOverlay();showDefault();resize();start();
+function repaint(){resize();if(reduce)draw(performance.now())}
+requestAnimationFrame(repaint);addEventListener('load',repaint);
+setTimeout(repaint,180);setTimeout(repaint,600);setTimeout(repaint,1400);
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120)});
+const opened=new URLSearchParams(location.search).get('video');
+if(opened)openVideo(opened);
+})();

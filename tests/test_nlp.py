@@ -69,9 +69,9 @@ TOPICS = Topics(topics=[
         TopicSpeaker(speaker="Speaker_1", evidence="Ada Lovelace")]),           # the same topic and speaker again
 ])
 REFERENCES = References(references=[
-    Reference(turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
-    Reference(turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
-    Reference(turn=8, name="Alan Turing", literal="Turing", gender="M"),
+    Reference(reasoning="pionera de la informática, citada como inspiración", is_reference=True, turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
+    Reference(reasoning="inventora citada como ejemplo", is_reference=True, turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
+    Reference(reasoning="matemático citado como referente", is_reference=True, turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
 PIECE = Piece(format="interview", roles=[
     SpeakerRole(speaker="Speaker_0", role="interviewer", role_es="entrevistador/a"),
@@ -134,6 +134,15 @@ def test_topics_by_speaker_over_the_whole_piece():
     assert t.found.tolist() == [True, True, False]   # checked against everything that speaker says
     assert llm.calls[0][1] == transcript(TURNS)      # one call with the whole transcript
     assert "care (cuidados), technology (tecnología)" in llm.calls[0][0]
+
+
+def test_references_reason_first_and_keep_only_those_the_reasoning_accepts():
+    assert list(Reference.model_fields)[:2] == ["reasoning", "is_reference"]   # the model reasons, then decides
+    called = Reference(reasoning="se le habla directamente: no es un referente", is_reference=False, turn=0,
+                       name="Pepe", literal="Pepe", gender="M")
+    refs = References(references=[*REFERENCES.references, called])
+    r = ReferenceExtractor(FakeLLM({References: refs}), NlpSettings()).extract(TURNS)
+    assert "Pepe" not in r.name.tolist() and "reasoning" not in r.columns
 
 
 def test_references_take_the_speaker_who_mentions_them():

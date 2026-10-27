@@ -126,7 +126,7 @@ def test_calculo_kpis_y_alerta_equality_washing():
     # Verificar que los segundos son positivos y coherentes
     assert kpis["por_genero"]["hombre"]["tiempo_voz_s"] > 0
     assert kpis["por_genero"]["mujer"]["tiempo_pantalla_s"] > 0
-    assert 0.0 <= kpis["por_genero"]["mujer"]["ratio_voz_pantalla"] <= 1.5
+    assert 0.0 <= kpis["por_genero"]["mujer"]["voz_activa_en_pantalla"] <= 1.0
 
 
 def test_salvaguarda_matematica_paridad_no_binaria_adr0006():
@@ -359,3 +359,17 @@ def test_porcentajes_sobre_el_tiempo_de_genero_determinado():
     assert kpis["total_voz_segundos"] == 40.0 and kpis["total_voz_determinado_s"] == 20.0
     # La salvaguarda ya mide sobre lo determinado: coincide con el porcentaje de voz
     assert kpis["salvaguarda_paridad"]["cuota_femenina"] * 100 == kpis["pct_voz_mujer"]
+
+
+def test_rvp_es_cociente_de_cuotas():
+    """Spec 21 §1.3: RVP = %voz / %pantalla; la fraccion de pantalla hablando va aparte (voz_activa_en_pantalla)."""
+    df_audio = pd.DataFrame([
+        {"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 0, "transcripcion": "Hola", "genero_inferido": "hombre",
+         "track_id": "person_2"}])
+    # Ella sale 10 s sin hablar; el sale 10 s y habla: ella 50 % de pantalla y 0 % de voz
+    df_video = pd.DataFrame([_persona("person_1", "mujer", 0.0, 10.0), _persona("person_2", "hombre", 0.0, 10.0)])
+    kpis = calcular_kpis_paridad(cruzar_intervalos_multimodales(df_audio, df_video))
+    assert kpis["por_genero"]["mujer"]["ratio_voz_pantalla"] == 0.0
+    assert kpis["por_genero"]["hombre"]["ratio_voz_pantalla"] == 2.0      # 100 % de voz / 50 % de pantalla
+    assert kpis["por_genero"]["hombre"]["voz_activa_en_pantalla"] == 1.0  # habla todo el tiempo que sale
+    assert kpis["por_genero"]["no_binario"]["ratio_voz_pantalla"] is None  # sin tiempo en pantalla

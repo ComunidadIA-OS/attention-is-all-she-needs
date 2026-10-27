@@ -585,7 +585,8 @@ def calcular_kpis_paridad(
         tiempo_voz_total = c1_s + c3_s
         tiempo_pantalla_total = c1_s + c2_s
 
-        ratio_vp = (
+        # Share of the screen time spent speaking (C1 / screen, Vilaplana); not the RVP, which compares shares
+        voz_activa_en_pantalla = (
             c1_s / max(0.01, tiempo_pantalla_total) if tiempo_pantalla_total > 0 else 0.0
         )
 
@@ -602,7 +603,7 @@ def calcular_kpis_paridad(
             "c1_voz_activa_s": round(c1_s, 2),
             "c2_presencia_muda_s": round(c2_s, 2),
             "c3_voz_off_s": round(c3_s, 2),
-            "ratio_voz_pantalla": round(ratio_vp, 3),
+            "voz_activa_en_pantalla": round(voz_activa_en_pantalla, 3),
             "area_media": round(area_media, 3),
             "centralidad_media": round(centrality_media, 3),
         }
@@ -622,6 +623,15 @@ def calcular_kpis_paridad(
         if total_pantalla_det > 0
         else 0.0
     )
+    # RVP (spec 21 §1.3): share of voice over share of screen of each gender; None without screen time
+    for gen in ("mujer", "hombre", "no_binario"):
+        g = kpis_genero[gen]
+        pct_v = g["tiempo_voz_s"] / total_voz_det * 100.0 if total_voz_det > 0 else 0.0
+        pct_p = g["tiempo_pantalla_s"] / total_pantalla_det * 100.0 if total_pantalla_det > 0 else 0.0
+        g["ratio_voz_pantalla"] = round(pct_v / pct_p, 3) if pct_p > 0 else None
+    kpis_genero["no_determinado"]["ratio_voz_pantalla"] = None
+    rvp_mujer = kpis_genero["mujer"]["ratio_voz_pantalla"]
+
     pct_voz_no_determinado = (
         kpis_genero["no_determinado"]["tiempo_voz_s"] / total_voz * 100.0 if total_voz > 0 else 0.0
     )
@@ -642,12 +652,12 @@ def calcular_kpis_paridad(
     alerta_equality_washing = False
     motivo_alerta = ""
     if pct_pantalla_mujer >= 35.0 and (
-        kpis_genero["mujer"]["ratio_voz_pantalla"] < 0.40 or pct_voz_mujer < 25.0
+        (rvp_mujer is not None and rvp_mujer < 0.40) or pct_voz_mujer < 25.0
     ):
         alerta_equality_washing = True
         motivo_alerta = (
             f"Presencia figurativa detectada: Mujeres representan {pct_pantalla_mujer:.1f}% de pantalla, "
-            f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {kpis_genero['mujer']['ratio_voz_pantalla']:.2f})."
+            f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {rvp_mujer:.2f})."
         )
 
     test_bechdel = evaluar_bechdel_conversacional(df_eventos)

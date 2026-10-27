@@ -27,7 +27,10 @@ def result(lake: Lake, video_id: str) -> dict:
             "pantalla_pct": _determined(_by_gender(kpis, "parity", "pantalla_s", pct=True)),
             "sin_determinar_pct": {"voz": _by_gender(kpis, "parity", "voz_s", pct=True).get("no_determinado"),
                                    "pantalla": _by_gender(kpis, "parity", "pantalla_s", pct=True).get("no_determinado")},
-            "ratio_voz_pantalla": _by_gender(kpis, "parity", "voz_activa_en_pantalla"),
+            # RVP (spec 21 §1.3): share of voice over share of screen; voz_activa_en_pantalla: screen time speaking
+            "ratio_voz_pantalla": _rvp(_by_gender(kpis, "parity", "voz_s", pct=True),
+                                       _by_gender(kpis, "parity", "pantalla_s", pct=True)),
+            "voz_activa_en_pantalla": _determined(_by_gender(kpis, "parity", "voz_activa_en_pantalla")),
             "referentes": _by_gender(kpis, "references", value=True),
         },
         "personas": _people(participants, people),
@@ -44,6 +47,10 @@ def result(lake: Lake, video_id: str) -> dict:
                          "aristas": _records(gold["graph_edges"])},
         "kpis": _records(kpis),   # every KPI, long format (valor / base), for what the sections above do not show
     }
+
+
+def _rvp(voice: dict, screen: dict) -> dict:
+    return {g: round(voice[g] / screen[g], 2) if screen.get(g) else None for g in _determined(voice)}
 
 
 def _determined(shares: dict) -> dict:

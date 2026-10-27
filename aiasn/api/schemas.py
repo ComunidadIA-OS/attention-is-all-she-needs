@@ -48,7 +48,7 @@ def result(lake: Lake, video_id: str) -> dict:
         "autoridad": {   # shares within each gender, from the KPIs of gold
             "voz_con_autoridad_pct": _by_gender(kpis, "authority", pct=True),
             "presentacion_con_cargo_pct": _by_gender(kpis, "naming", pct=True),
-            "ideas_aportadas_pct": {c: _by_gender(kpis, "ideas", c, pct=True) for c in ("con", "solo")},
+            "ideas": _ideas(kpis),
         },
         "constelacion": {"nodos": _records(nodes.rename(columns={"node_id": "id"})),
                          "aristas": _records(gold["graph_edges"])},
@@ -147,6 +147,16 @@ def _topics(kpis: pd.DataFrame, nodes: pd.DataFrame) -> list[dict]:
     return _records(pd.DataFrame({"tema": t.categoria_es, "clave": t.categoria, "genero": t.genero,
                                   "personas": t.valor.astype(int), "pct": (t.valor / t.base * 100).round(1),
                                   "sesgo": t.categoria.map(bias)}))
+
+
+def _ideas(kpis: pd.DataFrame) -> dict:
+    """The key ideas split into groups that add up to 100: those brought only by one gender, and those shared by
+    several. An idea belongs to exactly one gender alone or is shared, so shared = total - those alone."""
+    alone = kpis[(kpis.kpi == "ideas") & (kpis.categoria == "solo")]
+    total = int(alone.base.iloc[0]) if len(alone) else 0
+    pct = lambda n: round(float(n) / total * 100, 1) if total else None
+    return {"total": total, "solo_pct": {r.genero: pct(r.valor) for r in alone.itertuples()},
+            "compartidas_pct": pct(total - alone.valor.sum())}
 
 
 def _tone(kpis: pd.DataFrame) -> dict:

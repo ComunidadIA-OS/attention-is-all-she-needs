@@ -132,6 +132,8 @@ def test_result_by_sections_of_the_front(settings):
     # Marta speaks from authority: testimony by role, but her caption title shows it
     assert res["autoridad"]["voz_con_autoridad_pct"]["mujer"] == 100.0
     assert res["poder"]["area_media"]["mujer"] == 0.3
+    # 3 ideas: one shared by Marta and the narrator, one only hers, one only his
+    assert res["autoridad"]["ideas"] == {"total": 3, "solo_pct": {"hombre": 33.3, "mujer": 33.3}, "compartidas_pct": 33.3}
     first = res["segmentos"][0]
     assert first == {"inicio": 0.0, "fin": 10.0, "segundos": 10.0, "cuadrante": 1, "tipo": first["tipo"],
                      "genero": "mujer", "persona": "p1", "texto": "Hola"}   # Marta speaking on screen

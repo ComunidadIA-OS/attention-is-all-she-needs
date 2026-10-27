@@ -42,7 +42,7 @@ const PAYLOAD = {
     },
     personas: [
       { id: "p1", nombre: "Ana Pérez", cargo: "Investigadora", genero: "mujer", rol: "experto/a", autoridad: true, pantalla_s: 40, voz_s: 25,
-        area: 0.3, centralidad: 0.8 },
+        area: 0.3, centralidad: 0.8, cargo_en: "researcher", sesgo_cargo: 0.09 },
       { id: "p2", nombre: null, cargo: null, genero: "hombre", rol: "presentador/a", autoridad: true, pantalla_s: 50, voz_s: 75 },
       { id: "p3", nombre: null, cargo: null, genero: "no_determinado", rol: null, autoridad: null, pantalla_s: 10, voz_s: 0 }
     ],
@@ -137,6 +137,7 @@ test("power, roles and climate", () => {
   assert.deepEqual(v.power, { distinct: { f: 1, m: 1 }, central: { f: 0.8, m: 0.6 }, area: { f: 0.3, m: 0.2 },
                              cited: { f: 0, m: 2 } });
   assert.deepEqual([v.people[0].area, v.people[0].centralidad, v.people[1].area], [0.3, 0.8, null]);
+  assert.deepEqual([v.people[0].cargoEn, v.people[0].sesgoCargo, v.people[1].sesgoCargo], ["researcher", 0.09, null]);
   assert.deepEqual(v.roles.map((r) => r.rol), ["presentador/a", "experto/a"]);
   assert.equal(v.undetermined, 1);
   assert.deepEqual(v.expertVoice, { f: 25, m: 0 });

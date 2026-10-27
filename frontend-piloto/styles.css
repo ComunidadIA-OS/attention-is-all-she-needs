@@ -347,3 +347,5 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .rv-btn[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
 .rv-btn[aria-pressed="true"]::before{content:"✓ "}
 @media (max-width:760px){.rv-choices{justify-content:flex-start}}
+.ledger.titles .fig{width:auto}
+.ledger.titles .mb{justify-content:flex-end}

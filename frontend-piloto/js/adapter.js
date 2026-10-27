@@ -119,6 +119,7 @@
         topics: Array.from(new Set(talks[p.id] || [])),
         note: p.cargo || "",
         area: num(p.area), centralidad: num(p.centralidad),
+        cargoEn: p.cargo_en || null, sesgoCargo: num(p.sesgo_cargo),
         labeled: Boolean(p.nombre) || voz > 0
       };
     });

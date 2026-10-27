@@ -104,7 +104,7 @@ function showPerson(id){
     :['Ratio voz / pantalla',`<span style="color:${ratio<.9?'#f0576e':'#6fcf9f'}">${ratio.toFixed(2)}</span>`];
   read.innerHTML=`<div class="pc-head"><span class="pc-star" style="background:radial-gradient(circle at 35% 35%,#fff,${core});box-shadow:0 0 20px 2px rgba(${glow},.6)"></span><div style="min-width:0"><div class="pc-name">${esc(p.name)}</div><div class="pc-role">${esc(p.role)}</div></div><span class="pc-g" style="${gcss}">${gname(p.g)}</span></div>
   <div class="pc-grid"><div class="pc-cell"><div class="ck">Tiempo en pantalla</div><div class="cv tnum">${LIVE?es1(p.screen):p.screen}%</div></div><div class="pc-cell"><div class="ck">Tiempo de voz</div><div class="cv tnum">${LIVE?es1(p.voice):p.voice}%</div></div><div class="pc-cell"><div class="ck">${c3[0]}</div><div class="cv tnum">${c3[1]}</div></div><div class="pc-cell"><div class="ck">${c4[0]}</div><div class="cv tnum">${c4[1]}</div></div></div>
-  <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div><div class="pc-note">${esc(p.note)}</div>`;
+  <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div>${LIVE&&p.sesgoCargo!=null?`<div class="pc-topics">Su cargo en word2vec <span class="chip">«${esc(p.cargoEn)}» · sesgo ${p.sesgoCargo>0?'+':''}${es2(p.sesgoCargo)} ${p.sesgoCargo>.02?'hacia «she»':p.sesgoCargo<-.02?'hacia «he»':'neutro'}</span></div>`:''}<div class="pc-note">${esc(p.note)}</div>`;
 }
 
 /* ---- segregación (espejo) ---- */
@@ -271,6 +271,12 @@ function renderLive(v,empty=false){
 
   // vii · supervisión humana (front only for now: decisions are not stored)
   renderReview(empty?[]:v.doubtful,empty);
+
+  // iv · cargos: the word2vec gender bias of each title, on the same axis as the topics
+  const titled=v.people.filter(p=>p.sesgoCargo!=null);
+  if(!empty&&titled.length)$('role-gap').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
+    +titled.map(p=>`<tr><td>${esc(p.cargoEn)}<span class="who">${esc(p.name)}</span></td><td class="fig">${bias(p.sesgoCargo)}</td></tr>`).join('')
+    +`</tbody></table><div class="rg-note">◆ hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
 
   // v · clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;

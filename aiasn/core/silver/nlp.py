@@ -12,7 +12,7 @@ from aiasn.core.transform import Transform
 
 # English keys (stable, word2vec) and their Spanish labels (`_es`, for the UI)
 TABLES = {
-    "nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"],
+    "nlp_topics": ["participant_id", "topic", "topic_es", "evidence"],   # one row per topic and participant
     "nlp_references": ["participant_id", "turn", "name", "genero"],   # genero: of the person cited
     "nlp_roles": ["participant_id", "role", "role_es", "authority", "authority_source"],   # source: rol, rotulo, ambos
     "nlp_ideas": ["idea_id", "idea", "participant_id"],

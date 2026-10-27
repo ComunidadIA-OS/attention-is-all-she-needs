@@ -59,8 +59,8 @@ class GraphGold(Transform):
 
     @staticmethod
     def _topics(topics: pd.DataFrame) -> pd.DataFrame:
-        """One small node per topic, sized by the turns it is talked about in; labelled in Spanish."""
-        t = topics.groupby("topic").agg(label=("topic_es", "first"), size=("turn", "size")).reset_index()
+        """One small node per topic, sized by the participants who talk about it; labelled in Spanish."""
+        t = topics.groupby("topic").agg(label=("topic_es", "first"), size=("topic", "size")).reset_index()
         return pd.DataFrame({"node_id": t.topic.map(topic_node), "tipo": TOPIC, "label": t.label, "clave": t.topic,
                              "size": t["size"].astype(float)})
 
@@ -95,7 +95,7 @@ class GraphGold(Transform):
 
     @staticmethod
     def _talks_about(topics: pd.DataFrame) -> pd.DataFrame:
-        """A participant talks about a topic: in how many turns. Topics shared by two participants join them."""
+        """A participant talks about a topic. Topics shared by two participants join them."""
         g = (topics.dropna(subset=["participant_id"]).groupby(["participant_id", "topic"]).size()
              .reset_index(name="peso"))
         return pd.DataFrame({"source": g.participant_id, "target": g.topic.map(topic_node), "tipo": "habla_de",

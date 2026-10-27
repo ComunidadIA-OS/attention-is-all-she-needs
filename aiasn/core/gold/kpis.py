@@ -84,7 +84,8 @@ def authority(tables: Tables, settings: Settings) -> pd.DataFrame:
 
 @kpi("topics")
 def topics(tables: Tables, settings: Settings) -> pd.DataFrame:
-    """Turns on each topic by the gender of who speaks, over all the topic turns of that gender."""
+    """Participants of each gender who talk about each topic, over all the topics the participants of that gender talk
+    about (each participant counts once per topic)."""
     t = with_gender(tables["silver/nlp_topics"], tables["silver/people"])
     counts = t.groupby(["genero", "topic"]).size()
     totals = t.groupby("genero").size()
@@ -136,8 +137,8 @@ def tone(tables: Tables, settings: Settings) -> pd.DataFrame:
 
 @kpi("stereotype")
 def stereotype(tables: Tables, settings: Settings) -> pd.DataFrame:
-    """Mean word2vec gender bias (> 0: towards "she") of the topics each gender talks about, per topic turn, and of
-    their caption titles, per participant. Only terms in the vocabulary count."""
+    """Mean word2vec gender bias (> 0: towards "she") of the topics each gender talks about, per participant and topic,
+    and of their caption titles, per participant. Only terms in the vocabulary count."""
     people, bias = tables["silver/people"], tables["silver/term_bias"]
     score = {(t.tipo, t.termino): t.sesgo for t in bias.dropna(subset=["sesgo"]).itertuples()}
     topics = with_gender(tables["silver/nlp_topics"], people)

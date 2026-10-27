@@ -458,7 +458,7 @@ def S(*speakers) -> pd.arrays.IntegerArray:
 
 
 NLP_BRONZE = {   # bronze nlp_* of a speaker 0 on screen (person 1) and a voice off screen (speaker 1)
-    "nlp_topics": pd.DataFrame({"turn": [0, 1, 2], "speaker": S(0, 1, 0), "topic": [" Technology", "robots", "health"],
+    "nlp_topics": pd.DataFrame({"speaker": S(0, 1, 0), "topic": [" Technology", "robots", "health"],
                                 "topic_es": ["Tecnologia", " robots ", "salud"],
                                 "evidence": ["la IA", "cuidar", "inventado"], "found": [True, True, False]}),
     "nlp_references": pd.DataFrame({"turn": [0, 2], "speaker": S(0, 0), "name": ["Ada Lovelace", "Alan Turing"],
@@ -538,7 +538,7 @@ def test_zero_shot_tone_has_nothing_to_check():
 def test_nlp_silver_without_rows():
     out = nlp({t: df.iloc[:0] for t, df in NLP_BRONZE.items()})
     assert all(out[t].empty and list(out[t].columns) == cols for t, cols in
-               {"nlp_topics": ["participant_id", "turn", "topic", "topic_es", "evidence"]}.items())
+               {"nlp_topics": ["participant_id", "topic", "topic_es", "evidence"]}.items())
 
 
 def test_references_leave_out_the_participants():

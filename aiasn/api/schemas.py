@@ -136,7 +136,7 @@ def _topics(kpis: pd.DataFrame, nodes: pd.DataFrame) -> list[dict]:
     t = kpis[kpis.kpi == "topics"]
     bias = nodes[nodes.tipo == "tema"].set_index("clave").sesgo
     return _records(pd.DataFrame({"tema": t.categoria_es, "clave": t.categoria, "genero": t.genero,
-                                  "turnos": t.valor.astype(int), "pct": (t.valor / t.base * 100).round(1),
+                                  "personas": t.valor.astype(int), "pct": (t.valor / t.base * 100).round(1),
                                   "sesgo": t.categoria.map(bias)}))
 
 

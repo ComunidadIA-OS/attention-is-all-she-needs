@@ -155,7 +155,7 @@ def test_result_by_sections_of_the_front(settings):
                                             "area": 0.3, "centralidad": 0.9}
     sp = res["veredicto"]["salvaguarda_paridad"]
     assert sp["regimen_aplicado"] == "FASE_1_ABSORCION_TECHO_MASCULINO" and sp["suelo_femenino_exigido"] == 0.4
-    assert {"tema": "tecnología", "clave": "technology", "genero": "mujer", "turnos": 1, "pct": 50.0,
+    assert {"tema": "tecnología", "clave": "technology", "genero": "mujer", "personas": 1, "pct": 50.0,
             "sesgo": -0.04} in res["temas"]
     assert res["clima"] == {"mujer": {"técnico/asertivo": 100.0}, "hombre": {"disenso": 100.0}}
     assert {n["id"] for n in res["constelacion"]["nodos"]} >= {"p1", "p2", "v1", "tema:technology"}

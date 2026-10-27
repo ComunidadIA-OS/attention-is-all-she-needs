@@ -96,10 +96,12 @@ function showPerson(id){
   const p=pr(id),ratio=p.screen?p.voice/p.screen:null;
   const gcss=p.g==='f'?'background:rgba(192,107,224,.18);color:#d08ce8':p.g==='m'?'background:rgba(116,160,180,.18);color:#93b8c9':'background:var(--sky-line);color:var(--sky-mut)';
   const core=p.g==='f'?P.f:p.g==='m'?P.m:P.u,glow=p.g==='f'?P.fGlow:p.g==='m'?P.mGlow:P.uGlow;
-  const protag=LIVE?PEND:Math.round(p.protag*100);
-  const rcell=LIVE?PEND:`<span style="color:${ratio<.9?'#f0576e':'#6fcf9f'}">${ratio.toFixed(2)}</span>`;
+  // with real data, how central and how big they are on screen; the mock-up's prominence and ratio otherwise
+  const c3=LIVE?['Centralidad en plano',p.centralidad==null?PEND:es2(p.centralidad)]:['Protagonismo',Math.round(p.protag*100)];
+  const c4=LIVE?['Área en plano',p.area==null?PEND:es1(p.area*100)+'%']
+    :['Ratio voz / pantalla',`<span style="color:${ratio<.9?'#f0576e':'#6fcf9f'}">${ratio.toFixed(2)}</span>`];
   read.innerHTML=`<div class="pc-head"><span class="pc-star" style="background:radial-gradient(circle at 35% 35%,#fff,${core});box-shadow:0 0 20px 2px rgba(${glow},.6)"></span><div style="min-width:0"><div class="pc-name">${esc(p.name)}</div><div class="pc-role">${esc(p.role)}</div></div><span class="pc-g" style="${gcss}">${gname(p.g)}</span></div>
-  <div class="pc-grid"><div class="pc-cell"><div class="ck">Tiempo en pantalla</div><div class="cv tnum">${LIVE?es1(p.screen):p.screen}%</div></div><div class="pc-cell"><div class="ck">Tiempo de voz</div><div class="cv tnum">${LIVE?es1(p.voice):p.voice}%</div></div><div class="pc-cell"><div class="ck">Protagonismo</div><div class="cv tnum">${protag}</div></div><div class="pc-cell"><div class="ck">Ratio voz / pantalla</div><div class="cv tnum">${rcell}</div></div></div>
+  <div class="pc-grid"><div class="pc-cell"><div class="ck">Tiempo en pantalla</div><div class="cv tnum">${LIVE?es1(p.screen):p.screen}%</div></div><div class="pc-cell"><div class="ck">Tiempo de voz</div><div class="cv tnum">${LIVE?es1(p.voice):p.voice}%</div></div><div class="pc-cell"><div class="ck">${c3[0]}</div><div class="cv tnum">${c3[1]}</div></div><div class="pc-cell"><div class="ck">${c4[0]}</div><div class="cv tnum">${c4[1]}</div></div></div>
   <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div><div class="pc-note">${esc(p.note)}</div>`;
 }
 
@@ -243,7 +245,8 @@ function renderLive(v,empty=false){
   $('power').innerHTML=
     `<tr><td>Abre y cierra el acto<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
-    `<tr><td>Centralidad media en plano</td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
+    `<tr><td>Centralidad media en plano<span class="who">1 en el centro del plano, 0 en una esquina</span></td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
+    `<tr><td>Área media en plano<span class="who">parte del encuadre que ocupan</span></td>${fig(v.power.area.f==null?'—':es1(v.power.area.f*100)+' %','f')}${fig(v.power.area.m==null?'—':es1(v.power.area.m*100)+' %','m')}</tr>`+
     `<tr><td>Interrupciones recibidas<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
 

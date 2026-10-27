@@ -104,6 +104,7 @@
         voice: totVoice ? round1((voz / totVoice) * 100) : 0,
         topics: Array.from(new Set(talks[p.id] || [])),
         note: p.cargo || "",
+        area: num(p.area), centralidad: num(p.centralidad),
         labeled: Boolean(p.nombre) || voz > 0
       };
     });
@@ -160,6 +161,7 @@
       power: {
         distinct: { f: (pw.personas_distintas || {}).mujer || 0, m: (pw.personas_distintas || {}).hombre || 0 },
         central: byGender(pw.centralidad_media),
+        area: byGender(pw.area_media),
         cited: { f: (pw.veces_citado_como_referente || {}).mujer || 0, m: (pw.veces_citado_como_referente || {}).hombre || 0 }
       },
       roles: roleList,

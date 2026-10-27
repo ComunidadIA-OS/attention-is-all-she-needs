@@ -41,7 +41,8 @@ const PAYLOAD = {
       referentes: { hombre: 2 }
     },
     personas: [
-      { id: "p1", nombre: "Ana Pérez", cargo: "Investigadora", genero: "mujer", rol: "experto/a", autoridad: true, pantalla_s: 40, voz_s: 25 },
+      { id: "p1", nombre: "Ana Pérez", cargo: "Investigadora", genero: "mujer", rol: "experto/a", autoridad: true, pantalla_s: 40, voz_s: 25,
+        area: 0.3, centralidad: 0.8 },
       { id: "p2", nombre: null, cargo: null, genero: "hombre", rol: "presentador/a", autoridad: true, pantalla_s: 50, voz_s: 75 },
       { id: "p3", nombre: null, cargo: null, genero: "no_determinado", rol: null, autoridad: null, pantalla_s: 10, voz_s: 0 }
     ],
@@ -50,7 +51,7 @@ const PAYLOAD = {
       { tema: "tecnología", clave: "technology", genero: "mujer", turnos: 1, pct: 33.3, sesgo: 0.0 },
       { tema: "tecnología", clave: "technology", genero: "hombre", turnos: 3, pct: 100.0, sesgo: 0.0 }
     ],
-    poder: { centralidad_media: { mujer: 0.8, hombre: 0.6, no_binario: null, no_determinado: 0.5 },
+    poder: { centralidad_media: { mujer: 0.8, hombre: 0.6, no_binario: null }, area_media: { mujer: 0.3, hombre: 0.2 },
              personas_distintas: { mujer: 1, hombre: 1, no_determinado: 1 }, veces_citado_como_referente: { hombre: 2 } },
     roles: [{ rol: "experto/a", genero: "mujer", voz_s: 25 }, { rol: "presentador/a", genero: "hombre", voz_s: 75 }],
     clima: { mujer: { "colaborativo": 50.0, "técnico/asertivo": 50.0 }, hombre: { "disenso": 100.0 } },
@@ -127,7 +128,9 @@ test("themes nobody of known gender talks about are left out", () => {
 });
 
 test("power, roles and climate", () => {
-  assert.deepEqual(v.power, { distinct: { f: 1, m: 1 }, central: { f: 0.8, m: 0.6 }, cited: { f: 0, m: 2 } });
+  assert.deepEqual(v.power, { distinct: { f: 1, m: 1 }, central: { f: 0.8, m: 0.6 }, area: { f: 0.3, m: 0.2 },
+                             cited: { f: 0, m: 2 } });
+  assert.deepEqual([v.people[0].area, v.people[0].centralidad, v.people[1].area], [0.3, 0.8, null]);
   assert.deepEqual(v.roles.map((r) => r.rol), ["presentador/a", "experto/a"]);
   assert.equal(v.undetermined, 1);
   assert.deepEqual(v.expertVoice, { f: 25, m: 0 });

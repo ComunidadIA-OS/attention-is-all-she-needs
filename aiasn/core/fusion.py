@@ -185,28 +185,23 @@ def generar_resumen_lectura_facil(
 
 def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
     """
-    Evalua deterministamente el Test de Bechdel Digital / Conversacional (Bechdel-Wallace 1985
-    adaptado a medios digitales y audiovisuales de no-ficcion):
-    1. Regla 1 (Pluralidad femenina): Intervienen con voz activa al menos 2 mujeres distintas
-       (rompiendo el 'Efecto Token' o sindrome de la mujer unica de Kanter, 1977).
-    2. Regla 2 (Identidad y autoridad propia): Al menos 2 mujeres estan acreditadas con nombre
-       propio, cargo o identificador diferenciado (rotulo OCR o hablante nominal).
-    3. Regla 3 (Interlocucion horizontal directa Mujer_A -> Mujer_B): Existe al menos una
-       transicion directa de turno de palabra entre dos mujeres distintas sin intermediacion
-       masculina como eje obligatorio del debate.
+    Test de Interlocucion Femenina (TIF), adaptacion AIASN del Test de Bechdel-Wallace (1985) a la no ficcion
+    audiovisual (doc 26 §5). Mide el aislamiento relacional: mujeres presentes que solo hablan a traves de un hombre.
+
+    Aplicabilidad, en orden (M: mujeres presentes con voz o pantalla; H: hombres presentes; V: personas con voz, de
+    cualquier genero, porque que haya conversacion no depende del genero; no_determinado no cuenta en M ni en H):
+    sin datos determinados, V < 2 o H = 0 -> no_evaluable; M = 0 o M = 1 -> no_supera; si no, evaluado.
+
+    Reglas (solo si evaluado):
+    1. Pluralidad femenina: al menos 2 mujeres distintas con voz activa (Cuadrantes 1 y 3).
+    2. Identidad acreditada: al menos 2 mujeres con rotulo de nombre o cargo (OCR).
+    3. Interlocucion horizontal: al menos una transicion directa de turno Mujer_A -> Mujer_B (A != B).
+    Supera solo con 3/3.
     """
+    vacio = {"mujeres_presentes": 0, "hombres_presentes": 0, "personas_con_voz": 0, "mujeres_distintas_hablando": 0,
+             "mujeres_con_rotulo_identificado": 0, "transiciones_mujer_a_mujer": 0}
     if df_eventos.empty:
-        return {
-            "mujeres_distintas_hablando": 0,
-            "mujeres_con_rotulo_identificado": 0,
-            "transiciones_mujer_a_mujer": 0,
-            "regla_1_pluralidad_femenina": False,
-            "regla_2_identidad_propia": False,
-            "regla_3_dialogo_horizontal": False,
-            "puntuacion_bechdel_0_3": 0,
-            "supera_bechdel_digital": False,
-            "diagnostico_bechdel": "SIN_DATOS: DataFrame de eventos vacio.",
-        }
+        return _resultado_tif("no_evaluable", "sin_datos", vacio)
 
     # Filtrar turnos con voz activa (Cuadrantes 1 y 3) ordenados cronologicamente
     if "cuadrante" in df_eventos.columns:
@@ -264,38 +259,89 @@ def evaluar_bechdel_conversacional(df_eventos: pd.DataFrame) -> Dict[str, Any]:
     puntuacion = int(regla_1) + int(regla_2) + int(regla_3)
     supera = bool(puntuacion == 3)
 
-    if supera:
-        diagnostico = (
-            "SUPERA BECHDEL DIGITAL (3/3): Pluralidad femenina acreditada e interlocucion "
-            f"horizontal directa ({transiciones_m_a_m} transicion(es) Mujer-Mujer sin intermediacion masculina)."
-        )
-    elif not regla_1:
-        diagnostico = (
-            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Efecto Token / mujer unica "
-            f"(solo {mujeres_distintas_hablando} mujer(es) con voz activa en la pieza)."
-        )
-    elif not regla_3:
-        diagnostico = (
-            f"NO SUPERA BECHDEL DIGITAL ({puntuacion}/3): Aislamiento relacional "
-            "(participan >=2 mujeres pero todos sus turnos estan mediados por hombres)."
-        )
-    else:
-        diagnostico = (
-            f"CUMPLIMIENTO PARCIAL BECHDEL DIGITAL ({puntuacion}/3): Interlocucion directa "
-            "detectada pero falta rotulacion nominal/cargo completa en pantalla."
-        )
+    # Quien es cada evento: su persona en pantalla, o su voz (enlazada a su persona si alguna vez habla en pantalla)
+    pista_de_voz = {
+        h: t for h, t in zip(df_eventos.get("hablante_id", pd.Series(dtype=float)), df_eventos.get("track_id", pd.Series(dtype=object)))
+        if pd.notna(h) and pd.notna(t) and t
+    }
 
-    return {
+    def _persona(row: Any) -> str:
+        track, hablante = row.get("track_id"), row.get("hablante_id")
+        if pd.notna(track) and track:
+            return f"t:{track}"
+        if pd.notna(hablante):
+            return f"t:{pista_de_voz[hablante]}" if hablante in pista_de_voz else f"h:{hablante}"
+        return _id_participante(row)
+
+    personas = {g: {_persona(r) for r in df_eventos[df_eventos["genero"] == g].to_dict("records")}
+                for g in ("mujer", "hombre", "no_binario")}
+    conteos = {
+        "mujeres_presentes": len(personas["mujer"]),
+        "hombres_presentes": len(personas["hombre"]),
+        "personas_con_voz": len({_persona(r) for r in df_voz.to_dict("records")}),
         "mujeres_distintas_hablando": mujeres_distintas_hablando,
         "mujeres_con_rotulo_identificado": mujeres_con_rotulo,
         "transiciones_mujer_a_mujer": transiciones_m_a_m,
-        "regla_1_pluralidad_femenina": regla_1,
-        "regla_2_identidad_propia": regla_2,
-        "regla_3_dialogo_horizontal": regla_3,
-        "puntuacion_bechdel_0_3": puntuacion,
-        "supera_bechdel_digital": supera,
-        "diagnostico_bechdel": diagnostico,
     }
+    m, h, v = conteos["mujeres_presentes"], conteos["hombres_presentes"], conteos["personas_con_voz"]
+    if not any(personas.values()):
+        return _resultado_tif("no_evaluable", "sin_datos", conteos)
+    if v < 2:
+        return _resultado_tif("no_evaluable", "sin_conversacion", conteos)
+    if h == 0:
+        return _resultado_tif("no_evaluable", "sin_hombres", conteos)
+    if m == 0:
+        return _resultado_tif("no_supera", "sin_mujeres", conteos)
+    if m == 1:
+        return _resultado_tif("no_supera", "una_mujer", conteos)
+
+    regla_1 = mujeres_distintas_hablando >= 2
+    regla_2 = mujeres_con_rotulo >= 2
+    regla_3 = transiciones_m_a_m >= 1
+    return _resultado_tif("evaluado", None, conteos, (regla_1, regla_2, regla_3))
+
+
+evaluar_interlocucion_femenina = evaluar_bechdel_conversacional
+
+MOTIVOS_TIF = {
+    "sin_datos": "NO EVALUABLE: no hay tramos de genero determinado.",
+    "sin_conversacion": "NO EVALUABLE: solo habla una persona; no hay conversacion.",
+    "sin_hombres": "NO EVALUABLE: solo participan mujeres; el test mide la mediacion masculina.",
+    "sin_mujeres": "NO SUPERA: no aparece ninguna mujer.",
+    "una_mujer": "NO SUPERA: solo aparece una mujer; no puede dialogar con otra.",
+}
+
+
+def _resultado_tif(estado: str, motivo: Optional[str], conteos: Dict[str, int],
+                   reglas: Optional[Tuple[bool, bool, bool]] = None) -> Dict[str, Any]:
+    """Contrato de salida del TIF (doc 26 §5.5); las reglas y la puntuacion solo cuando se evalua."""
+    if reglas is None:
+        return {"estado": estado, "motivo": motivo, "aplica": False, **conteos,
+                "regla_1_pluralidad_femenina": None, "regla_2_identidad_propia": None,
+                "regla_3_dialogo_horizontal": None, "puntuacion_bechdel_0_3": None, "supera_bechdel_digital": False,
+                "diagnostico_tif": motivo, "diagnostico_bechdel": MOTIVOS_TIF[motivo]}
+    regla_1, regla_2, regla_3 = reglas
+    puntuacion = int(regla_1) + int(regla_2) + int(regla_3)
+    if puntuacion == 3:
+        diagnostico, texto = "supera", (
+            "SUPERA EL TEST DE INTERLOCUCION FEMENINA (3/3): pluralidad femenina acreditada e interlocucion "
+            f"horizontal directa ({conteos['transiciones_mujer_a_mujer']} transicion(es) Mujer-Mujer sin intermediacion masculina).")
+    elif not regla_1:
+        diagnostico, texto = "mujer_sin_voz", (
+            f"NO SUPERA ({puntuacion}/3): hay {conteos['mujeres_presentes']} mujeres presentes, pero solo "
+            f"{conteos['mujeres_distintas_hablando']} con voz activa.")
+    elif not regla_3:
+        diagnostico, texto = "aislamiento_relacional", (
+            f"NO SUPERA ({puntuacion}/3): aislamiento relacional; hablan >=2 mujeres pero todos sus turnos "
+            "estan mediados por hombres.")
+    else:
+        diagnostico, texto = "parcial", (
+            f"CUMPLIMIENTO PARCIAL ({puntuacion}/3): interlocucion directa detectada, pero falta rotulacion "
+            "nominal o de cargo de al menos dos mujeres.")
+    return {"estado": estado, "motivo": None, "aplica": True, **conteos,
+            "regla_1_pluralidad_femenina": regla_1, "regla_2_identidad_propia": regla_2,
+            "regla_3_dialogo_horizontal": regla_3, "puntuacion_bechdel_0_3": puntuacion,
+            "supera_bechdel_digital": puntuacion == 3, "diagnostico_tif": diagnostico, "diagnostico_bechdel": texto}
 
 
 def normalizar_tabla_audio(df_audio: pd.DataFrame, umbral_etico: float = 0.80) -> pd.DataFrame:

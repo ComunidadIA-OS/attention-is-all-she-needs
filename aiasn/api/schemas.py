@@ -68,6 +68,22 @@ def _rvp(voice: dict, screen: dict) -> dict:
     return {g: round(voice[g] / screen[g], 2) if screen.get(g) else None for g in _determined(voice)}
 
 
+def _tif(s: pd.Series) -> dict:
+    """Test de Interlocucion Femenina (doc 26 §5): its state, and the score and rules only when it is evaluated."""
+    score = _clean(s.get("bechdel_puntuacion_bechdel_0_3"))
+    rules = ("regla_1_pluralidad_femenina", "regla_2_identidad_propia", "regla_3_dialogo_horizontal")
+    counts = ("mujeres_presentes", "hombres_presentes", "personas_con_voz", "mujeres_distintas_hablando",
+              "mujeres_con_rotulo_identificado", "transiciones_mujer_a_mujer")
+    return {
+        "estado": s.get("bechdel_estado"), "motivo": _clean(s.get("bechdel_motivo")),
+        "puntuacion_0_3": None if score is None else int(score),
+        "supera": bool(s.get("bechdel_supera_bechdel_digital")),
+        "diagnostico": _clean(s.get("bechdel_diagnostico_tif")), "texto": s.get("bechdel_diagnostico_bechdel"),
+        "reglas": {r: None if _clean(s.get(f"bechdel_{r}")) is None else bool(s.get(f"bechdel_{r}")) for r in rules},
+        **{c: int(s.get(f"bechdel_{c}") or 0) for c in counts},
+    }
+
+
 def _determined(shares: dict) -> dict:
     return {g: v for g, v in shares.items() if g != "no_determinado"}
 
@@ -78,7 +94,7 @@ def _verdict(s: pd.Series) -> dict:
         "alerta_equality_washing": bool(s.alerta_equality_washing), "motivo_alerta": s.motivo_alerta,
         "alerta_infrarrepresentacion": bool(s.alerta_infrarrepresentacion),
         "motivo_infrarrepresentacion": s.motivo_infrarrepresentacion,
-        "bechdel": {"puntuacion_0_3": int(s.bechdel_puntuacion_bechdel_0_3), "diagnostico": s.bechdel_diagnostico_bechdel},
+        "bechdel": _tif(s),
         "salvaguarda_paridad": {"cumple": bool(s.salvaguarda_cumple_salvaguarda_paridad),
                                 "cuota_femenina": float(s.salvaguarda_cuota_femenina)},
         "valoracion_ciudadana": None,   # not measured yet

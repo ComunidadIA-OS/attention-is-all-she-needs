@@ -136,6 +136,9 @@ def test_result_by_sections_of_the_front(settings):
     assert res["segmentos_dudosos"] == []   # every span has a known gender here
     assert res["veredicto"]["valoracion_ciudadana"] is None
     assert res["veredicto"]["alerta_infrarrepresentacion"] is False   # 50 % on screen: above the 40 % floor
+    tif = res["veredicto"]["bechdel"]   # one woman (Marta) and a man: "no supera", with no score
+    assert (tif["estado"], tif["motivo"], tif["puntuacion_0_3"], tif["supera"]) == ("no_supera", "una_mujer", None, False)
+    assert tif["reglas"]["regla_3_dialogo_horizontal"] is None and tif["mujeres_presentes"] == 1
     assert res["metricas"]["voz_pct"]["mujer"] == 66.7 and res["metricas"]["pantalla_pct"]["mujer"] == 50.0
     assert res["metricas"]["referentes"] == {"mujer": 1, "hombre": 1}
     assert "no_determinado" not in res["metricas"]["voz_pct"]   # shares of determined time; the rest apart

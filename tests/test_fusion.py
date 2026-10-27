@@ -225,9 +225,19 @@ def test_bechdel_conversacional_determinista():
     assert res_mediado["puntuacion_bechdel_0_3"] == 2
     assert res_mediado["supera_bechdel_digital"] is False
 
-    # Caso 2: Dialogo horizontal directo Mujer_A -> Mujer_B con identidad acreditada (3/3)
+    # Caso 2: Dialogo horizontal directo Mujer_A -> Mujer_B con identidad acreditada (3/3), en una mesa con moderador
     df_directo = pd.DataFrame(
         [
+            {
+                "tiempo_i": -5.0,
+                "tiempo_f": 0.0,
+                "duracion_s": 5.0,
+                "cuadrante": 1,
+                "genero": "hombre",
+                "hablante_id": "spk_h1",
+                "rotulo_nombre": "Marc Puig",
+                "rotulo_cargo": "Moderador",
+            },
             {
                 "tiempo_i": 0.0,
                 "tiempo_f": 15.0,
@@ -257,6 +267,12 @@ def test_bechdel_conversacional_determinista():
     assert res_directo["transiciones_mujer_a_mujer"] == 1
     assert res_directo["puntuacion_bechdel_0_3"] == 3
     assert res_directo["supera_bechdel_digital"] is True
+    assert res_directo["estado"] == "evaluado" and res_directo["diagnostico_tif"] == "supera"
+
+    # Sin hombres no hay mediacion masculina que medir: no evaluable (doc 26 §5.3, paso 3)
+    solo_mujeres = evaluar_bechdel_conversacional(df_directo.iloc[1:])
+    assert (solo_mujeres["estado"], solo_mujeres["motivo"]) == ("no_evaluable", "sin_hombres")
+    assert solo_mujeres["puntuacion_bechdel_0_3"] is None and solo_mujeres["regla_3_dialogo_horizontal"] is None
 
 
 def test_compatibilidad_directa_tablas_bronze_rocio():
@@ -292,7 +308,8 @@ def test_compatibilidad_directa_tablas_bronze_rocio():
     df_ev = cruzar_intervalos_multimodales(df_audio_bronze, df_video_bronze)
     kpis = calcular_kpis_paridad(df_ev, duracion_total_s=8.0)
     assert kpis["pct_voz_mujer"] == 100.0
-    assert kpis["test_bechdel_digital"]["supera_bechdel_digital"] is True
+    # Dos mujeres que dialogan y ningun hombre: el TIF no se evalua, aunque cuente la transicion
+    assert kpis["test_bechdel_digital"]["estado"] == "no_evaluable"
     assert kpis["test_bechdel_digital"]["transiciones_mujer_a_mujer"] == 1
 
 
@@ -415,3 +432,44 @@ def test_alerta_de_infrarrepresentacion():
 def test_la_lectura_facil_avisa_del_tiempo_sin_genero():
     texto = calcular_kpis_paridad(_pieza_con_tramo_no_determinado())["resumen_lectura_facil"]
     assert "En un 50% del tiempo de voz no se pudo saber el genero." in texto
+
+
+def _mesa(turnos):
+    """Eventos de una pieza: (persona, genero, cuadrante, segundos, con_rotulo) por turno, uno tras otro."""
+    t, rows = 0.0, []
+    for persona, genero, cuadrante, s, rotulo in turnos:
+        rows.append({"tiempo_i": t, "tiempo_f": t + s, "duracion_s": s, "cuadrante": cuadrante, "genero": genero,
+                     "hablante_id": persona if cuadrante in (1, 3) else None, "track_id": persona,
+                     "rotulo_nombre": f"Nombre {persona}" if rotulo else None, "rotulo_cargo": None,
+                     "area": 0.3, "centrality": 0.8})
+        t += s
+    return pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize("turnos, estado, motivo_o_diagnostico", [
+    # Ponencia de una mujer
+    ([("m1", "mujer", 1, 30, True)], "no_evaluable", "sin_conversacion"),
+    # Mesa solo de mujeres
+    ([("m1", "mujer", 1, 10, True), ("m2", "mujer", 1, 10, True), ("m3", "mujer", 1, 10, True)],
+     "no_evaluable", "sin_hombres"),
+    # Panel solo de hombres
+    ([(f"h{i}", "hombre", 1, 10, True) for i in range(4)], "no_supera", "sin_mujeres"),
+    # Una mujer y dos hombres (muestra A)
+    ([("h1", "hombre", 1, 10, True), ("m1", "mujer", 1, 10, True), ("h2", "hombre", 1, 10, True)],
+     "no_supera", "una_mujer"),
+    # Dos mujeres, una muda, y un hombre
+    ([("h1", "hombre", 1, 10, True), ("m1", "mujer", 1, 10, True), ("m2", "mujer", 2, 10, True)],
+     "evaluado", "mujer_sin_voz"),
+    # Dos mujeres que solo hablan a traves del moderador
+    ([("h1", "hombre", 1, 5, True), ("m1", "mujer", 1, 10, True), ("h1", "hombre", 1, 5, True),
+      ("m2", "mujer", 1, 10, True)], "evaluado", "aislamiento_relacional"),
+    # Mesa equilibrada con dialogo directo y rotulos
+    ([("h1", "hombre", 1, 5, True), ("m1", "mujer", 1, 10, True), ("m2", "mujer", 1, 10, True)], "evaluado", "supera"),
+])
+def test_tif_casos_minimos_doc26(turnos, estado, motivo_o_diagnostico):
+    from aiasn.core.fusion import evaluar_interlocucion_femenina
+    tif = evaluar_interlocucion_femenina(_mesa(turnos))
+    assert tif["estado"] == estado
+    assert (tif["diagnostico_tif"] if estado == "evaluado" else tif["motivo"]) == motivo_o_diagnostico
+    assert (tif["puntuacion_bechdel_0_3"] is None) == (estado != "evaluado")
+    assert tif["supera_bechdel_digital"] == (motivo_o_diagnostico == "supera")

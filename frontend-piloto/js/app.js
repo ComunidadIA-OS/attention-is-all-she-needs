@@ -206,7 +206,10 @@ const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
 
 // empty: no video analysed yet, every figure blank (no sample data passed off as a result)
 function renderLive(v,empty=false){
-  LIVE=true;
+  LIVE=true;document.body.classList.add('live-data');   // real data: the report stacks its sections (see styles.css)
+  // the roles section keeps the expert comparison in its card; authority, ideas and titles go in a row below it
+  if(!$('role-more'))document.querySelector('.role').insertAdjacentHTML('afterend','<div class="role-more" id="role-more"><div id="role-auth"></div><div id="role-side"></div></div>');
+  $('role-auth').innerHTML=$('role-side').innerHTML='';
   const W8={pantalla:['Presencia en pantalla','peso 30 %'],voz:['Tiempo de voz','peso 20 %'],espacio:['Protagonismo espacial · centralidad y área','peso 25 %'],autoridad:['Autoridad · provisional','peso 25 %']};
   const irm=v.index?Object.keys(W8).map(k=>({k:W8[k][0],w:W8[k][1],v:v.index.dims[k]==null?null:Math.round(v.index.dims[k])})):null;
   DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes,irm:irm};
@@ -300,12 +303,12 @@ function renderLive(v,empty=false){
 
   // iv · autoridad: from what each gender speaks, how they are introduced and what ideas they bring
   const share=x=>x==null?'—':es1(x)+' %',arow=(label,sub,o)=>`<tr><td>${label}<span class="who">${sub}</span></td><td class="fig f">${empty?PEND:share(o.f)}</td><td class="fig m">${empty?PEND:share(o.m)}</td></tr>`;
-  $('role-gap').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
+  $('role-auth').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
     +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
     +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)+'</tbody></table>');
   // key ideas: who brings each, in groups that add up to 100
   const ideaSegs=[['f','solo mujeres',v.ideas.f],['m','solo hombres',v.ideas.m],['sh','compartidas entre géneros',v.ideas.shared],['u','solo voces sin género conocido',v.ideas.u]].filter(x=>x[2]);
-  $('role-gap').insertAdjacentHTML('beforeend',empty||!v.ideas.total?'':`<div class="ideas"><div class="ideas-t">Ideas clave de la pieza <span class="who">${v.ideas.total} ideas, según quién las aporta</span></div>`
+  $('role-side').insertAdjacentHTML('beforeend',empty||!v.ideas.total?'':`<div class="ideas"><div class="ideas-t">Ideas clave de la pieza <span class="who">${v.ideas.total} ideas, según quién las aporta</span></div>`
     +`<div class="ideas-bar" role="img" aria-label="Ideas clave: ${ideaSegs.map(x=>`${es1(x[2])} por ciento ${x[1]}`).join(', ')}.">${ideaSegs.map(x=>`<span class="ib ${x[0]}" style="width:${x[2]}%">${Math.round(x[2])}%</span>`).join('')}</div>`
     +`<div class="ideas-lg">${ideaSegs.map(x=>`<span><i class="ib ${x[0]}"></i>${x[1]} · ${es1(x[2])} %</span>`).join('')}</div></div>`);
 
@@ -314,7 +317,7 @@ function renderLive(v,empty=false){
 
   // iv · cargos: the word2vec gender bias of each title, on the same axis as the topics
   const titled=v.people.filter(p=>p.sesgoCargo!=null);
-  if(!empty&&titled.length)$('role-gap').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
+  if(!empty&&titled.length)$('role-side').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
     +titled.map(p=>`<tr><td>${esc(p.cargoEn)}<span class="who">${esc(p.name)}</span></td><td class="fig">${bias(p.sesgoCargo)}</td></tr>`).join('')
     +`</tbody></table><div class="rg-note">◆ hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
 

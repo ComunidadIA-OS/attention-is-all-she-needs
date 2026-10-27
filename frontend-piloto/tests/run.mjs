@@ -27,13 +27,16 @@ const PAYLOAD = {
     veredicto: {
       resumen_lectura_facil: "Lectura Facil (UNE 153101): INFRARREPRESENTACION: Las mujeres hablan poco. Tiempo de voz de mujeres: 25.0%.",
       alerta_equality_washing: false, motivo_alerta: "",
-      bechdel: { puntuacion_0_3: 1, diagnostico: "" },
-      salvaguarda_paridad: { cumple: false, cuota_femenina: 0.25 },
+      alerta_infrarrepresentacion: true, motivo_infrarrepresentacion: "Por debajo del 40 %.",
+      bechdel: { estado: "no_supera", motivo: "una_mujer", puntuacion_0_3: null, diagnostico: "una_mujer",
+                 reglas: { regla_1_pluralidad_femenina: null } },
+      salvaguarda_paridad: { cumple: false, cuota_femenina: 0.25, suelo_femenino_exigido: 0.4 },
       valoracion_ciudadana: null
     },
     metricas: {
       voz_pct: { mujer: 25.0, hombre: 75.0, no_binario: 0.0, no_determinado: 0.0 },
-      pantalla_pct: { mujer: 40.0, hombre: 50.0, no_binario: 0.0, no_determinado: 10.0 },
+      pantalla_pct: { mujer: 40.0, hombre: 50.0, no_binario: 0.0 },
+      sin_determinar_pct: { voz: 0.0, pantalla: 10.0 },
       ratio_voz_pantalla: { mujer: 0.42, hombre: 0.9, no_binario: null, no_determinado: 0.0 },
       referentes: { hombre: 2 }
     },
@@ -105,7 +108,10 @@ test("themes by gender, most female-leaning first", () => {
 test("verdict figures are the API ones, none computed here", () => {
   assert.deepEqual([v.screen, v.voice, v.ratio], [{ f: 40, m: 50 }, { f: 25, m: 75 }, 0.42]);
   assert.deepEqual(v.refs, { f: 0, m: 2 });
-  assert.deepEqual(v.parity, { ok: false, cuota: 0.25 });
+  assert.deepEqual(v.parity, { ok: false, cuota: 0.25, suelo: 0.4 });
+  assert.deepEqual(v.underrep, { on: true, text: "Por debajo del 40 %." });
+  assert.deepEqual(v.coverage, { voz: 0, pantalla: 10 });
+  assert.deepEqual([v.tif.estado, v.tif.motivo, v.tif.puntuacion], ["no_supera", "una_mujer", null]);
   assert.equal(v.washing.on, false);
   assert.equal(v.index, null);   // the index is not in the API yet: the page shows it as pending
 });
@@ -134,6 +140,7 @@ test("an empty or partial result does not break the page", () => {
   assert.deepEqual([e.people, e.themes, e.easy, e.roles], [[], [], [], []]);
   assert.equal(e.ratio, null);
   assert.equal(e.expertVoice, null);
+  assert.equal(e.tif, null);   // an old result without the TIF state: the line is not shown
 });
 
 console.log(failed ? `\n${failed} pruebas fallidas` : "\nTodas las pruebas correctas");

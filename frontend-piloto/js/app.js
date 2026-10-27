@@ -168,6 +168,24 @@ try{const s=localStorage.getItem('aiasn-t');if(s)document.documentElement.setAtt
 
 /* ---- la misma página con el resultado de la API ---- */
 const FLAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+const INFO_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>';
+// Test de Interlocución Femenina (doc 26 §5): what each state and diagnosis means, in plain words
+const TIF_MOTIVO={sin_datos:'No hay tramos de género determinado.',sin_conversacion:'Solo habla una persona: no hay conversación.',
+  sin_hombres:'Solo participan mujeres: el test mide si dialogan sin la mediación de un hombre.',
+  sin_mujeres:'No aparece ninguna mujer.',una_mujer:'Solo aparece una mujer: no puede dialogar con otra.'};
+const TIF_DIAG={supera:'Dos o más mujeres acreditadas dialogan directamente entre ellas.',
+  parcial:'Dialogan entre ellas, pero falta el rótulo de nombre o cargo de alguna.',
+  aislamiento_relacional:'Aislamiento relacional: las mujeres solo hablan a través de un hombre.',
+  mujer_sin_voz:'Hay mujeres presentes que no llegan a hablar.'};
+const TIF_REGLAS=[['regla_1_pluralidad_femenina','dos o más mujeres con voz'],['regla_2_identidad_propia','dos o más mujeres con rótulo'],
+  ['regla_3_dialogo_horizontal','una mujer responde a otra']];
+function tifLine(t){
+  const name='<b>Test de Interlocución Femenina</b> <span class="rule">adaptación del test de Bechdel · orientativo</span>';
+  if(t.estado==='no_evaluable')return[INFO_ICON,' ok',`${name} — <b>no evaluable</b>: ${esc(TIF_MOTIVO[t.motivo]||'')}`];
+  if(t.estado==='no_supera')return[FLAG_ICON,'',`${name} — <b>no supera</b>: ${esc(TIF_MOTIVO[t.motivo]||'')}`];
+  const ok=t.puntuacion===3,rules=TIF_REGLAS.map(([k,l])=>`${t.reglas[k]?'✓':'✕'} ${l}`).join(' · ');
+  return[ok?OK_ICON:FLAG_ICON,ok?' ok':'',`${name} — <b>${ok?'supera':'no supera'} (${t.puntuacion}/3)</b>: ${esc(TIF_DIAG[t.diagnostico]||'')} <span class="rule">${rules}</span>`];
+}
 const OK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 function flag(el,on,html){el.className='vflag'+(on?'':' ok');el.innerHTML=(on?FLAG_ICON:OK_ICON)+`<div>${html}</div>`}
 const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
@@ -185,18 +203,25 @@ function renderLive(v,empty=false){
   // veredicto
   $('gauge').setAttribute('aria-label','Índice de Representación pendiente: el backend aún no lo calcula');
   $('gauge-arc').style.display='none';$('gauge-num').textContent='—';
-  $('v-screen').innerHTML=pct(v.screen.f);$('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`;
+  $('v-screen').innerHTML=pct(v.screen.f);
+  $('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`+(v.coverage.pantalla?` · ${es1(v.coverage.pantalla)} % sin género conocido`:'');
   $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
   $('v-ratio-s').textContent=empty?'':v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
   if(empty)$('v-screen-s').textContent='';
   $('v-refs').textContent=empty?'—':`${v.refs.f} : ${v.refs.m}`;
-  $('flag-1').style.display=$('flag-2').style.display=empty?'none':'';   // .vflag sets display, which beats [hidden]
-  flag($('flag-1'),!v.parity.ok,v.parity.ok
-    ?`<b>Salvaguarda de paridad cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %.`
-    :`<b>Salvaguarda de paridad no cumplida.</b> Cuota femenina del ${es1(v.parity.cuota==null?null:v.parity.cuota*100)} %, por debajo del objetivo legal del 40 %.`);
+  flag($('flag-1'),v.underrep.on,v.underrep.on
+    ?`<b>Infrarrepresentación.</b> ${esc(v.underrep.text)}`
+    :'<b>Infrarrepresentación</b> — <b>no activada</b>: las mujeres alcanzan el 40 % del tiempo en pantalla, o hablan más de lo que aparecen.');
+  const suelo=es1(v.parity.suelo==null?40:v.parity.suelo*100),cuota=es1(v.parity.cuota==null?null:v.parity.cuota*100);
+  flag($('flag-4'),!v.parity.ok,v.parity.ok
+    ?`<b>Salvaguarda de paridad cumplida.</b> Las mujeres tienen el ${cuota} % de la voz de género conocido; el mínimo es el ${suelo} %.`
+    :`<b>Salvaguarda de paridad no cumplida.</b> Las mujeres tienen el ${cuota} % de la voz de género conocido, por debajo del mínimo del ${suelo} %.`);
+  if(v.tif){const[ic,cls,html]=tifLine(v.tif),el=$('flag-3');el.className='vflag'+cls;el.innerHTML=ic+`<div>${html}</div>`}
+  ['flag-1','flag-2','flag-4'].forEach(id=>{$(id).style.display=empty?'none':''});
+  $('flag-3').style.display=empty||!v.tif?'none':'';
   flag($('flag-2'),v.washing.on,v.washing.on
     ?`<b>Equality-washing activado.</b> ${esc(v.washing.text)}`
-    :'<b>Equality-washing</b> — <b>no activado</b>: la presencia en pantalla de las mujeres va acompañada de voz.');
+    :'<b>Equality-washing</b> — <b>no activado</b>: no se da una alta presencia en pantalla (≥ 35 %) con poca voz (< 20 % o ratio voz/pantalla < 0,30).');
 
   // lectura fácil
   $('ez-list').innerHTML=(v.easy.length?v.easy:[empty?'Todavía no se ha analizado ningún vídeo.':'El resumen en lectura fácil no está disponible para este vídeo.']).map(s=>`<li>${esc(s)}</li>`).join('')

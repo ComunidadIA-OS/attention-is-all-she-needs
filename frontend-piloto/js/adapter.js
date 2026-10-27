@@ -148,7 +148,13 @@
       ratio: num((mt.ratio_voz_pantalla || {}).mujer),
       refs: { f: refs.mujer || 0, m: refs.hombre || 0 },
       washing: { on: Boolean(v.alerta_equality_washing), text: v.motivo_alerta || "" },
-      parity: { ok: sp.cumple === true, cuota: num(sp.cuota_femenina) },
+      underrep: { on: Boolean(v.alerta_infrarrepresentacion), text: v.motivo_infrarrepresentacion || "" },
+      parity: { ok: sp.cumple === true, cuota: num(sp.cuota_femenina), suelo: num(sp.suelo_femenino_exigido) },
+      coverage: { voz: num((mt.sin_determinar_pct || {}).voz), pantalla: num((mt.sin_determinar_pct || {}).pantalla) },
+      tif: v.bechdel && v.bechdel.estado ? {
+        estado: v.bechdel.estado, motivo: v.bechdel.motivo || null, diagnostico: v.bechdel.diagnostico || null,
+        puntuacion: num(v.bechdel.puntuacion_0_3), reglas: v.bechdel.reglas || {}
+      } : null,
       index: num(v.indice_global),   // not computed by the backend yet
       easy: easySentences(v.resumen_lectura_facil),
       power: {

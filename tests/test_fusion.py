@@ -336,3 +336,26 @@ def test_bechdel_cuenta_una_vez_a_la_mujer_rotulada_que_habla_y_calla():
     ev = cruzar_intervalos_multimodales(df_audio, df_video)
     assert set(ev[ev.track_id == "person_6"].cuadrante) == {1, 2}   # habla y luego calla
     assert calcular_kpis_paridad(ev)["test_bechdel_digital"]["mujeres_con_rotulo_identificado"] == 1
+
+
+def _pieza_con_tramo_no_determinado():
+    """Una mujer habla 10 s en pantalla, un hombre 10 s en pantalla, y una voz en off de genero no determinado 20 s."""
+    df_audio = pd.DataFrame([
+        {"tiempo_i": 0.0, "tiempo_f": 10.0, "speaker_id": 0, "transcripcion": "Hola", "genero_inferido": "mujer",
+         "track_id": "person_1"},
+        {"tiempo_i": 10.0, "tiempo_f": 20.0, "speaker_id": 1, "transcripcion": "Si", "genero_inferido": "hombre",
+         "track_id": "person_2"},
+        {"tiempo_i": 20.0, "tiempo_f": 40.0, "speaker_id": 2, "transcripcion": "Narracion",
+         "genero_inferido": "no_determinado", "track_id": None}])
+    df_video = pd.DataFrame([_persona("person_1", "mujer", 0.0, 10.0), _persona("person_2", "hombre", 10.0, 20.0)])
+    return cruzar_intervalos_multimodales(df_audio, df_video)
+
+
+def test_porcentajes_sobre_el_tiempo_de_genero_determinado():
+    """Spec 21 §5.3 / ADR-0005: el tiempo no determinado no entra en el denominador y se informa aparte."""
+    kpis = calcular_kpis_paridad(_pieza_con_tramo_no_determinado())
+    assert kpis["pct_voz_mujer"] == 50.0            # 10 s de 20 s determinados, no de 40 s
+    assert kpis["pct_voz_no_determinado"] == 50.0   # 20 s de 40 s sin poder medir
+    assert kpis["total_voz_segundos"] == 40.0 and kpis["total_voz_determinado_s"] == 20.0
+    # La salvaguarda ya mide sobre lo determinado: coincide con el porcentaje de voz
+    assert kpis["salvaguarda_paridad"]["cuota_femenina"] * 100 == kpis["pct_voz_mujer"]

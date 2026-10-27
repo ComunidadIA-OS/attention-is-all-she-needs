@@ -162,6 +162,17 @@ def test_tone_aggregated_by_gender():
     assert t.loc[("hombre", "dissent")].tolist() == [1.0, 1.0, "disenso"]
 
 
+def test_parity_shares_leave_out_undetermined_time():
+    events = pd.DataFrame({"genero": ["mujer", "hombre", "no_determinado"], "cuadrante": [1, 1, 3],
+                           "duracion_s": [10.0, 10.0, 20.0], "tiempo_i": [0.0, 10.0, 20.0], "tiempo_f": [10.0, 20.0, 40.0],
+                           "area": [0.3, 0.3, None], "centrality": [0.8, 0.8, None], "hablante_id": [0, 1, 2],
+                           "track_id": ["person_1", "person_2", None], "rotulo_nombre": [None] * 3,
+                           "rotulo_cargo": [None] * 3})
+    voice = kpis_module.parity({"gold/quadrants": events}, Settings()).query("categoria == 'voz_s'").set_index("genero")
+    assert voice.loc["mujer", "valor"] / voice.loc["mujer", "base"] == 0.5          # of the 20 s of known gender
+    assert voice.loc["no_determinado", "valor"] / voice.loc["no_determinado", "base"] == 0.5   # of all the 40 s
+
+
 def test_kpis_registry(monkeypatch):
     monkeypatch.setattr(kpis_module, "KPIS", dict(KPIS))
 

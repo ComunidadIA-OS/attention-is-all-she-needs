@@ -112,6 +112,8 @@ def test_result_by_sections_of_the_front(settings):
     assert res["veredicto"]["valoracion_ciudadana"] is None
     assert res["metricas"]["voz_pct"]["mujer"] == 66.7 and res["metricas"]["pantalla_pct"]["mujer"] == 50.0
     assert res["metricas"]["referentes"] == {"mujer": 1, "hombre": 1}
+    assert "no_determinado" not in res["metricas"]["voz_pct"]   # shares of determined time; the rest apart
+    assert res["metricas"]["sin_determinar_pct"] == {"voz": 0.0, "pantalla": 0.0}
     marta = next(p for p in res["personas"] if p["id"] == "p1")
     assert marta | {"pantalla_s": None} == {"id": "p1", "nombre": "Marta Ruiz", "cargo": "Investigadora", "genero": "mujer",
                                             "rol": "testimonio", "autoridad": True, "pantalla_s": None, "voz_s": 20.0}

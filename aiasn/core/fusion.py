@@ -609,14 +609,24 @@ def calcular_kpis_paridad(
 
     total_voz = sum(kpis_genero[g]["tiempo_voz_s"] for g in generos_validos)
     total_pantalla = sum(kpis_genero[g]["tiempo_pantalla_s"] for g in generos_validos)
+    # Shares over the time of determined gender only (spec 21 §5.3, ADR-0005); the undetermined part is reported
+    # apart, as how much of the piece could not be measured
+    total_voz_det = total_voz - kpis_genero["no_determinado"]["tiempo_voz_s"]
+    total_pantalla_det = total_pantalla - kpis_genero["no_determinado"]["tiempo_pantalla_s"]
 
     pct_voz_mujer = (
-        (kpis_genero["mujer"]["tiempo_voz_s"] / total_voz * 100.0) if total_voz > 0 else 0.0
+        (kpis_genero["mujer"]["tiempo_voz_s"] / total_voz_det * 100.0) if total_voz_det > 0 else 0.0
     )
     pct_pantalla_mujer = (
-        (kpis_genero["mujer"]["tiempo_pantalla_s"] / total_pantalla * 100.0)
-        if total_pantalla > 0
+        (kpis_genero["mujer"]["tiempo_pantalla_s"] / total_pantalla_det * 100.0)
+        if total_pantalla_det > 0
         else 0.0
+    )
+    pct_voz_no_determinado = (
+        kpis_genero["no_determinado"]["tiempo_voz_s"] / total_voz * 100.0 if total_voz > 0 else 0.0
+    )
+    pct_pantalla_no_determinado = (
+        kpis_genero["no_determinado"]["tiempo_pantalla_s"] / total_pantalla * 100.0 if total_pantalla > 0 else 0.0
     )
 
     # Salvaguarda matematica progresiva en 3 fases (ADR-006)
@@ -653,8 +663,12 @@ def calcular_kpis_paridad(
         "duracion_total_analizada_s": round(duracion_total_s, 2),
         "total_voz_segundos": round(total_voz, 2),
         "total_pantalla_segundos": round(total_pantalla, 2),
+        "total_voz_determinado_s": round(total_voz_det, 2),
+        "total_pantalla_determinado_s": round(total_pantalla_det, 2),
         "pct_voz_mujer": round(pct_voz_mujer, 2),
         "pct_pantalla_mujer": round(pct_pantalla_mujer, 2),
+        "pct_voz_no_determinado": round(pct_voz_no_determinado, 2),
+        "pct_pantalla_no_determinado": round(pct_pantalla_no_determinado, 2),
         "alerta_equality_washing": alerta_equality_washing,
         "motivo_alerta": motivo_alerta,
         "salvaguarda_paridad": salvaguarda_paridad,

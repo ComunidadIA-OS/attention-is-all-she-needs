@@ -22,8 +22,11 @@ def result(lake: Lake, video_id: str) -> dict:
     return {
         "veredicto": _verdict(gold["summary"].iloc[0]),
         "metricas": {
-            "voz_pct": _by_gender(kpis, "parity", "voz_s", pct=True),
-            "pantalla_pct": _by_gender(kpis, "parity", "pantalla_s", pct=True),
+            # shares of the time of determined gender; sin_determinar_pct: the part of all the time left out
+            "voz_pct": _determined(_by_gender(kpis, "parity", "voz_s", pct=True)),
+            "pantalla_pct": _determined(_by_gender(kpis, "parity", "pantalla_s", pct=True)),
+            "sin_determinar_pct": {"voz": _by_gender(kpis, "parity", "voz_s", pct=True).get("no_determinado"),
+                                   "pantalla": _by_gender(kpis, "parity", "pantalla_s", pct=True).get("no_determinado")},
             "ratio_voz_pantalla": _by_gender(kpis, "parity", "voz_activa_en_pantalla"),
             "referentes": _by_gender(kpis, "references", value=True),
         },
@@ -41,6 +44,10 @@ def result(lake: Lake, video_id: str) -> dict:
                          "aristas": _records(gold["graph_edges"])},
         "kpis": _records(kpis),   # every KPI, long format (valor / base), for what the sections above do not show
     }
+
+
+def _determined(shares: dict) -> dict:
+    return {g: v for g, v in shares.items() if g != "no_determinado"}
 
 
 def _verdict(s: pd.Series) -> dict:

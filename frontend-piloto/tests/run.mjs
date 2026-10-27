@@ -28,6 +28,7 @@ const PAYLOAD = {
       resumen_lectura_facil: "Lectura Facil (UNE 153101): INFRARREPRESENTACION: Las mujeres hablan poco. Tiempo de voz de mujeres: 25.0%.",
       alerta_equality_washing: false, motivo_alerta: "",
       alerta_infrarrepresentacion: true, motivo_infrarrepresentacion: "Por debajo del 40 %.",
+      indice_global: { total: 76.6, provisional: true, dimensiones: { pantalla: 89.5, voz: 64.7, espacio: 97.3, autoridad: null } },
       bechdel: { estado: "no_supera", motivo: "una_mujer", puntuacion_0_3: null, diagnostico: "una_mujer",
                  reglas: { regla_1_pluralidad_femenina: null } },
       salvaguarda_paridad: { cumple: false, cuota_femenina: 0.25, suelo_femenino_exigido: 0.4 },
@@ -134,7 +135,7 @@ test("verdict figures are the API ones, none computed here", () => {
   assert.deepEqual(v.coverage, { voz: 0, pantalla: 10 });
   assert.deepEqual([v.tif.estado, v.tif.motivo, v.tif.puntuacion], ["no_supera", "una_mujer", null]);
   assert.equal(v.washing.on, false);
-  assert.equal(v.index, null);   // the index is not in the API yet: the page shows it as pending
+  assert.deepEqual(v.index, { total: 76.6, provisional: true, dims: { pantalla: 89.5, voz: 64.7, espacio: 97.3, autoridad: null } });
 });
 
 test("easy read: the API summary, one sentence per item", () => {

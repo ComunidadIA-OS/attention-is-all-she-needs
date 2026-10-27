@@ -189,7 +189,11 @@
         estado: v.bechdel.estado, motivo: v.bechdel.motivo || null, diagnostico: v.bechdel.diagnostico || null,
         puntuacion: num(v.bechdel.puntuacion_0_3), reglas: v.bechdel.reglas || {}
       } : null,
-      index: num(v.indice_global),   // not computed by the backend yet
+      // Índice Global de Representación (spec 21 §4) and its four signals, 0-100, as gold computes it
+      index: v.indice_global && v.indice_global.total != null ? {
+        total: num(v.indice_global.total), provisional: v.indice_global.provisional !== false,
+        dims: v.indice_global.dimensiones || {}
+      } : null,
       easy: easySentences(v.resumen_lectura_facil),
       power: {
         distinct: { f: (pw.personas_distintas || {}).mujer || 0, m: (pw.personas_distintas || {}).hombre || 0 },

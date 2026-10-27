@@ -139,6 +139,8 @@ def test_result_by_sections_of_the_front(settings):
     assert res["segmentos_dudosos"] == []   # every span has a known gender here
     assert res["veredicto"]["valoracion_ciudadana"] is None
     assert res["veredicto"]["alerta_infrarrepresentacion"] is False   # 50 % on screen: above the 40 % floor
+    ig = res["veredicto"]["indice_global"]
+    assert ig["provisional"] is True and 0 <= ig["total"] <= 100 and set(ig["dimensiones"]) == {"pantalla", "voz", "espacio", "autoridad"}
     tif = res["veredicto"]["bechdel"]   # one woman (Marta) and a man: "no supera", with no score
     assert (tif["estado"], tif["motivo"], tif["puntuacion_0_3"], tif["supera"]) == ("no_supera", "una_mujer", None, False)
     assert tif["reglas"]["regla_3_dialogo_horizontal"] is None and tif["mujeres_presentes"] == 1

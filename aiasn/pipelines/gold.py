@@ -6,6 +6,7 @@ import logging
 
 from aiasn.core.gold.fusion import FusionGold
 from aiasn.core.gold.graph import GraphGold
+from aiasn.core.gold.index import IndexGold
 from aiasn.core.gold.kpis import KpisGold
 from aiasn.pipelines.transform_pipeline import TransformPipeline
 from aiasn.settings import Settings
@@ -16,7 +17,7 @@ class GoldPipeline(TransformPipeline):
     name = "gold"
 
     def __init__(self, settings: Settings):
-        super().__init__([FusionGold(settings), KpisGold(settings), GraphGold(settings)])
+        super().__init__([FusionGold(settings), KpisGold(settings), IndexGold(settings), GraphGold(settings)])
 
 
 if __name__ == "__main__":

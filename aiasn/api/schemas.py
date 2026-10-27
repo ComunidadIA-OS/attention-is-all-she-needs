@@ -21,7 +21,7 @@ def result(lake: Lake, video_id: str) -> dict:
     kpis, nodes = gold["kpis"], gold["graph_nodes"]
     participants = nodes[nodes.tipo == "participante"]
     return {
-        "veredicto": _verdict(gold["summary"].iloc[0]),
+        "veredicto": _verdict(gold["summary"].iloc[0]) | {"indice_global": _index(lake, video_id)},
         "metricas": {
             # shares of the time of determined gender; sin_determinar_pct: the part of all the time left out
             "voz_pct": _determined(_by_gender(kpis, "parity", "voz_s", pct=True)),
@@ -72,6 +72,15 @@ def _segments(quadrants: pd.DataFrame, links: pd.DataFrame) -> dict:
 
 def _rvp(voice: dict, screen: dict) -> dict:
     return {g: round(voice[g] / screen[g], 2) if screen.get(g) else None for g in _determined(voice)}
+
+
+def _index(lake: Lake, video_id: str) -> dict | None:
+    """Índice Global de Representación (spec 21 §4) and its four signals, 0-100; None for a video from before it."""
+    if not lake.exists("gold", "index", video_id):
+        return None
+    i = lake.read("gold", "index", video_id).iloc[0]
+    return {"total": _clean(i.indice), "provisional": bool(i.provisional),
+            "dimensiones": {k: _clean(i[k]) for k in ("pantalla", "voz", "espacio", "autoridad")}}
 
 
 def _tif(s: pd.Series) -> dict:

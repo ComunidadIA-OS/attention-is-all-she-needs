@@ -3,7 +3,7 @@
 
 # The demo: an S3 store, the API and the worker image.
 #   docker compose --profile jobs build    # both images (the worker one takes a while)
-#   docker compose up -d                   # store and API on http://localhost:8000
+#   docker compose up -d                   # store, API (http://localhost:8000) and front (http://localhost:8080)
 # The worker is not a running service: the API starts a container of its image for each video.
 name: aiasn
 
@@ -39,6 +39,15 @@ services:
     depends_on:
       - store
     restart: unless-stopped   # also retries until the store is up
+
+  front:
+    build: { context: ., dockerfile: docker/front.Dockerfile }
+    image: aiasn-front
+    ports:
+      - "${FRONT_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
 
   worker:
     build: { context: ., dockerfile: docker/worker.Dockerfile }

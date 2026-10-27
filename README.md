@@ -209,7 +209,7 @@ docker run --rm --gpus all ubuntu nvidia-smi # debe mostrar tu GPU
 
 ```bash
 docker compose --profile jobs build # imágenes de la API y del worker (la del worker, ~8 GB, tarda 10–20 min la primera vez)
-docker compose up -d # almacén S3 (SeaweedFS) y API en http://localhost:8000
+docker compose up -d # almacén S3 (SeaweedFS), API en http://localhost:8000 y front en http://localhost:8080
 ```
 
 El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker` por vídeo y lo borra al lanzar el siguiente (hasta entonces, `docker logs aiasn-worker-<video_id>`). La API usa el socket de Docker para ello, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.
@@ -230,7 +230,7 @@ curl -F file=@video.mp4 http://localhost:8000/videos # → {"video_id": "video-3
 curl http://localhost:8000/videos/video-3f9a # estado; con "ok", también el resultado
 ```
 
-Documentación interactiva de la API en <http://localhost:8000/docs>.
+O, desde el navegador, abre el front en <http://localhost:8080>: «Elegir vídeo» → «Analizar». Documentación interactiva de la API en <http://localhost:8000/docs>. Si los puertos 8000 u 8080 están ocupados, cámbialos con `API_PORT` y `FRONT_PORT` en `.env`.
 
 ---
 

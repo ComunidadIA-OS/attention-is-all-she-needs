@@ -9,14 +9,21 @@ Réplica de la maqueta «Constelación del Protagonismo» conectada a la API del
 
 ## Uso
 
+Con Docker, el contenedor `front` la sirve en <http://localhost:8080> y le pasa `/api` a la API (ver README principal):
+
 ```bash
-docker compose up -d                                        # API en http://localhost:8000 (ver README principal)
-python -m http.server 8080 --directory frontend-piloto      # y abrir http://localhost:8080
+docker compose up -d
+```
+
+Sin Docker, sírvela con cualquier servidor estático e indícale dónde está la API:
+
+```bash
+python -m http.server 8080 --directory frontend-piloto      # y abrir http://localhost:8080/?api=http://localhost:8000
 ```
 
 * **Al abrirla** muestra los datos de muestra de la maqueta, tal cual.
 * **«Elegir vídeo» → «Analizar»** sube un vídeo a la API, sigue su procesado y repinta la página con el resultado. La dirección de la página guarda el vídeo (`?video=<id>`) para volver a abrirlo o compartirlo.
-* **`?api=http://localhost:8010`** cambia la dirección de la API, que por defecto es `http://localhost:8000`.
+* **`?api=<url>`** cambia la dirección de la API. Por defecto es `/api`, la del contenedor `front`.
 
 ## Con datos reales
 

@@ -234,7 +234,8 @@ function renderLive(v){
 }
 
 /* ---- análisis de un vídeo con la API ---- */
-const API=(new URLSearchParams(location.search).get('api')||'http://localhost:8000').replace(/\/+$/,'');
+// Served by the front container, the API is under /api on the same origin; elsewhere, ?api=http://localhost:8000
+const API=(new URLSearchParams(location.search).get('api')||'/api').replace(/\/+$/,'');
 const STEPS={audio:'audio',nlp:'lenguaje',video:'vídeo',captions:'rótulos',silver:'unificación',gold:'indicadores'};
 const POLL_MS=3000,POLL_MAX_MS=60*60*1000,BUSY_RETRIES=3,BUSY_WAIT_MS=5000;
 const sleep=ms=>new Promise(ok=>setTimeout(ok,ms));

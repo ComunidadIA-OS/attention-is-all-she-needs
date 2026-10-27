@@ -25,6 +25,11 @@ class Manifest:
             self._save()
 
     @staticmethod
+    def video_ids(lake: Lake) -> list[str]:
+        """Every video with a manifest in the lake."""
+        return sorted(p.rsplit("video_id=", 1)[1].split("/")[0] for p in lake.fs.glob(f"{lake.root}/runs/video_id=*/manifest.json"))
+
+    @staticmethod
     def load(lake: Lake, video_id: str) -> dict | None:
         """The manifest of `video_id` as stored, None if the video is unknown; unlike Manifest(), creates nothing."""
         path = f"{lake.root}/runs/video_id={video_id}/manifest.json"

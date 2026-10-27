@@ -207,3 +207,14 @@ def test_launcher_choice(monkeypatch):
     assert isinstance(jobs.make_launcher(Settings(api={"launcher": "process"}).api), jobs.ProcessLauncher)
     with pytest.raises(ConnectionError):
         jobs.make_launcher(Settings(api={"launcher": "docker"}).api)
+
+
+def test_list_of_videos_latest_first(settings):
+    lake = Lake.from_settings(settings)
+    for video_id, status in [("old", OK), ("new", RUNNING)]:
+        manifest = Manifest(lake, video_id)
+        manifest.start("audio")
+        manifest.set_status(status)
+    with client(settings, FakeLauncher()) as api:
+        body = api.get("/videos").json()
+    assert [(v["video_id"], v["estado"]) for v in body] == [("new", "procesando"), ("old", "ok")]

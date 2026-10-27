@@ -77,3 +77,9 @@ def test_storage_options_only_for_s3():
     assert storage.options("s3://aiasn") == {"key": "aiasn", "secret": "secret",
                                              "client_kwargs": {"endpoint_url": "http://minio:9000"}}
     assert Settings(lake_uri="s3://aiasn", storage=storage).storage.options("s3://aiasn")["key"] == "aiasn"
+
+
+def test_manifest_lists_the_videos(lake):
+    for video_id in ("b", "a"):
+        Manifest(lake, video_id)
+    assert Manifest.video_ids(lake) == ["a", "b"]

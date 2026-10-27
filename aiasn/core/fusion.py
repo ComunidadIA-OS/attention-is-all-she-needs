@@ -28,6 +28,8 @@ LENGUAS_COOFICIALES_SOPORTADAS: Sequence[str] = ("es", "ca", "gl", "eu", "en")
 # Equality-washing (spec 21 §3.1): a critical mass on screen (Kanter 1977) whose voice does not follow, by the ratio
 # of shares or by a voice share as low as the media average (GMMP 2020: 19 %; Gender Gap Tracker: 21 %)
 EW_PANTALLA_MIN, EW_RVP_MAX, EW_VOZ_MAX = 35.0, 0.30, 20.0
+# Under-representation (spec 21 §3.2): below the legal floor on screen (LO 2/2024) and no more voice than presence
+INFRA_PANTALLA_MAX, INFRA_RVP_MAX = 40.0, 1.0
 
 
 def calcular_solape_temporal(
@@ -146,6 +148,8 @@ def generar_resumen_lectura_facil(
     pct_pantalla_mujer: float,
     alerta_equality_washing: bool,
     cumple_salvaguarda: bool,
+    alerta_infrarrepresentacion: bool = False,
+    pct_voz_no_determinado: float = 0.0,
 ) -> str:
     """
     Genera un resumen textual estructurado en Lectura Facil (UNE 153101 EX / WCAG 2.2 AA, ADR-010)
@@ -155,19 +159,27 @@ def generar_resumen_lectura_facil(
         estado_texto = (
             "ALERTA DE PRESENCIA FIGURATIVA: Las mujeres aparecen en pantalla pero tienen muy poca voz activa."
         )
+    elif alerta_infrarrepresentacion:
+        estado_texto = (
+            "INFRARREPRESENTACION: Las mujeres salen menos del 40% del tiempo en pantalla y no hablan mas de lo que salen."
+        )
     elif cumple_salvaguarda:
         estado_texto = (
             "CUMPLE PARIDAD: La participacion de las mujeres alcanza el umbral de equilibrio."
         )
     else:
         estado_texto = (
-            "INFRARREPRESENTACION: La participacion de las mujeres esta por debajo del minimo del 40%."
+            "PARIDAD NO ALCANZADA: El tiempo de voz de las mujeres no llega al reparto minimo del 40%."
         )
+    cobertura = (
+        f" En un {pct_voz_no_determinado:.0f}% del tiempo de voz no se pudo saber el genero."
+        if pct_voz_no_determinado >= 0.5 else ""
+    )
 
     return (
         f"Lectura Facil (UNE 153101): {estado_texto} "
         f"Tiempo de voz de mujeres: {pct_voz_mujer:.1f}%. "
-        f"Tiempo en pantalla de mujeres: {pct_pantalla_mujer:.1f}%."
+        f"Tiempo en pantalla de mujeres: {pct_pantalla_mujer:.1f}%.{cobertura}"
     )
 
 
@@ -665,6 +677,18 @@ def calcular_kpis_paridad(
             f"pero solo {pct_voz_mujer:.1f}% de voz activa (Ratio Voz/Pantalla: {rvp_mujer:.2f})."
         )
 
+    # Without women on screen there is no RVP: that is under-representation too, if there is screen time at all
+    alerta_infrarrepresentacion = bool(
+        total_pantalla_det > 0
+        and pct_pantalla_mujer < INFRA_PANTALLA_MAX
+        and (rvp_mujer is None or rvp_mujer < INFRA_RVP_MAX)
+    )
+    motivo_infrarrepresentacion = (
+        f"Las mujeres ocupan el {pct_pantalla_mujer:.1f}% del tiempo en pantalla, por debajo del 40%, "
+        f"y su voz ({pct_voz_mujer:.1f}%) no compensa esa presencia."
+        if alerta_infrarrepresentacion else ""
+    )
+
     test_bechdel = evaluar_bechdel_conversacional(df_eventos)
 
     resumen_lectura_facil = generar_resumen_lectura_facil(
@@ -672,6 +696,8 @@ def calcular_kpis_paridad(
         pct_pantalla_mujer=pct_pantalla_mujer,
         alerta_equality_washing=alerta_equality_washing,
         cumple_salvaguarda=bool(salvaguarda_paridad["cumple_salvaguarda_paridad"]),
+        alerta_infrarrepresentacion=alerta_infrarrepresentacion,
+        pct_voz_no_determinado=pct_voz_no_determinado,
     )
 
     return {
@@ -686,6 +712,8 @@ def calcular_kpis_paridad(
         "pct_pantalla_no_determinado": round(pct_pantalla_no_determinado, 2),
         "alerta_equality_washing": alerta_equality_washing,
         "motivo_alerta": motivo_alerta,
+        "alerta_infrarrepresentacion": alerta_infrarrepresentacion,
+        "motivo_infrarrepresentacion": motivo_infrarrepresentacion,
         "salvaguarda_paridad": salvaguarda_paridad,
         "test_bechdel_digital": test_bechdel,
         "resumen_lectura_facil": resumen_lectura_facil,

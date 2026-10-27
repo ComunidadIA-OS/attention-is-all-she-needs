@@ -396,3 +396,22 @@ def test_umbrales_de_equality_washing_de_la_spec():
     # Con 15 % de la voz salta, aunque el RVP sea de 0,21
     bajo = _eventos([("mujer", 1, 3), ("mujer", 2, 67), ("hombre", 3, 17), ("hombre", 2, 30)])
     assert calcular_kpis_paridad(bajo)["alerta_equality_washing"] is True
+
+
+def test_alerta_de_infrarrepresentacion():
+    """Spec 21 §3.2: pantalla < 40 % y RVP < 1; la lectura facil la recoge."""
+    # Ella: 30 % de la pantalla y 20 % de la voz (RVP 0,67)
+    kpis = calcular_kpis_paridad(_eventos([("mujer", 1, 2), ("mujer", 2, 28), ("hombre", 1, 8), ("hombre", 2, 62)]))
+    assert kpis["alerta_infrarrepresentacion"] is True and "30.0%" in kpis["motivo_infrarrepresentacion"]
+    assert "INFRARREPRESENTACION" in kpis["resumen_lectura_facil"]
+    # Con poca pantalla pero mas voz que presencia (RVP > 1) no salta
+    habla = calcular_kpis_paridad(_eventos([("mujer", 1, 30), ("hombre", 1, 40), ("hombre", 2, 30)]))
+    assert habla["alerta_infrarrepresentacion"] is False
+    # Sin ninguna mujer en pantalla no hay RVP, pero si infrarrepresentacion
+    sin = calcular_kpis_paridad(_eventos([("mujer", 3, 10), ("hombre", 1, 50)]))
+    assert sin["pct_pantalla_mujer"] == 0.0 and sin["alerta_infrarrepresentacion"] is True
+
+
+def test_la_lectura_facil_avisa_del_tiempo_sin_genero():
+    texto = calcular_kpis_paridad(_pieza_con_tramo_no_determinado())["resumen_lectura_facil"]
+    assert "En un 50% del tiempo de voz no se pudo saber el genero." in texto

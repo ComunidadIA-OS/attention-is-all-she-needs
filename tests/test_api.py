@@ -129,6 +129,7 @@ def test_result_by_sections_of_the_front(settings):
     res = r.json()["resultado"]
     assert set(res) == {"veredicto", "metricas", "personas", "temas", "poder", "roles", "clima", "constelacion", "kpis"}
     assert res["veredicto"]["valoracion_ciudadana"] is None
+    assert res["veredicto"]["alerta_infrarrepresentacion"] is False   # 50 % on screen: above the 40 % floor
     assert res["metricas"]["voz_pct"]["mujer"] == 66.7 and res["metricas"]["pantalla_pct"]["mujer"] == 50.0
     assert res["metricas"]["referentes"] == {"mujer": 1, "hombre": 1}
     assert "no_determinado" not in res["metricas"]["voz_pct"]   # shares of determined time; the rest apart

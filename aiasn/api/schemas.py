@@ -61,6 +61,8 @@ def _verdict(s: pd.Series) -> dict:
     return {
         "resumen_lectura_facil": s.resumen_lectura_facil,
         "alerta_equality_washing": bool(s.alerta_equality_washing), "motivo_alerta": s.motivo_alerta,
+        "alerta_infrarrepresentacion": bool(s.alerta_infrarrepresentacion),
+        "motivo_infrarrepresentacion": s.motivo_infrarrepresentacion,
         "bechdel": {"puntuacion_0_3": int(s.bechdel_puntuacion_bechdel_0_3), "diagnostico": s.bechdel_diagnostico_bechdel},
         "salvaguarda_paridad": {"cumple": bool(s.salvaguarda_cumple_salvaguarda_paridad),
                                 "cuota_femenina": float(s.salvaguarda_cuota_femenina)},

@@ -295,3 +295,15 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 .pend{color:var(--sky-faint)}
 .comp-pend{font-size:13px;color:var(--muted);padding:14px 0}
 #clima-rows{display:flex;flex-direction:column;gap:18px}
+
+/* progreso del análisis */
+.steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;list-style:none;margin:14px 0 0;padding:12px 16px;border:1px solid var(--line);border-radius:10px;background:var(--ground);font-size:13px;color:var(--muted)}
+.steps li{display:inline-flex;align-items:center;gap:6px}
+.steps .ic{font-family:var(--mono);font-weight:700;width:1em;text-align:center}
+.steps .done{color:var(--ink)}.steps .done .ic{color:var(--good)}
+.steps .run{color:var(--ink);font-weight:600}.steps .run .ic{color:var(--accent);animation:pulse 1.2s ease-in-out infinite}
+.steps .err{color:var(--crit);font-weight:600}
+.steps .count{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.steps .note{flex-basis:100%;font-size:12px;color:var(--warn)}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.steps .run .ic{animation:none}}

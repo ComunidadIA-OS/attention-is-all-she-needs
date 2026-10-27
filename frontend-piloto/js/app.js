@@ -240,7 +240,9 @@ function renderLive(v,empty=false){
 /* ---- análisis de un vídeo con la API ---- */
 // Served by the front container, the API is under /api on the same origin; elsewhere, ?api=http://localhost:8000
 const API=(new URLSearchParams(location.search).get('api')||'/api').replace(/\/+$/,'');
+// In the order they run: audio → lenguaje and vídeo → rótulos side by side, then unificación and indicadores
 const STEPS={audio:'audio',nlp:'lenguaje',video:'vídeo',captions:'rótulos',silver:'unificación',gold:'indicadores'};
+const SLOW_MS=60*1000;   // audio or vídeo still running after this: the first video downloads the models
 const POLL_MS=3000,POLL_MAX_MS=60*60*1000,BUSY_RETRIES=3,BUSY_WAIT_MS=5000;
 const sleep=ms=>new Promise(ok=>setTimeout(ok,ms));
 const msg=t=>{$('live-msg').textContent=t};
@@ -249,12 +251,48 @@ function running(status){
   const run=keys.filter(k=>pasos[k]==='running'),next=keys.filter(k=>pasos[k]!=='ok')[0];
   return (run.length?run:next?[next]:[]).map(k=>STEPS[k]).join(' + ');
 }
+let tick;
+function showSteps(status,t0){
+  const pasos=(status&&status.pasos)||{},keys=Object.keys(STEPS),el=$('steps');
+  const s=Math.round((Date.now()-t0)/1000),done=keys.filter(k=>pasos[k]==='ok').length;
+  const slow=Date.now()-t0>SLOW_MS&&['audio','video'].some(k=>pasos[k]==='running');
+  const state=k=>pasos[k]==='ok'?['done','✓','hecho']:pasos[k]==='running'?['run','●','en marcha']:pasos[k]==='error'?['err','✕','con error']:['todo','○','pendiente'];
+  el.innerHTML=keys.map(k=>{const[c,ic,txt]=state(k);return `<li class="${c}"><span class="ic" aria-hidden="true">${ic}</span>${STEPS[k].charAt(0).toUpperCase()+STEPS[k].slice(1)}<span class="sr-only">: ${txt}</span></li>`}).join('')
+    +`<li class="count">${done}/${keys.length} · ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}</li>`
+    +(slow?'<li class="note">El primer vídeo descarga los modelos: puede tardar unos minutos más.</li>':'');
+  el.style.display='';
+  $('live-msg').classList.add('sr-only');   // the row says it; the message stays for screen readers
+}
+function hideSteps(){$('steps').style.display='none';$('live-msg').classList.remove('sr-only')}
 $('live-file').addEventListener('change',e=>{const f=e.target.files[0];$('live-name').textContent=f?f.name:'Elegir vídeo'});
+// Polls a video until it has a result, showing its steps; also after a reload (?video=ID while processing)
+async function follow(id,t0){
+  let last={pasos:{}};
+  showSteps(last,t0);clearInterval(tick);tick=setInterval(()=>showSteps(last,t0),1000);   // the clock runs between polls
+  try{
+    for(;;){
+      if(Date.now()-t0>POLL_MAX_MS)throw new Error('el análisis tarda demasiado');
+      const r=await fetch(API+'/videos/'+encodeURIComponent(id));
+      if(!r.ok)throw new Error(r.status===404?'vídeo desconocido':'HTTP '+r.status);
+      const body=await r.json(),estado=body.status&&body.status.estado;
+      last=body.status||last;showSteps(last,t0);
+      if(estado==='error')throw new Error((body.status&&body.status.error)||'error');
+      if(estado==='ok'&&body.resultado){renderLive(AIASNAdapter.toView(body));return}
+      msg(estado==='en_cola'?'En cola…':`Procesando: ${running(body.status)} (${Object.values(last.pasos||{}).filter(x=>x==='ok').length} de 6)…`);
+      await sleep(POLL_MS);
+    }
+  }finally{   // a failed step stays marked with its ✕ next to the error message
+    clearInterval(tick);
+    if($('steps').querySelector('.err'))$('live-msg').classList.remove('sr-only');else hideSteps();
+  }
+}
+const failed=(err,what)=>msg(err instanceof TypeError?`No se pudo conectar con la API (${API}).`:what+err.message);
+
 $('live').addEventListener('submit',async e=>{
   e.preventDefault();
   const file=$('live-file').files[0];
   if(!file){msg('Elige primero un vídeo.');return}
-  const go=$('live-go');go.disabled=true;
+  const go=$('live-go'),t0=Date.now();go.disabled=true;
   try{
     msg('Enviando el vídeo…');
     const fd=new FormData();fd.append('file',file);
@@ -262,32 +300,18 @@ $('live').addEventListener('submit',async e=>{
     for(let i=0;res.status===409&&i<BUSY_RETRIES;i++){await sleep(BUSY_WAIT_MS);res=await fetch(API+'/videos',{method:'POST',body:fd})}
     if(res.status===409){msg('Ya se está procesando otro vídeo. Vuelve a intentarlo en unos minutos.');return}
     if(!res.ok)throw new Error('HTTP '+res.status);
-    const id=(await res.json()).video_id,started=Date.now();
-    for(;;){
-      if(Date.now()-started>POLL_MAX_MS)throw new Error('el análisis tarda demasiado');
-      const r=await fetch(API+'/videos/'+encodeURIComponent(id));
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      const body=await r.json(),estado=body.status&&body.status.estado;
-      if(estado==='error')throw new Error((body.status&&body.status.error)||'error');
-      if(estado==='ok'&&body.resultado){renderLive(AIASNAdapter.toView(body));msg('Análisis completado.');const u=new URL(location.href);u.searchParams.set('video',id);history.replaceState(null,'',u);return}
-      msg(estado==='en_cola'?'En cola…':'Procesando: '+running(body.status)+'…');
-      await sleep(POLL_MS);
-    }
-  }catch(err){
-    msg(err instanceof TypeError?`No se pudo conectar con la API (${API}).`:'No se pudo completar el análisis: '+err.message);
-  }finally{go.disabled=false}
+    const id=(await res.json()).video_id;
+    const u=new URL(location.href);u.searchParams.set('video',id);history.replaceState(null,'',u);   // a reload keeps following it
+    await follow(id,t0);
+    msg('Análisis completado.');
+  }catch(err){failed(err,'No se pudo completar el análisis: ')}
+  finally{go.disabled=false}
 });
 
-// ?video=ID opens a video already processed (to share or reload its result) without uploading it again
+// ?video=ID opens a video (to share or reload its result) without uploading it again
 async function openVideo(id){
-  try{
-    msg('Cargando el resultado…');
-    const r=await fetch(API+'/videos/'+encodeURIComponent(id));
-    if(!r.ok)throw new Error(r.status===404?'vídeo desconocido':'HTTP '+r.status);
-    const body=await r.json();
-    if(body.status&&body.status.estado==='ok'&&body.resultado){renderLive(AIASNAdapter.toView(body));msg('')}
-    else msg('Ese vídeo aún no tiene resultado: '+((body.status&&body.status.estado)||'')+'.');
-  }catch(err){msg(err instanceof TypeError?`No se pudo conectar con la API (${API}).`:'No se pudo abrir el vídeo: '+err.message)}
+  try{msg('Cargando el resultado…');await follow(id,Date.now());msg('')}
+  catch(err){failed(err,'No se pudo abrir el vídeo: ')}
 }
 
 renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderComp();renderSr();
@@ -297,6 +321,6 @@ requestAnimationFrame(repaint);addEventListener('load',repaint);
 setTimeout(repaint,180);setTimeout(repaint,600);setTimeout(repaint,1400);
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120)});
 const params=new URLSearchParams(location.search),opened=params.get('video');
+if(!params.has('demo'))renderLive(AIASNAdapter.toView({resultado:{}}),true);   // ?demo: the mock-up with its sample data
 if(opened)openVideo(opened);
-else if(!params.has('demo'))renderLive(AIASNAdapter.toView({resultado:{}}),true);   // ?demo: the mock-up with its sample data
 })();

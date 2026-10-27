@@ -267,6 +267,9 @@ function renderLive(v,empty=false){
     +arow('Ideas clave aportadas','solas o junto a otras personas',v.authority.ideas)
     +arow('Ideas clave en exclusiva','sin que nadie más las aporte',v.authority.ideasAlone)+'</tbody></table>');
 
+  // vii · supervisión humana (front only for now: decisions are not stored)
+  renderReview(empty?[]:v.doubtful,empty);
+
   // v · clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;
   $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||`<div class="cl-note">${empty?'Sin datos.':'No hay turnos clasificados por tono en este vídeo.'}</div>`;
@@ -281,6 +284,39 @@ function renderLive(v,empty=false){
 
   hover=null;buildOverlay();showDefault();renderSr();repaint();
 }
+
+/* ---- supervisión humana: decide each doubtful span; kept in memory until the backend stores them ---- */
+let decisions={};
+const CHOICES=[['mujer','Mujer'],['hombre','Hombre'],['no_determinable','No determinable']];
+const mmss=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+function renderReview(spans,empty){
+  decisions={};
+  const box=$('review'),tab=$('tab-supervision');
+  box.style.display=tab.style.display=empty?'none':'';
+  const body=$('rv-body');
+  if(!spans.length){body.innerHTML='<tr><td colspan="3">No hay tramos dudosos en este vídeo: todos tienen un género determinado.</td></tr>';reviewCount(0);return}
+  // one row and one decision per person, with the spans where they show
+  body.innerHTML=spans.map(p=>{
+    const when=p.spans.slice(0,4).map(([a,b])=>`${mmss(a)}–${mmss(b)}`).join(', ')+(p.spans.length>4?` y ${p.spans.length-4} más`:'');
+    const said=p.textos.length?` · «${esc(p.textos[0].length>90?p.textos[0].slice(0,89)+'…':p.textos[0])}»`:'';
+    return `<tr data-key="${esc(p.id)}"><td>${esc(p.persona)}<span class="who">${p.spans.length} ${p.spans.length===1?'tramo':'tramos'} · ${es1(p.segundos)} s</span></td>`
+      +`<td class="rv-when">${when}<span class="who">${said||'sin voz en estos tramos'}</span></td>`
+      +`<td><div class="rv-choices" role="group" aria-label="Género de ${esc(p.persona)}">`
+      +CHOICES.map(([k,l])=>`<button type="button" class="rv-btn" data-choice="${k}" aria-pressed="false">${l}</button>`).join('')+'</div></td></tr>';
+  }).join('');
+  reviewCount(spans.length);
+}
+function reviewCount(total){
+  const done=Object.keys(decisions).length;
+  $('rv-count').innerHTML=total?`<b>${done} de ${total}</b> ${total===1?'persona revisada':'personas revisadas'}`:'Nada que revisar';
+}
+$('rv-body').addEventListener('click',e=>{
+  const b=e.target.closest('.rv-btn');if(!b)return;
+  const row=b.closest('tr'),key=row.dataset.key,again=decisions[key]===b.dataset.choice;
+  if(again)delete decisions[key];else decisions[key]=b.dataset.choice;   // pressing the chosen one again undoes it
+  row.querySelectorAll('.rv-btn').forEach(x=>x.setAttribute('aria-pressed',String(!again&&x===b)));
+  reviewCount($('rv-body').querySelectorAll('tr[data-key]').length);
+});
 
 /* ---- análisis de un vídeo con la API ---- */
 // Served by the front container, the API is under /api on the same origin; elsewhere, ?api=http://localhost:8000
@@ -397,7 +433,7 @@ let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120
     queued=false;
     const line=innerHeight*.4;
     let current=sections[0];
-    for(const s of sections)if(s[1].getBoundingClientRect().top<=line)current=s;
+    for(const s of sections)if(s[1].offsetParent!==null&&s[1].getBoundingClientRect().top<=line)current=s;   // hidden: skip
     if(current[0]===shown)return;
     if(shown)shown.removeAttribute('aria-current');
     shown=current[0];shown.setAttribute('aria-current','true');

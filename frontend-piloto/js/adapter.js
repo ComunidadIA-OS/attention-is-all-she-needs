@@ -72,6 +72,20 @@
     return String(text).replace(/^\s*Lectura F[aá]cil[^:]*:\s*/i, "").split(/(?<=\.)\s+/).map((s) => s.trim()).filter(Boolean);
   }
 
+  /** The spans of undetermined gender grouped by person, for the human review: one decision per person. */
+  function doubtfulPeople(spans, labelOf) {
+    const by = new Map();
+    spans.forEach((s) => {
+      const id = s.persona || "?";
+      const p = by.get(id) || { id: id, persona: labelOf[id] || s.persona || "Sin identificar", segundos: 0, spans: [], textos: [] };
+      p.segundos += num(s.segundos) || 0;
+      p.spans.push([num(s.inicio) || 0, num(s.fin) || 0]);
+      if (s.texto) p.textos.push(s.texto);
+      by.set(id, p);
+    });
+    return Array.from(by.values()).map((p) => Object.assign(p, { segundos: round1(p.segundos) }));
+  }
+
   function toView(payload) {
     const r = (payload && payload.resultado) || {};
     const v = r.veredicto || {};
@@ -171,6 +185,7 @@
         ? { f: round1(((experts.f || 0) / totVoice) * 100), m: round1(((experts.m || 0) / totVoice) * 100) }
         : null,
       clima: { f: tone("mujer"), m: tone("hombre") },
+      doubtful: doubtfulPeople(r.segmentos_dudosos || [], labelOf),
       authority: {   // shares within each gender, as the API gives them
         voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),
         title: byGender((r.autoridad || {}).presentacion_con_cargo_pct),

@@ -70,7 +70,11 @@ const PAYLOAD = {
         { source: "p1", target: "p2", tipo: "turno", peso: 1 }
       ]
     },
-    kpis: []
+    kpis: [],
+    segmentos_dudosos: [{ inicio: 100.5, fin: 109.4, segundos: 3.1, cuadrante: 2, tipo: "Presencia muda en pantalla",
+                          genero: "no_determinado", persona: "p3", texto: null },
+                        { inicio: 110, fin: 112, segundos: 2, cuadrante: 2, tipo: "Presencia muda en pantalla",
+                          genero: "no_determinado", persona: "p3", texto: null }]
   }
 };
 
@@ -142,12 +146,17 @@ test("power, roles and climate", () => {
   assert.deepEqual(v.clima, { f: { tec: 50, col: 50, dis: 0 }, m: { tec: 0, col: 0, dis: 100 } });
 });
 
+test("spans to review grouped by person, with the name the graph gives them", () => {
+  assert.deepEqual(v.doubtful.map((d) => [d.persona, d.spans, d.segundos]), [["Persona 3", [[100.5, 109.4], [110, 112]], 5.1]]);
+});
+
 test("an empty or partial result does not break the page", () => {
   const e = A.toView({ video_id: "x", resultado: {} });
   assert.deepEqual([e.people, e.themes, e.easy, e.roles], [[], [], [], []]);
   assert.equal(e.ratio, null);
   assert.equal(e.expertVoice, null);
   assert.equal(e.tif, null);   // an old result without the TIF state: the line is not shown
+  assert.deepEqual(e.doubtful, []);
 });
 
 console.log(failed ? `\n${failed} pruebas fallidas` : "\nTodas las pruebas correctas");

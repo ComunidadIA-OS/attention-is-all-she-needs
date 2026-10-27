@@ -333,3 +333,17 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 
 /* autoridad, presentación e ideas dentro de "Jerarquía de rol" */
 .ledger.auth{margin-top:18px}
+
+/* supervisión humana: el estado de cada botón va en su texto y en aria-pressed, no solo en el color */
+.rv-bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;margin-bottom:12px;font-size:13px;color:var(--muted)}
+.rv-bar b{color:var(--ink)}
+.rv-note{font-size:12px;color:var(--warn)}
+.rv-table td{vertical-align:top}
+.rv-table .rv-when{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.rv-table th:nth-child(2){text-align:left}
+.rv-choices{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.rv-btn{font:inherit;font-size:12px;font-weight:600;cursor:pointer;min-height:32px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--ground);color:var(--muted)}
+.rv-btn:hover{color:var(--ink);border-color:var(--muted)}
+.rv-btn[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.rv-btn[aria-pressed="true"]::before{content:"✓ "}
+@media (max-width:760px){.rv-choices{justify-content:flex-start}}

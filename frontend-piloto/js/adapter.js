@@ -13,6 +13,7 @@
   "use strict";
 
   const G = { mujer: "f", hombre: "m", no_binario: "n" };
+  const SKY_W = 660, SKY_H = 470;   // the sky at its usual size, in px: the layout keeps stars apart at this scale
   const ROLE_ORDER = ["presentador/a", "moderador/a", "entrevistador/a", "experto/a", "testimonio", "narrador/a en off"];
 
   const num = (x) => (typeof x === "number" && isFinite(x) ? x : null);
@@ -40,22 +41,35 @@
       p.nx = 0.5 + r * Math.cos(a);
       p.ny = 0.48 + r * 0.9 * Math.sin(a);
     });
-    for (let it = 0; it < 80; it++) {   // keep stars and their labels from overlapping
+    // Keep stars apart in pixels of a typical sky (it is wider than tall): each needs its radius, its glow and room
+    // for its name below; stars also keep off the topic diamonds, which stay where they are
+    const W = SKY_W, H = SKY_H, radius = (p) => 7 + p.protag * 17;
+    for (let it = 0; it < 200; it++) {
       for (let i = 0; i < people.length; i++) {
+        const a = people[i];
         for (let j = i + 1; j < people.length; j++) {
-          const a = people[i], b = people[j];
-          let dx = b.nx - a.nx, dy = b.ny - a.ny;
-          const d = Math.hypot(dx, dy), min = 0.11;
+          const b = people[j];
+          let dx = (b.nx - a.nx) * W, dy = (b.ny - a.ny) * H;
+          const d = Math.hypot(dx, dy), min = radius(a) + radius(b) + 26;
           if (d < min) {
             if (d === 0) { dx = Math.cos(i + j); dy = Math.sin(i + j); }
             const k = (min - d) / 2 / (d || 1);
-            a.nx -= dx * k; a.ny -= dy * k; b.nx += dx * k; b.ny += dy * k;
+            a.nx -= (dx * k) / W; a.ny -= (dy * k) / H; b.nx += (dx * k) / W; b.ny += (dy * k) / H;
+          }
+        }
+        for (const t of Object.values(topics)) {
+          let dx = (a.nx - t[0]) * W, dy = (a.ny - t[1]) * H;
+          const d = Math.hypot(dx, dy), min = radius(a) + 30;
+          if (d < min) {
+            if (d === 0) { dx = 1; dy = 0; }
+            a.nx += (dx * (min - d)) / (d || 1) / W; a.ny += (dy * (min - d)) / (d || 1) / H;
           }
         }
       }
-      people.forEach((p) => {
-        p.nx = Math.min(0.92, Math.max(0.08, p.nx));
-        p.ny = Math.min(0.8, Math.max(0.1, p.ny));
+      people.forEach((p) => {   // inside the sky, above the legend
+        const r = radius(p);
+        p.nx = Math.min(1 - (r + 12) / W, Math.max((r + 12) / W, p.nx));
+        p.ny = Math.min(1 - (r + 60) / H, Math.max((r + 12) / H, p.ny));
       });
     }
     return topics;
@@ -158,6 +172,10 @@
       people: people,
       topics: topics,
       edges: people.flatMap((p) => p.topics.map((t) => [p.id, t])),
+      // people seen together on screen: [a, b, seconds]
+      shared: edges.filter((e) => e.tipo === "comparte_plano" && people.some((p) => p.id === e.source)
+                                  && people.some((p) => p.id === e.target))
+                   .map((e) => [e.source, e.target, num(e.peso) || 0]),
       themes: Object.values(themes).filter((t) => t.f || t.m).sort((a, b) => (b.f - b.m) - (a.f - a.m)),
       screen: screen,
       voice: voice,

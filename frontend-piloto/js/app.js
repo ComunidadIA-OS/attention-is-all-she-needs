@@ -46,6 +46,12 @@ function draw(t){
   let bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#0b0e22');bg.addColorStop(1,'#070912');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
   neb(W*.62,H*.3,Math.max(W,H)*.55,P.neb1,.14);neb(W*.24,H*.86,Math.max(W,H)*.4,P.neb2,.1);
   for(const s of field){const[x,y]=px(s.x,s.y);const a=reduce?s.a:s.a*(.75+.25*Math.sin(t/900+s.ph));ctx.beginPath();ctx.arc(x,y,s.r,0,6.283);ctx.fillStyle=`rgba(${P.star},${a})`;ctx.fill()}
+  // people on screen together: dotted, brighter the longer they share the frame
+  const maxShared=Math.max(1,...(DATA.shared||[]).map(s=>s[2]));
+  // always between people with a name or a voice; those of people who only appear, when hovering them
+  for(const[a,b,sec] of DATA.shared||[]){const p=pr(a),q=pr(b),on=hover===a||hover===b;if(!on&&!(p.labeled&&q.labeled))continue;const[ax,ay]=px(p.nx,p.ny),[bx,by]=px(q.nx,q.ny);
+    ctx.save();ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);
+    ctx.strokeStyle=`rgba(${P.star},${on?.75:(hover?.08:.18+.4*sec/maxShared)})`;ctx.lineWidth=on?1.6:1.2;ctx.stroke();ctx.restore()}
   for(const[pid,top] of DATA.edges){const p=pr(pid),[tx,ty]=px(...DATA.topics[top]),[sx,sy]=px(p.nx,p.ny),on=hover===pid;ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(tx,ty);ctx.strokeStyle=on?`rgba(${P.edgeOn},.6)`:`rgba(${P.edge},${hover?.07:.16})`;ctx.lineWidth=on?1.6:1;ctx.stroke()}
   for(const key in DATA.topics){const[x,y]=px(...DATA.topics[key]);ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.strokeStyle=`rgba(${P.topic},${hover?.4:.6})`;ctx.lineWidth=1.3;ctx.strokeRect(-4,-4,8,8);ctx.restore()}
   for(const p of DATA.people){
@@ -94,6 +100,10 @@ function showDefault(){
     ?`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su <b>tamaño</b> es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
     :`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
 }
+function sharedWith(id){
+  const w=(DATA.shared||[]).filter(s=>s[0]===id||s[1]===id).map(s=>[pr(s[0]===id?s[1]:s[0]),s[2]]).sort((a,b)=>b[1]-a[1]);
+  return w.length?`<div class="pc-topics">Comparte plano con ${w.slice(0,4).map(([q,sec])=>`<span class="chip">${esc(q.name)} · ${es1(sec)} s</span>`).join('')}${w.length>4?` y ${w.length-4} más`:''}</div>`:'';
+}
 function showPerson(id){
   const p=pr(id),ratio=p.screen?p.voice/p.screen:null;
   const gcss=p.g==='f'?'background:rgba(192,107,224,.18);color:#d08ce8':p.g==='m'?'background:rgba(116,160,180,.18);color:#93b8c9':'background:var(--sky-line);color:var(--sky-mut)';
@@ -104,7 +114,7 @@ function showPerson(id){
     :['Ratio voz / pantalla',`<span style="color:${ratio<.9?'#f0576e':'#6fcf9f'}">${ratio.toFixed(2)}</span>`];
   read.innerHTML=`<div class="pc-head"><span class="pc-star" style="background:radial-gradient(circle at 35% 35%,#fff,${core});box-shadow:0 0 20px 2px rgba(${glow},.6)"></span><div style="min-width:0"><div class="pc-name">${esc(p.name)}</div><div class="pc-role">${esc(p.role)}</div></div><span class="pc-g" style="${gcss}">${gname(p.g)}</span></div>
   <div class="pc-grid"><div class="pc-cell"><div class="ck">Tiempo en pantalla</div><div class="cv tnum">${LIVE?es1(p.screen):p.screen}%</div></div><div class="pc-cell"><div class="ck">Tiempo de voz</div><div class="cv tnum">${LIVE?es1(p.voice):p.voice}%</div></div><div class="pc-cell"><div class="ck">${c3[0]}</div><div class="cv tnum">${c3[1]}</div></div><div class="pc-cell"><div class="ck">${c4[0]}</div><div class="cv tnum">${c4[1]}</div></div></div>
-  <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div>${LIVE&&p.sesgoCargo!=null?`<div class="pc-topics">Su cargo en word2vec <span class="chip">«${esc(p.cargoEn)}» · sesgo ${p.sesgoCargo>0?'+':''}${es2(p.sesgoCargo)} ${p.sesgoCargo>.02?'hacia «she»':p.sesgoCargo<-.02?'hacia «he»':'neutro'}</span></div>`:''}<div class="pc-note">${esc(p.note)}</div>`;
+  <div class="pc-topics">${p.topics.length?'Habla de '+p.topics.map(t=>`<span class="chip">${esc(DATA.tlabel[t]||t)}</span>`).join(''):'<span class="chip">Sin tema asignado</span>'}</div>${LIVE&&p.sesgoCargo!=null?`<div class="pc-topics">Su cargo en word2vec <span class="chip">«${esc(p.cargoEn)}» · sesgo ${p.sesgoCargo>0?'+':''}${es2(p.sesgoCargo)} ${p.sesgoCargo>.02?'hacia «she»':p.sesgoCargo<-.02?'hacia «he»':'neutro'}</span></div>`:''}${LIVE?sharedWith(p.id):''}<div class="pc-note">${esc(p.note)}</div>`;
 }
 
 /* ---- segregación (espejo) ---- */
@@ -197,11 +207,11 @@ const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
 // empty: no video analysed yet, every figure blank (no sample data passed off as a result)
 function renderLive(v,empty=false){
   LIVE=true;
-  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,themes:v.themes,irm:null};
+  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes,irm:null};
   const nf=v.people.filter(p=>p.g==='f').length,nm=v.people.filter(p=>p.g==='m').length;
   const tag=$('src-tag');tag.textContent=empty?'Sin datos':'Datos reales';tag.classList.toggle('real',!empty);
   $('src-desc').textContent=empty?'Elige un vídeo y pulsa «Analizar».':`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
-  $('legend-size').textContent='El tamaño de cada estrella es su tiempo de voz';
+  $('legend-size').innerHTML='<span class="lg-shared">··· comparten plano</span> El tamaño de cada estrella es su tiempo de voz';
   cv.setAttribute('aria-label','Constelación del vídeo analizado: cada estrella es una persona; su tamaño es su tiempo de voz y su color y forma, el género percibido. Los datos completos están en la tabla siguiente.');
 
   // veredicto

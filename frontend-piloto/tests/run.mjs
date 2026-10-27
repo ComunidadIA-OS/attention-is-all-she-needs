@@ -68,7 +68,8 @@ const PAYLOAD = {
         { source: "p1", target: "tema:care", tipo: "habla_de", peso: 2 },
         { source: "p1", target: "tema:technology", tipo: "habla_de", peso: 1 },
         { source: "p2", target: "tema:technology", tipo: "habla_de", peso: 3 },
-        { source: "p1", target: "p2", tipo: "turno", peso: 1 }
+        { source: "p1", target: "p2", tipo: "turno", peso: 1 },
+        { source: "p1", target: "p2", tipo: "comparte_plano", peso: 12.5 }
       ]
     },
     kpis: [],
@@ -102,11 +103,23 @@ test("topics come from the 'habla_de' edges, labelled in Spanish", () => {
   assert.deepEqual(v.edges, [["p1", "cuidados"], ["p1", "tecnología"], ["p2", "tecnología"]]);
 });
 
-test("layout stays inside the sky and keeps stars apart", () => {
-  for (const p of v.people) assert.ok(p.nx >= 0.08 && p.nx <= 0.92 && p.ny >= 0.1 && p.ny <= 0.8);
-  for (let i = 0; i < v.people.length; i++)
-    for (let j = i + 1; j < v.people.length; j++)
-      assert.ok(Math.hypot(v.people[i].nx - v.people[j].nx, v.people[i].ny - v.people[j].ny) > 0.1);
+test("layout keeps stars inside the sky and apart, by their size, in pixels", () => {
+  const W = 660, H = 470, r = (p) => 7 + p.protag * 17;
+  // a crowded sky: 16 people, as in a real video, plus the ones of the payload
+  const many = JSON.parse(JSON.stringify(PAYLOAD));
+  for (let i = 4; i < 20; i++) many.resultado.personas.push({ id: `p${i}`, genero: "hombre", pantalla_s: 3, voz_s: 0 });
+  for (const view of [v, A.toView(many)]) {
+    for (const p of view.people) assert.ok(p.nx > 0 && p.nx < 1 && p.ny > 0 && p.ny < 1);
+    for (let i = 0; i < view.people.length; i++)
+      for (let j = i + 1; j < view.people.length; j++) {
+        const a = view.people[i], b = view.people[j];
+        assert.ok(Math.hypot((a.nx - b.nx) * W, (a.ny - b.ny) * H) >= r(a) + r(b) + 20, `${a.id} and ${b.id} overlap`);
+      }
+  }
+});
+
+test("people seen together on screen", () => {
+  assert.deepEqual(v.shared, [["p1", "p2", 12.5]]);
 });
 
 test("themes by gender, most female-leaning first", () => {

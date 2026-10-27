@@ -265,9 +265,12 @@ function renderLive(v,empty=false){
   const share=x=>x==null?'—':es1(x)+' %',arow=(label,sub,o)=>`<tr><td>${label}<span class="who">${sub}</span></td><td class="fig f">${empty?PEND:share(o.f)}</td><td class="fig m">${empty?PEND:share(o.m)}</td></tr>`;
   $('role-gap').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
     +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
-    +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)
-    +arow('Ideas clave aportadas','solas o junto a otras personas',v.authority.ideas)
-    +arow('Ideas clave en exclusiva','sin que nadie más las aporte',v.authority.ideasAlone)+'</tbody></table>');
+    +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)+'</tbody></table>');
+  // key ideas: who brings each, in groups that add up to 100
+  const ideaSegs=[['f','solo mujeres',v.ideas.f],['m','solo hombres',v.ideas.m],['sh','compartidas entre géneros',v.ideas.shared],['u','solo voces sin género conocido',v.ideas.u]].filter(x=>x[2]);
+  $('role-gap').insertAdjacentHTML('beforeend',empty||!v.ideas.total?'':`<div class="ideas"><div class="ideas-t">Ideas clave de la pieza <span class="who">${v.ideas.total} ideas, según quién las aporta</span></div>`
+    +`<div class="ideas-bar" role="img" aria-label="Ideas clave: ${ideaSegs.map(x=>`${es1(x[2])} por ciento ${x[1]}`).join(', ')}.">${ideaSegs.map(x=>`<span class="ib ${x[0]}" style="width:${x[2]}%">${Math.round(x[2])}%</span>`).join('')}</div>`
+    +`<div class="ideas-lg">${ideaSegs.map(x=>`<span><i class="ib ${x[0]}"></i>${x[1]} · ${es1(x[2])} %</span>`).join('')}</div></div>`);
 
   // vii · supervisión humana (front only for now: decisions are not stored)
   renderReview(empty?[]:v.doubtful,empty);

@@ -252,6 +252,12 @@ function renderLive(v,empty=false){
     `<tr><td>Interrupciones recibidas<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
 
+  // iii · who is cited as a reference, by whom
+  const old=$('refs-list');if(old)old.remove();
+  if(!empty)$('power').closest('table').insertAdjacentHTML('afterend',`<div class="refs" id="refs-list"><div class="refs-t">Referentes citados</div>`
+    +(v.power.references.length?'<ul>'+v.power.references.map(r=>`<li><span class="rchip ${r.g==='f'||r.g==='m'?r.g:'u'}">${esc(r.name)}</span><span class="who">${gname(r.g).toLowerCase()} · ${r.times} ${r.times===1?'vez':'veces'} · por ${r.by.map(esc).join(', ')||'—'}</span></li>`).join('')+'</ul>'
+      :'<div class="who">Nadie cita a ninguna persona como referente en este vídeo.</div>')+'</div>');
+
   // iv · roles
   const chip=p=>`<span class="rchip ${p.g==='f'||p.g==='m'?p.g:'u'}">${esc(p.name)}</span>`;
   $('ladder').innerHTML=v.roles.map(r=>`<div class="rl-row"><div class="rl-tier">${esc(r.rol.charAt(0).toUpperCase()+r.rol.slice(1))}</div><div class="rl-people">${r.people.map(chip).join('')}</div></div>`).join('')

@@ -25,6 +25,11 @@ import pandas as pd
 LENGUAS_COOFICIALES_SOPORTADAS: Sequence[str] = ("es", "ca", "gl", "eu", "en")
 
 
+# Equality-washing (spec 21 §3.1): a critical mass on screen (Kanter 1977) whose voice does not follow, by the ratio
+# of shares or by a voice share as low as the media average (GMMP 2020: 19 %; Gender Gap Tracker: 21 %)
+EW_PANTALLA_MIN, EW_RVP_MAX, EW_VOZ_MAX = 35.0, 0.30, 20.0
+
+
 def calcular_solape_temporal(
     inicio_a: float, fin_a: float, inicio_b: float, fin_b: float
 ) -> float:
@@ -651,8 +656,8 @@ def calcular_kpis_paridad(
     # Alta presencia en pantalla pero deficit severo de voz activa
     alerta_equality_washing = False
     motivo_alerta = ""
-    if pct_pantalla_mujer >= 35.0 and (
-        (rvp_mujer is not None and rvp_mujer < 0.40) or pct_voz_mujer < 25.0
+    if pct_pantalla_mujer >= EW_PANTALLA_MIN and (
+        (rvp_mujer is not None and rvp_mujer < EW_RVP_MAX) or pct_voz_mujer < EW_VOZ_MAX
     ):
         alerta_equality_washing = True
         motivo_alerta = (

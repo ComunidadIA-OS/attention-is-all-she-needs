@@ -373,3 +373,26 @@ def test_rvp_es_cociente_de_cuotas():
     assert kpis["por_genero"]["hombre"]["ratio_voz_pantalla"] == 2.0      # 100 % de voz / 50 % de pantalla
     assert kpis["por_genero"]["hombre"]["voz_activa_en_pantalla"] == 1.0  # habla todo el tiempo que sale
     assert kpis["por_genero"]["no_binario"]["ratio_voz_pantalla"] is None  # sin tiempo en pantalla
+
+
+def _eventos(filas):
+    """Eventos del contrato de cuadrantes: (genero, cuadrante, segundos) por fila."""
+    t, rows = 0.0, []
+    for genero, cuadrante, s in filas:
+        rows.append({"tiempo_i": t, "tiempo_f": t + s, "duracion_s": s, "cuadrante": cuadrante, "genero": genero,
+                     "hablante_id": None, "track_id": f"p_{genero}", "rotulo_nombre": None, "rotulo_cargo": None,
+                     "area": 0.3, "centrality": 0.8})
+        t += s
+    return pd.DataFrame(rows)
+
+
+def test_umbrales_de_equality_washing_de_la_spec():
+    """Spec 21 §3.1: pantalla >= 35 % y (RVP < 0,30 o voz < 20 %)."""
+    # Ella: 70 % de la pantalla y 25 % de la voz -> RVP 0,36: la regla antigua (0,40 / 25 %) la marcaba
+    medio = _eventos([("mujer", 1, 5), ("mujer", 2, 65), ("hombre", 3, 15), ("hombre", 2, 30)])
+    kpis = calcular_kpis_paridad(medio)
+    assert (kpis["pct_pantalla_mujer"], kpis["pct_voz_mujer"]) == (70.0, 25.0)
+    assert kpis["alerta_equality_washing"] is False
+    # Con 15 % de la voz salta, aunque el RVP sea de 0,21
+    bajo = _eventos([("mujer", 1, 3), ("mujer", 2, 67), ("hombre", 3, 17), ("hombre", 2, 30)])
+    assert calcular_kpis_paridad(bajo)["alerta_equality_washing"] is True

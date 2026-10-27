@@ -60,8 +60,10 @@ function draw(t){
     ctx.globalAlpha=1;
   }
 }
-let raf;const loop=t=>{draw(t);raf=requestAnimationFrame(loop)};
+// The sky twinkles only while it is on screen: off screen it would keep the main thread busy and make scrolling stutter
+let raf,skyVisible=true;const loop=t=>{draw(t);raf=skyVisible?requestAnimationFrame(loop):0};
 function start(){cancelAnimationFrame(raf);reduce?draw(0):raf=requestAnimationFrame(loop)}
+new IntersectionObserver(([e])=>{const was=skyVisible;skyVisible=e.isIntersecting;if(skyVisible&&!was&&!reduce)start()}).observe(cv);
 
 /* ---- overlay ---- */
 const ov=$('ov');
@@ -437,7 +439,9 @@ let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(repaint,120
     if(current[0]===shown)return;
     if(shown)shown.removeAttribute('aria-current');
     shown=current[0];shown.setAttribute('aria-current','true');
-    shown.scrollIntoView({block:'nearest',inline:'nearest'});   // keep it visible in the tab strip on a phone
+    // keep it visible in the tab strip on a phone, moving only the strip (scrollIntoView would also move the page)
+    const ul=shown.closest('ul'),a=shown.offsetLeft,b=a+shown.offsetWidth;
+    if(a<ul.scrollLeft)ul.scrollLeft=a-8;else if(b>ul.scrollLeft+ul.clientWidth)ul.scrollLeft=b-ul.clientWidth+8;
   };
   addEventListener('scroll',()=>{if(!queued){queued=true;requestAnimationFrame(mark)}},{passive:true});
   addEventListener('resize',mark);mark();

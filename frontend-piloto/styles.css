@@ -324,9 +324,9 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 /* pestañas de navegación: saltan a cada sección de la misma página */
 html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
-.tabs{position:sticky;top:var(--top-h,64px);z-index:19;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:saturate(1.3) blur(10px);border-bottom:1px solid var(--hair)}
+.tabs{position:sticky;top:var(--top-h,64px);z-index:19;background:var(--bg);border-bottom:1px solid var(--hair)}   /* solid: a blur repaints on every scroll */
 @media (max-width:760px){.top{position:static}.tabs{top:0}}   /* on a phone only the tabs stay: the header is tall */
-.tabs ul{display:flex;gap:4px;list-style:none;margin:0;padding:7px 0;overflow-x:auto;scrollbar-width:thin}
+.tabs ul{display:flex;gap:4px;list-style:none;margin:0;padding:7px 0;overflow-x:auto;scrollbar-width:thin;position:relative}
 .tabs a{display:inline-flex;align-items:center;min-height:30px;padding:4px 11px;border-radius:999px;font-size:12.5px;font-weight:500;color:var(--muted);text-decoration:none;white-space:nowrap;border:1px solid transparent}
 .tabs a:hover{color:var(--ink);border-color:var(--line)}
 .tabs a[aria-current="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}

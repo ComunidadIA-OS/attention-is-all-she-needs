@@ -283,9 +283,10 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 
 /* ===== conexión con la API (añadido a la maqueta) ===== */
 .live{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.live .pill{cursor:pointer;background:var(--ground);font:inherit;font-size:11.5px;font-weight:600}
+.live .pill{cursor:pointer;background:var(--ground);font:inherit;font-size:14px;font-weight:600;padding:9px 18px;min-height:40px}
 .live .pill:hover{color:var(--ink);border-color:var(--muted)}
-.live .lv-go{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.live .lv-go{color:var(--bg);background:var(--accent);border-color:var(--accent)}   /* page background: readable on the accent in both themes */
+.live .lv-go:hover{color:var(--bg);filter:brightness(1.08)}
 .live .lv-go:disabled{opacity:.55;cursor:progress}
 .live .lv-pick:focus-within{outline:3px solid var(--accent);outline-offset:2px}
 .lv-msg{font-size:12px;color:var(--muted);order:-1;max-width:42ch;text-align:right}

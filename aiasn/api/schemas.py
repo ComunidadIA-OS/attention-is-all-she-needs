@@ -41,6 +41,7 @@ def result(lake: Lake, video_id: str) -> dict:
             "area_media": _determined(_by_gender(kpis, "parity", "area")),   # mean share of the frame on screen
             "personas_distintas": participants.genero.value_counts().to_dict(),
             "veces_citado_como_referente": _by_gender(kpis, "references", value=True),
+            "referentes": _references(lake.read("silver", "nlp_references", video_id), participants),
         },
         "roles": _records(participants.dropna(subset=["role_es"]).groupby(["role_es", "genero"], as_index=False)
                           .speech_time_s.sum().rename(columns={"role_es": "rol", "speech_time_s": "voz_s"})),
@@ -147,6 +148,19 @@ def _topics(kpis: pd.DataFrame, nodes: pd.DataFrame) -> list[dict]:
     return _records(pd.DataFrame({"tema": t.categoria_es, "clave": t.categoria, "genero": t.genero,
                                   "personas": t.valor.astype(int), "pct": (t.valor / t.base * 100).round(1),
                                   "sesgo": t.categoria.map(bias)}))
+
+
+def _references(refs: pd.DataFrame, participants: pd.DataFrame) -> list[dict]:
+    """Each well-known person cited as a reference, with their gender, how many times and by whom (as the graph names
+    the participants), most cited first."""
+    if refs.empty:
+        return []
+    label = participants.set_index("node_id").label
+    out = []
+    for name, g in refs.groupby("name", sort=False):
+        by = list(dict.fromkeys(label.get(p, p) for p in g.participant_id.dropna()))
+        out.append({"nombre": name, "genero": _clean(g.genero.iloc[0]), "veces": len(g), "citado_por": by})
+    return sorted(out, key=lambda r: -r["veces"])
 
 
 def _ideas(kpis: pd.DataFrame) -> dict:

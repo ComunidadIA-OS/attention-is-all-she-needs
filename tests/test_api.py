@@ -127,8 +127,11 @@ def test_result_by_sections_of_the_front(settings):
         r = api.get("/videos/vid1")
     json.loads(r.text, parse_constant=lambda c: pytest.fail(f"{c} in the JSON"))   # no NaN
     res = r.json()["resultado"]
-    assert set(res) == {"veredicto", "metricas", "personas", "temas", "poder", "roles", "clima", "constelacion", "kpis",
-                        "segmentos", "segmentos_dudosos"}
+    assert set(res) == {"veredicto", "metricas", "personas", "temas", "poder", "roles", "clima", "autoridad",
+                        "constelacion", "kpis", "segmentos", "segmentos_dudosos"}
+    # Marta speaks from authority: testimony by role, but her caption title shows it
+    assert res["autoridad"]["voz_con_autoridad_pct"]["mujer"] == 100.0
+    assert res["poder"]["area_media"]["mujer"] == 0.3
     first = res["segmentos"][0]
     assert first == {"inicio": 0.0, "fin": 10.0, "segundos": 10.0, "cuadrante": 1, "tipo": first["tipo"],
                      "genero": "mujer", "persona": "p1", "texto": "Hola"}   # Marta speaking on screen

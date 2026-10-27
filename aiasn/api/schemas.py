@@ -37,13 +37,19 @@ def result(lake: Lake, video_id: str) -> dict:
         "personas": _people(participants, people),
         "temas": _topics(kpis, nodes),
         "poder": {
-            "centralidad_media": _by_gender(kpis, "parity", "centralidad"),
+            "centralidad_media": _determined(_by_gender(kpis, "parity", "centralidad")),
+            "area_media": _determined(_by_gender(kpis, "parity", "area")),   # mean share of the frame on screen
             "personas_distintas": participants.genero.value_counts().to_dict(),
             "veces_citado_como_referente": _by_gender(kpis, "references", value=True),
         },
         "roles": _records(participants.dropna(subset=["role_es"]).groupby(["role_es", "genero"], as_index=False)
                           .speech_time_s.sum().rename(columns={"role_es": "rol", "speech_time_s": "voz_s"})),
         "clima": _tone(kpis),
+        "autoridad": {   # shares within each gender, from the KPIs of gold
+            "voz_con_autoridad_pct": _by_gender(kpis, "authority", pct=True),
+            "presentacion_con_cargo_pct": _by_gender(kpis, "naming", pct=True),
+            "ideas_aportadas_pct": {c: _by_gender(kpis, "ideas", c, pct=True) for c in ("con", "solo")},
+        },
         "constelacion": {"nodos": _records(nodes.rename(columns={"node_id": "id"})),
                          "aristas": _records(gold["graph_edges"])},
         "kpis": _records(kpis),   # every KPI, long format (valor / base), for what the sections above do not show

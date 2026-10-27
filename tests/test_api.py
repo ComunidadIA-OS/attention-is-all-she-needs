@@ -127,7 +127,13 @@ def test_result_by_sections_of_the_front(settings):
         r = api.get("/videos/vid1")
     json.loads(r.text, parse_constant=lambda c: pytest.fail(f"{c} in the JSON"))   # no NaN
     res = r.json()["resultado"]
-    assert set(res) == {"veredicto", "metricas", "personas", "temas", "poder", "roles", "clima", "constelacion", "kpis"}
+    assert set(res) == {"veredicto", "metricas", "personas", "temas", "poder", "roles", "clima", "constelacion", "kpis",
+                        "segmentos", "segmentos_dudosos"}
+    first = res["segmentos"][0]
+    assert first == {"inicio": 0.0, "fin": 10.0, "segundos": 10.0, "cuadrante": 1, "tipo": first["tipo"],
+                     "genero": "mujer", "persona": "p1", "texto": "Hola"}   # Marta speaking on screen
+    assert {s["persona"] for s in res["segmentos"] if s["cuadrante"] == 3} == {"v1"}   # the narrator, off screen
+    assert res["segmentos_dudosos"] == []   # every span has a known gender here
     assert res["veredicto"]["valoracion_ciudadana"] is None
     assert res["veredicto"]["alerta_infrarrepresentacion"] is False   # 50 % on screen: above the 40 % floor
     assert res["metricas"]["voz_pct"]["mujer"] == 66.7 and res["metricas"]["pantalla_pct"]["mujer"] == 50.0

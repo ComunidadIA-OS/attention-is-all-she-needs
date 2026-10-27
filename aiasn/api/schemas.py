@@ -6,6 +6,7 @@ already computed in silver and gold (ADR-0001)."""
 
 import pandas as pd
 
+from aiasn.core.silver.identity import participant_of
 from aiasn.storage.lake import Lake
 
 
@@ -15,7 +16,7 @@ def status(manifest: dict) -> dict:
 
 
 def result(lake: Lake, video_id: str) -> dict:
-    gold = {t: lake.read("gold", t, video_id) for t in ("summary", "kpis", "graph_nodes", "graph_edges")}
+    gold = {t: lake.read("gold", t, video_id) for t in ("summary", "kpis", "graph_nodes", "graph_edges", "quadrants")}
     people = lake.read("silver", "people", video_id)
     kpis, nodes = gold["kpis"], gold["graph_nodes"]
     participants = nodes[nodes.tipo == "participante"]
@@ -46,7 +47,21 @@ def result(lake: Lake, video_id: str) -> dict:
         "constelacion": {"nodos": _records(nodes.rename(columns={"node_id": "id"})),
                          "aristas": _records(gold["graph_edges"])},
         "kpis": _records(kpis),   # every KPI, long format (valor / base), for what the sections above do not show
+        **_segments(gold["quadrants"], lake.read("silver", "speaker_person", video_id)),
     }
+
+
+def _segments(quadrants: pd.DataFrame, links: pd.DataFrame) -> dict:
+    """The spans of the four quadrants with who is in each, and apart those of undetermined gender: what a person
+    reviews (ADR-0005, art. 14 AI Act)."""
+    by_speaker = participant_of(links)
+    track = quadrants.track_id.astype("string").str.removeprefix("person_")
+    who = ("p" + track).where(track.notna(), quadrants.hablante_id.map(lambda s: by_speaker.get(int(s)) if pd.notna(s) else None))
+    seg = pd.DataFrame({"inicio": quadrants.tiempo_i, "fin": quadrants.tiempo_f, "segundos": quadrants.duracion_s,
+                        "cuadrante": quadrants.cuadrante, "tipo": quadrants.tipo_cuadrante,
+                        "genero": quadrants.genero, "persona": who, "texto": quadrants.transcripcion})
+    seg = seg.sort_values(["inicio", "cuadrante"], kind="stable")
+    return {"segmentos": _records(seg), "segmentos_dudosos": _records(seg[seg.genero == "no_determinado"])}
 
 
 def _rvp(voice: dict, screen: dict) -> dict:

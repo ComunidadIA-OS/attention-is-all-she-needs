@@ -160,7 +160,7 @@ def test_result_by_sections_of_the_front(settings):
     marta = next(p for p in res["personas"] if p["id"] == "p1")
     assert marta | {"pantalla_s": None} == {"id": "p1", "nombre": "Marta Ruiz", "cargo": "Investigadora", "genero": "mujer",
                                             "rol": "testimonio", "autoridad": True, "pantalla_s": None, "voz_s": 20.0,
-                                            "area": 0.3, "centralidad": 0.9}
+                                            "area": 0.3, "centralidad": 0.9, "cargo_en": "researcher", "sesgo_cargo": 0.09}
     sp = res["veredicto"]["salvaguarda_paridad"]
     assert sp["regimen_aplicado"] == "FASE_1_ABSORCION_TECHO_MASCULINO" and sp["suelo_femenino_exigido"] == 0.4
     assert {"tema": "tecnología", "clave": "technology", "genero": "mujer", "personas": 1, "pct": 50.0,

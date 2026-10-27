@@ -132,13 +132,15 @@ def _by_gender(kpis: pd.DataFrame, kpi: str, categoria: str | None = None, pct: 
 
 
 def _people(participants: pd.DataFrame, people: pd.DataFrame) -> list[dict]:
-    names = people.set_index("participant_id").name
+    names, titles_en = people.set_index("participant_id").name, people.set_index("participant_id").title_en
     out = pd.DataFrame({"id": participants.node_id, "nombre": participants.node_id.map(names),
                         "cargo": participants.title, "genero": participants.genero, "rol": participants.role_es,
                         "autoridad": participants.authority, "pantalla_s": participants.screen_time_s,
                         "voz_s": participants.speech_time_s,
                         # mean share of the frame and centrality (1 at the centre) while on screen
-                        "area": participants.area, "centralidad": participants.centrality})
+                        "area": participants.area, "centralidad": participants.centrality,
+                        # word2vec gender bias of their caption title, scored in English (> 0: towards "she")
+                        "cargo_en": participants.node_id.map(titles_en), "sesgo_cargo": participants.sesgo})
     return _records(out)
 
 

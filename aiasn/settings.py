@@ -184,6 +184,9 @@ class StorageSettings(BaseModel):
             return {}
         options = {"key": self.access_key, "secret": self.secret_key}
         options = {k: v.get_secret_value() for k, v in options.items() if v is not None}
+        # No cached listings: the API and the workers write the same lake, and a stale listing makes s3fs read a
+        # rewritten manifest with its old ETag (FileExpired)
+        options["use_listings_cache"] = False
         return options | ({"client_kwargs": {"endpoint_url": self.endpoint_url}} if self.endpoint_url else {})
 
 

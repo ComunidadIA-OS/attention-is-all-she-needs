@@ -74,7 +74,7 @@ def test_manifest_in_the_lake(lake):
 def test_storage_options_only_for_s3():
     storage = StorageSettings(endpoint_url="http://minio:9000", access_key="aiasn", secret_key="secret")
     assert storage.options("data") == {}
-    assert storage.options("s3://aiasn") == {"key": "aiasn", "secret": "secret",
+    assert storage.options("s3://aiasn") == {"key": "aiasn", "secret": "secret", "use_listings_cache": False,
                                              "client_kwargs": {"endpoint_url": "http://minio:9000"}}
     assert Settings(lake_uri="s3://aiasn", storage=storage).storage.options("s3://aiasn")["key"] == "aiasn"
 

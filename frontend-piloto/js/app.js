@@ -264,14 +264,13 @@ function renderLive(v,empty=false){
   dumb.setAttribute('aria-label','Brecha entre tiempo en pantalla y tiempo de voz. '+rows.map(d=>`${d.name}: ${es1(d.screen)} por ciento en pantalla y ${es1(d.voice)} por ciento de voz`).join('. ')+'.');
   renderDumb(empty?[]:rows);
 
-  // iii · poder
+  // iii · poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
+  document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: cuántas personas distintas, dónde y cuánto ocupan en el plano y a quién se cita como referente.';
   const fig=(x,g)=>`<td class="fig ${g}">${empty?PEND:x}</td>`;
   $('power').innerHTML=
-    `<tr><td>Abre y cierra el acto<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
     `<tr><td>Centralidad media en plano<span class="who">1 en el centro del plano, 0 en una esquina</span></td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
     `<tr><td>Área media en plano<span class="who">parte del encuadre que ocupan</span></td>${fig(v.power.area.f==null?'—':es1(v.power.area.f*100)+' %','f')}${fig(v.power.area.m==null?'—':es1(v.power.area.m*100)+' %','m')}</tr>`+
-    `<tr><td>Interrupciones recibidas<span class="who">pendiente en el backend</span></td>${fig(PEND,'')}${fig(PEND,'')}</tr>`+
     `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
 
   // iii · who is cited as a reference, by whom

@@ -29,12 +29,12 @@ python -m http.server 8080 --directory frontend-piloto      # y abrir http://loc
 
 El front no calcula indicadores: todo viene de la API (ADR-0001). `js/adapter.js` solo traduce la respuesta de la API a lo que dibuja la página. Lo que el backend aún no calcula se muestra como «—»:
 
-* **Índice de representación** y su composición.
 * **Protagonismo de cada persona.** Mientras tanto, el tamaño de cada estrella es su tiempo de voz, y la leyenda lo indica.
-* **Quién abre y cierra** e **interrupciones recibidas**.
-* **Ratio voz/pantalla por persona.** El ratio del veredicto es el de la API, cuya definición está pendiente de unificar con la de la maqueta.
+* **Ratio voz/pantalla por persona.** El del veredicto sí viene de la API (% de voz ÷ % de pantalla).
 
-Las posiciones de las estrellas se calculan solas: cada persona se coloca cerca de los temas de los que habla.
+El índice de representación es provisional hasta que se cierre la definición de su señal de autoridad. Quién abre y cierra la pieza y las interrupciones quedan fuera del piloto: solo aparecen en la maqueta (`?demo`).
+
+Las posiciones de las estrellas se calculan solas: cada persona se coloca cerca de los temas de los que habla, separada de las demás según su tamaño.
 
 ## Estructura
 

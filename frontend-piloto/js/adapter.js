@@ -100,6 +100,20 @@
     return Array.from(by.values()).map((p) => Object.assign(p, { segundos: round1(p.segundos) }));
   }
 
+  /** Seconds of each gender in the three quadrants of the fusion (KPI parity), and their share of that gender's
+   * time in them: speaking on screen (C1), on screen without speaking (C2), speaking off screen (C3). */
+  function quadrants(kpis) {
+    const out = {};
+    for (const [g, code] of [["mujer", "f"], ["hombre", "m"]]) {
+      const s = (c) => num((kpis.find((k) => k.kpi === "parity" && k.genero === g && k.categoria === c) || {}).valor) || 0;
+      const secs = { c1: s("c1_voz_activa"), c2: s("c2_presencia_muda"), c3: s("c3_voz_off") };
+      const total = secs.c1 + secs.c2 + secs.c3;
+      out[code] = total ? { total: round1(total), secs: secs,
+        pct: { c1: round1((secs.c1 / total) * 100), c2: round1((secs.c2 / total) * 100), c3: round1((secs.c3 / total) * 100) } } : null;
+    }
+    return out;
+  }
+
   function toView(payload) {
     const r = (payload && payload.resultado) || {};
     const v = r.veredicto || {};
@@ -210,6 +224,7 @@
         ? { f: round1(((experts.f || 0) / totVoice) * 100), m: round1(((experts.m || 0) / totVoice) * 100) }
         : null,
       clima: { f: tone("mujer"), m: tone("hombre") },
+      quadrants: quadrants(r.kpis || []),
       doubtful: doubtfulPeople(r.segmentos_dudosos || [], labelOf),
       authority: {   // shares within each gender, as the API gives them
         voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),

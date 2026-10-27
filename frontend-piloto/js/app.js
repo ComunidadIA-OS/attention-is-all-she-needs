@@ -263,6 +263,16 @@ function renderLive(v,empty=false){
   const rows=[{name:'Mujeres',screen:v.screen.f||0,voice:v.voice.f||0,col:'var(--f)'},{name:'Hombres',screen:v.screen.m||0,voice:v.voice.m||0,col:'var(--m)'}];
   dumb.setAttribute('aria-label','Brecha entre tiempo en pantalla y tiempo de voz. '+rows.map(d=>`${d.name}: ${es1(d.screen)} por ciento en pantalla y ${es1(d.voice)} por ciento de voz`).join('. ')+'.');
   renderDumb(empty?[]:rows);
+  // the three quadrants of each gender's time: does she speak when she is on screen?
+  const oldQ=$('quads');if(oldQ)oldQ.remove();
+  const QS=[['c1','habla en pantalla'],['c2','en pantalla sin hablar'],['c3','habla fuera de pantalla']];
+  const qbar=(name,q)=>!q?'':`<div class="q-row"><div class="q-name">${name} <span class="who">${es1(q.total)} s</span></div>`
+    +`<div class="q-bar" role="img" aria-label="${name}: ${QS.map(([k,l])=>`${es1(q.pct[k])} por ciento ${l}`).join(', ')}.">`
+    +QS.filter(([k])=>q.pct[k]).map(([k])=>`<span class="q ${k}" style="width:${q.pct[k]}%">${q.pct[k]>=8?Math.round(q.pct[k])+'%':''}</span>`).join('')+'</div></div>';
+  if(!empty&&(v.quadrants.f||v.quadrants.m))dumb.insertAdjacentHTML('afterend',`<div class="quads" id="quads"><div class="q-t">Cómo se reparte su tiempo</div>`
+    +qbar('Mujeres',v.quadrants.f)+qbar('Hombres',v.quadrants.m)
+    +`<div class="q-lg">${QS.map(([k,l])=>`<span><i class="q ${k}"></i>${l}</span>`).join('')}</div>`
+    +`<div class="q-note">Los tres cuadrantes de Vilaplana: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
 
   // iii · poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
   document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: cuántas personas distintas, dónde y cuánto ocupan en el plano y a quién se cita como referente.';

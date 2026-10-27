@@ -73,7 +73,9 @@ const PAYLOAD = {
         { source: "p1", target: "p2", tipo: "comparte_plano", peso: 12.5 }
       ]
     },
-    kpis: [],
+    kpis: [{ kpi: "parity", genero: "mujer", categoria: "c1_voz_activa", valor: 20, base: 30 },
+           { kpi: "parity", genero: "mujer", categoria: "c2_presencia_muda", valor: 20, base: 60 },
+           { kpi: "parity", genero: "mujer", categoria: "c3_voz_off", valor: 10, base: 10 }],
     segmentos_dudosos: [{ inicio: 100.5, fin: 109.4, segundos: 3.1, cuadrante: 2, tipo: "Presencia muda en pantalla",
                           genero: "no_determinado", persona: "p3", texto: null },
                         { inicio: 110, fin: 112, segundos: 2, cuadrante: 2, tipo: "Presencia muda en pantalla",
@@ -164,6 +166,11 @@ test("power, roles and climate", () => {
 
 test("spans to review grouped by person, with the name the graph gives them", () => {
   assert.deepEqual(v.doubtful.map((d) => [d.persona, d.spans, d.segundos]), [["Persona 3", [[100.5, 109.4], [110, 112]], 5.1]]);
+});
+
+test("each gender's time in the three quadrants", () => {
+  assert.deepEqual(v.quadrants.f, { total: 50, secs: { c1: 20, c2: 20, c3: 10 }, pct: { c1: 40, c2: 40, c3: 20 } });
+  assert.equal(v.quadrants.m, null);   // no seconds for men in this payload
 });
 
 test("an empty or partial result does not break the page", () => {

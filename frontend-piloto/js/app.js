@@ -324,7 +324,7 @@ $('rv-body').addEventListener('click',e=>{
 // Served by the front container, the API is under /api on the same origin; elsewhere, ?api=http://localhost:8000
 const API=(new URLSearchParams(location.search).get('api')||'/api').replace(/\/+$/,'');
 // In the order they run: audio → lenguaje and vídeo → rótulos side by side, then unificación and indicadores
-const STEPS={audio:'audio',nlp:'lenguaje',video:'vídeo',captions:'rótulos',silver:'unificación',gold:'indicadores'};
+const STEPS={audio:'audio',nlp:'NLP',video:'vídeo',captions:'OCR',silver:'unificación',gold:'KPIs'};
 const SLOW_MS=60*1000;   // audio or vídeo still running after this: the first video downloads the models
 const POLL_MS=3000,POLL_MAX_MS=60*60*1000,BUSY_RETRIES=3,BUSY_WAIT_MS=5000;
 const sleep=ms=>new Promise(ok=>setTimeout(ok,ms));

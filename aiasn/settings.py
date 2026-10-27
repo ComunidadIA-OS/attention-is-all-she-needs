@@ -156,6 +156,9 @@ class BiasSettings(BaseModel):
 
 class SilverSettings(BaseModel):
     gender_threshold: float = Field(0.80, ge=0.5, le=1)   # below it, no_determinado (ADR-0005); also used by the fusion
+    # A person whose face shows in fewer of their detections (back turned, only hands) gets no gender from the video:
+    # from the body alone it is unreliable, and without a face they cannot be told apart from others either
+    min_face_share: float = Field(0.5, ge=0, le=1)
     max_gap_s: float = Field(1.0, ge=0)                    # shorter absences do not split a person's presence
     speaking_threshold: float = 0.0                        # speaking_score (TalkNet) above it: speaking
     speaking_window_s: float = Field(1.0, ge=0)            # rolling majority of the speaking state; 0: no smoothing

@@ -574,3 +574,16 @@ def test_term_bias_without_terms_does_not_load_the_model(tmp_path):
     out = WordBiasSilver(settings).run({"silver/nlp_topics": pd.DataFrame({"topic": []}),
                                         "silver/people": pd.DataFrame({"title_en": []})})
     assert out["term_bias"].empty and not (tmp_path / "missing.bin.gz").exists()
+
+
+def test_no_gender_from_the_body_alone():
+    # Seen from behind or only the hands: the model still guesses a gender from the body
+    back = detections(1, range(3, 80, 4), "F", 0.95).assign(face_x1=np.nan)
+    one_face = back.copy(); one_face.loc[one_face.index[0], "face_x1"] = 10.0   # a face in 1 of 20 detections
+    faces = detections(2, range(3, 80, 4), "F", 0.95).assign(face_x1=10.0)
+    people = VideoSilver(Settings()).run({"bronze/video_detections": pd.concat([back, faces])})["video_people"]
+    assert people.genero.tolist() == ["no_determinado", "mujer"] and pd.isna(people.prob_mujer[0])
+    few = VideoSilver(Settings()).run({"bronze/video_detections": one_face})["video_people"]
+    assert few.genero.tolist() == ["no_determinado"]
+    loose = VideoSilver(Settings(silver={"min_face_share": 0})).run({"bronze/video_detections": one_face})["video_people"]
+    assert loose.genero.tolist() == ["mujer"]   # decided on the frames with a face only

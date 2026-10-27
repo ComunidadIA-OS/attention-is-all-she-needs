@@ -101,6 +101,16 @@ Si encuentras un error o deseas proponer una mejora:
    * Entorno de ejecución (versión de Python, GPU o AI Endpoints).
 
 
+### 5.1. Decisiones de Diseño por Consenso por Silencio (*Lazy Consensus*)
+
+Las decisiones de arquitectura (`docs/adr/`) se adoptan por **consenso por silencio**, como en la Apache Software Foundation:
+
+1. La persona que propone abre el ADR con estado **«Propuesta»** y lo anuncia al equipo con un resumen de sus consecuencias y un **plazo mínimo de 48 h**.
+2. Cualquier integrante puede objetar o pedir más tiempo; una objeción detiene el plazo hasta resolverla.
+3. Si no hay objeciones al vencer el plazo, el estado pasa a **«Aceptada (consenso por silencio, AAAA-MM-DD)»** en el ADR y en `docs/adr/README.md`.
+4. Cualquier decisión aceptada así puede reabrirse en cualquier momento.
+5. La licencia del repositorio y la entrega oficial requieren el acuerdo expreso de todo el equipo.
+
 ---
 
 ## 6. Política de Desarrollo Asistido por IA (Copilotos y LLMs)

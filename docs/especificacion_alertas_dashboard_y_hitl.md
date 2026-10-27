@@ -46,10 +46,11 @@ A partir de los metadatos tabulares extraídos por los adaptadores de inferencia
 
 5. **Test de Bechdel Digital / Conversacional (`evaluar_bechdel_conversacional` en `aiasn/core/fusion.py`):**
    Adaptación determinista del Test de Bechdel-Wallace (1985) a contenidos digitales y audiovisuales de no-ficción (debates, pódcast, mesas redondas, informativos) para medir la **autoridad relacional** sin gasto adicional de GPU:
+   * **Condición previa de aplicabilidad (decisión D-10, 27/10/2026):** El test solo se evalúa si en la pieza **aparecen o hablan al menos 2 mujeres y 1 hombre** (presencia = voz activa o tiempo en pantalla > 0). Con una sola mujer el resultado es trivial (*Efecto Token*, ya cubierto por la Alerta de Infrarrepresentación); sin hombres no puede existir mediación masculina. Se cuenta presencia y no solo voz para que la Regla 1 siga detectando a la mujer presente que nunca toma la palabra. Si no se cumple, el motor devuelve `aplica = false`, `puntuacion_bechdel_0_3 = null` y un motivo (`no_aplica_una_mujer`, `no_aplica_sin_mujeres` o `no_aplica_sin_hombres`), y el panel muestra «No se aplica» con el motivo en lugar de `0/3`.
    * **Regla 1 · Pluralidad femenina ($\ge 2$ mujeres con voz activa):** Verifica que intervengan al menos dos mujeres distintas (`hablante_id` / `rotulo_nombre` diferenciados) en los cuadrantes de habla activa ($Q_1, Q_3$), rompiendo el *Efecto Token* o síndrome de la mujer única (*Kanter, 1977*).
    * **Regla 2 · Identidad y autoridad acreditada:** Verifica que al menos dos mujeres estén identificadas con nombre propio o cargo mediante rótulo en pantalla (`rotulo_nombre` / `rotulo_cargo` por OCR).
    * **Regla 3 · Interlocución horizontal directa ($\text{Mujer}_A \rightarrow \text{Mujer}_B$):** Contabiliza las transiciones consecutivas de turno de palabra entre dos mujeres distintas sin que un hombre actúe como mediador o eje obligatorio de validación ($\text{transiciones\_mujer\_a\_mujer} \ge 1$).
-   * **Puntuación y Veredicto (`0/3` a `3/3`):** Otorga `supera_bechdel_digital = True` únicamente cuando se cumplen simultáneamente las tres reglas (`3/3`), diagnosticando en caso contrario si el fallo se debe a *Efecto Token* (una sola mujer) o a *Aislamiento Relacional* (dos o más mujeres cuyos turnos están siempre mediados por hombres).
+   * **Puntuación y Veredicto (`0/3` a `3/3`):** Otorga `supera_bechdel_digital = True` únicamente cuando se cumplen simultáneamente las tres reglas (`3/3`), diagnosticando en caso contrario si el fallo se debe a *Efecto Token* (una sola mujer) o a *Aislamiento Relacional* (dos o más mujeres cuyos turnos están siempre mediados por hombres). Cuando el test no se aplica (condición previa), no se puntúa ni se diagnostica *Efecto Token* como fallo del test: se informa del motivo de no aplicación.
 
 ---
 
@@ -216,3 +217,31 @@ En estricto cumplimiento del **Artículo 14 del Reglamento Europeo de IA (RIA)**
    * **Directiva (UE) 2022/2381:** Sobre el equilibrio de género en los consejos de administración (*Women on Boards*).
    * **Ley Orgánica 2/2024, de 1 de agosto:** De representación paritaria y presencia equilibrada.
    * **Ley 34/1988, de 11 de noviembre:** General de Publicidad (art. 3.a).
+
+---
+
+## 8. Revisión Preventiva de Material No Publicado (decisión D-11)
+
+El panel opera en tres **fases del material**. Las reglas de las secciones 1 a 5 son idénticas en todas; cambian el propósito, la presentación y las garantías:
+
+| Fase | Entrada | Salida | Sello / huella | Valoración ciudadana | Privacidad |
+| :--- | :--- | :--- | :---: | :---: | :--- |
+| **Preproducción** | Escaleta (persona, género, minutos, rótulo; orden = turnos) | Proyección determinista | No | No | Anonimización por defecto |
+| **Grabación y edición** | Vídeo bruto o en montaje | Diagnóstico provisional + «Qué cambiar antes de publicar» | No (informe interno) | No | Anonimización por defecto; retención efímera |
+| **Publicado** | Pieza final | Dictamen certificable | Sí (tras supervisión humana) | Sí | Según configuración |
+
+### 8.1. Margen hasta la Paridad
+Con $F$ = segundos de mujeres y $T$ = total determinado en un canal (voz o pantalla), y suelo $s = 0{,}40$:
+* **Añadir** intervención nueva (alarga la pieza): $\Delta_{\text{añadir}} = \dfrac{s\,T - F}{1 - s}$
+* **Redistribuir** sin alargar (de hombres a mujeres): $\Delta_{\text{redistribuir}} = s\,T - F$
+
+### 8.2. Recomendaciones
+Reglas deterministas, priorizadas y vinculadas a su métrica de origen: tramos pendientes de supervisión (alta), margen de voz (alta), equality-washing (alta), una sola mujer (alta), margen de pantalla (media), Bechdel R1/R3 y rótulos ausentes (media), concentración de turnos > 60 % en una persona y temas tratados por un solo género (baja).
+
+### 8.3. Proyección desde Escaleta: Supuestos
+Voz = minutos previstos; pantalla = voz (RVP = 1); orden de la escaleta = orden de turnos. En consecuencia la Alerta de Infrarrepresentación (RVP < 1) no se activa en proyección y el déficit se refleja en la salvaguarda y en el margen de voz.
+
+### 8.4. Contrato de API Solicitado
+* `POST /videos`: campos adicionales `modo` (`"certificacion"` | `"preventivo"`), `estado_material` (`"bruto"` | `"montaje"` | `"final"`) y `retencion` (`"efimera"` en modo preventivo: el backend no conserva vídeo, fotogramas ni transcripción tras devolver el resultado).
+* En modo preventivo la respuesta **no incluye sello** ni se registra para valoración pública.
+* Opcional: `POST /escaletas` con `[{ nombre, genero, minutos, rotulo }]`, que devuelve el mismo `resultado` que un vídeo. Mientras no exista, la proyección se calcula en el cliente.

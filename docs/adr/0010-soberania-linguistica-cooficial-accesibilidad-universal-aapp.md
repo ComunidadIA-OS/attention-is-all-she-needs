@@ -29,3 +29,5 @@ El despliegue de una herramienta de auditoría de paridad y protagonismo con voc
 ## 3. Consecuencias
 * **Positivas:** Cumplimiento estricto del Esquema Nacional de Interoperabilidad, elegibilidad inmediata para licitaciones públicas y transferencia tecnológica en el Directorio de Soluciones Libres de la Administración (CTT / SEDIA).
 * **Coste computacional:** Nulo (**0 W adicionales de GPU**), ya que la generación del bloque de Lectura Fácil es 100 % determinista en el núcleo de Python.
+
+* **Estado de revisión de las traducciones de la interfaz (27/10/2026):** galego revisado por Alba Camiña García; catalán e inglés asistidos por IA sin revisión nativa registrada; **euskara asistido por IA y sin revisar** (el equipo no puede revisarlo). La interfaz muestra un aviso visible en euskara y se solicita revisión externa a personas hablantes. Ver `MODEL_CARD.md` §4.

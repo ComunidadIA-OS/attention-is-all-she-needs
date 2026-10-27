@@ -47,9 +47,9 @@ const PAYLOAD = {
       { id: "p3", nombre: null, cargo: null, genero: "no_determinado", rol: null, autoridad: null, pantalla_s: 10, voz_s: 0 }
     ],
     temas: [
-      { tema: "cuidados", clave: "care", genero: "mujer", turnos: 2, pct: 66.7, sesgo: 0.1 },
-      { tema: "tecnología", clave: "technology", genero: "mujer", turnos: 1, pct: 33.3, sesgo: 0.0 },
-      { tema: "tecnología", clave: "technology", genero: "hombre", turnos: 3, pct: 100.0, sesgo: 0.0 }
+      { tema: "cuidados", clave: "care", genero: "mujer", personas: 2, pct: 66.7, sesgo: 0.1 },
+      { tema: "tecnología", clave: "technology", genero: "mujer", personas: 1, pct: 33.3, sesgo: 0.0 },
+      { tema: "tecnología", clave: "technology", genero: "hombre", personas: 3, pct: 100.0, sesgo: 0.0 }
     ],
     poder: { centralidad_media: { mujer: 0.8, hombre: 0.6, no_binario: null }, area_media: { mujer: 0.3, hombre: 0.2 },
              personas_distintas: { mujer: 1, hombre: 1, no_determinado: 1 }, veces_citado_como_referente: { hombre: 2 } },

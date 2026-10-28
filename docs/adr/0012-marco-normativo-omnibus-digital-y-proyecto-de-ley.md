@@ -12,7 +12,7 @@
 Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo justificamos nuestras decisiones:
 
 1. **El Ómnibus Digital de IA** modifica el calendario del RIA. Según las fuentes secundarias consultadas (artículos de despachos y de artificialintelligenceact.eu; el texto del DOUE no ha podido descargarse de forma automática y **está pendiente de contrastar a mano**), el Reglamento (UE) 2026/1744 se publicó el 24/07/2026 y entró en vigor el 27/07/2026. **Aplaza** las obligaciones de los sistemas de alto riesgo del Anexo III al **2 de diciembre de 2027** y las del Anexo I al **2 de agosto de 2028**. **No aplaza** las prácticas prohibidas (desde el 02/02/2025) ni las obligaciones de transparencia del **Art. 50**, aplicables desde el **02/08/2026**.
-2. **El Proyecto de Ley Orgánica para el buen uso y la gobernanza de la IA** (Consejo de Ministros, 26/05/2026; publicado en el BOCG el 12/06/2026, plazo de enmiendas hasta el 30/06/2026) adapta el ordenamiento español al RIA. Según nos trasladaron las mentoras en las sesiones, **decayó con la disolución de las Cortes** y no llegó a aprobarse. Esa circunstancia **no está verificada por el equipo en una fuente oficial**; hasta confirmarla en congreso.es, se cita siempre como «proyecto de ley» y nunca como norma vigente.
+2. **El Proyecto de Ley Orgánica para el buen uso y la gobernanza de la IA** (Consejo de Ministros, 26/05/2026; publicado en el BOCG el 12/06/2026, plazo de enmiendas hasta el 30/06/2026) adapta el ordenamiento español al RIA. La **disolución de las Cortes está verificada en el BOE**: el Real Decreto 806/2026, de 5 de octubre (BOE-A-2026-20742, publicado el 06/10/2026), disuelve el Congreso y el Senado y convoca elecciones generales para el **29/11/2026**; las nuevas Cámaras se reunirán el 23/12/2026. Conforme al Art. 207 del Reglamento del Congreso, la disolución provoca el **decaimiento** de los asuntos en tramitación, por lo que el proyecto **ha decaído** (coherente con lo que nos trasladaron las mentoras en las sesiones). Para volver a tramitarse, el próximo Gobierno tendría que presentarlo de nuevo. Se cita siempre como «proyecto de ley decaído» y nunca como norma vigente.
 
 **Contenido del proyecto relevante para nosotras** (leído directamente en el BOCG):
 
@@ -60,12 +60,13 @@ Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo 
 * **Positivas:** decisiones justificadas con cita, un calendario realista (sin sobrerreaccionar a fechas que el Ómnibus ha movido) y una declaración honesta sobre qué es norma y qué es referencia.
 * **Compromisos y riesgos:**
   * Las fechas del Ómnibus proceden de fuentes secundarias hasta contrastar el DOUE a mano.
-  * Que el proyecto haya decaído es información de las sesiones, no de una fuente oficial.
+  * El decaimiento del proyecto se deduce del Real Decreto 806/2026 (BOE) y del Art. 207 del Reglamento del Congreso; falta comprobar el estado del expediente en congreso.es.
   * La clasificación de AIASN como «riesgo limitado» es una interpretación del equipo.
 * **Preguntas abiertas para Ángela Gasch y Karina Gibert:** (1) ¿Confirman la clasificación de la categorización de género percibido (Anexo III.1.b frente al Art. 50.3)? (2) ¿Quién es, en un despliegue, el *deployer* que debe informar a las personas expuestas? (3) ¿Se ha publicado alguna guía de la AESIA sobre categorización biométrica?
 
 ## 5. Fuentes
 
 * BOCG, Congreso de los Diputados, XV Legislatura, Serie A, núm. 97-1, 12/06/2026 (Expediente 121/000096): https://www.congreso.es/public_oficiales/L15/CONG/BOCG/A/BOCG-15-A-97-1.PDF
+* Real Decreto 806/2026, de 5 de octubre, de disolución del Congreso de los Diputados y del Senado y de convocatoria de elecciones (BOE-A-2026-20742, 06/10/2026): https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-20742
 * Reglamento (UE) 2024/1689 (DOUE, 12/07/2024): ejemplar en `documentacion-tecnica/admin_y_bases/`.
 * Reglamento (UE) 2026/1744 (Ómnibus Digital de IA), DOUE 24/07/2026: **texto oficial pendiente de contrastar** en EUR-Lex.

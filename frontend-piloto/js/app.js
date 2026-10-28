@@ -230,8 +230,8 @@ function renderLive(v,empty=false){
     +'<li>Cuando el sistema no está seguro de quién es una persona, una persona del equipo lo revisa.</li>';
 
   // i · temas
-  $('cap-themes').textContent='De qué habla cada género: cada tema, como porcentaje de los temas que tratan sus hablantes. Bajo cada tema, ◆ su sesgo de género en word2vec: hacia la derecha se asocia a «she», hacia la izquierda a «he».';
-  $('mirror-mc').textContent=empty?'':'◆ sesgo word2vec';
+  $('cap-themes').textContent='De qué habla cada género: cada tema, como porcentaje de los temas que tratan sus hablantes. Bajo cada tema, su sesgo de género en word2vec: hacia la derecha se asocia a «she», hacia la izquierda a «he».';
+  $('mirror-mc').textContent=empty?'':'sesgo word2vec';
   mirror.setAttribute('aria-label','Segregación temática por género, como porcentaje de los temas que trata cada grupo, y sesgo de género de cada tema en word2vec (positivo hacia mujer, negativo hacia hombre). '+v.themes.map(t=>`${t.t}: mujeres ${es1(t.f)}, hombres ${es1(t.m)}, sesgo ${t.sesgo==null?'sin dato':es2(t.sesgo)}`).join('. ')+'.');
   renderMirror();
 
@@ -287,7 +287,7 @@ function renderLive(v,empty=false){
   const titled=v.people.filter(p=>p.cargoEn||p.note);
   if(!empty&&titled.length)$('role-side').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
     +titled.map(p=>`<tr><td>${esc(p.cargoEn||p.note)}<span class="who">${esc(p.name)}</span></td><td class="fig">${p.sesgoCargo==null?'<span class="mb none">sin vector en word2vec</span>':bias(p.sesgoCargo)}</td></tr>`).join('')
-    +`</tbody></table><div class="rg-note">◆ hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
+    +`</tbody></table><div class="rg-note">Hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
 
   // v · clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;

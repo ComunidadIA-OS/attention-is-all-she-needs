@@ -293,7 +293,7 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 
 /* vídeos analizados */
 .live .lv-open{max-width:220px;appearance:auto;color:var(--ink)}
-/* sesgo word2vec bajo cada tema del espejo: forma (◆) y cifra, no solo color */
+/* sesgo word2vec bajo cada tema del espejo: forma (rombo) y cifra, no solo color */
 .mirror.bias .mrow{height:auto;min-height:34px;padding:3px 0}
 .mirror.bias .mcat{display:flex;flex-direction:column;align-items:center;gap:2px}
 .mb{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--faint);font-weight:500}

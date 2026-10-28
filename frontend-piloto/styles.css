@@ -314,7 +314,7 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .tabs a:hover{color:var(--ink);border-color:var(--line)}
 .tabs a[aria-current="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}
 
-/* autoridad, presentación e ideas dentro de "Jerarquía de rol" */
+/* autoridad y presentación dentro de "Jerarquía de rol" */
 .ledger.auth{margin-top:18px}
 
 /* supervisión humana: el estado de cada botón va en su texto y en aria-pressed, no solo en el color */
@@ -333,15 +333,6 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .ledger.titles .fig{width:auto}
 .ledger.titles .mb{justify-content:flex-end}
 
-/* ideas clave en grupos que suman 100: color y trama, nunca solo color */
-.ideas{margin-top:20px}
-.ideas-t{font-size:13px;font-weight:600;color:var(--ink)}.ideas-t .who{font-weight:400;color:var(--faint);margin-left:6px;font-size:11px}
-.ideas-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin-top:8px}
-.ib{display:flex;align-items:center;justify-content:center;font:700 11px var(--mono);color:#fff}
-.ib.f{background:var(--f)}.ib.m{background:var(--m)}.ib.u{background:var(--u);color:#1a1530}
-.ib.sh{background-color:var(--accent);background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.28) 5px 7px)}
-.ideas-lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:11.5px;color:var(--muted)}
-.ideas-lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 
 /* referentes citados */
 .refs{margin-top:16px}
@@ -366,10 +357,10 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .q-note{font-size:11.5px;color:var(--faint);margin-top:12px;max-width:60ch;line-height:1.5}
 
 /* con datos reales el informe respira más: pantalla–voz y poder, una debajo de otra; y bajo la jerarquía de rol, una
-   fila a todo el ancho con la autoridad a un lado y las ideas y los cargos al otro */
+   fila a todo el ancho con la autoridad a un lado y los cargos al otro */
 .live-data .ex-cols{grid-template-columns:1fr;gap:56px}
 .role-more{display:none}
 .live-data .role-more{display:grid;grid-template-columns:1fr 1fr;gap:42px;margin-top:34px;align-items:start}
-.live-data .role-more .ledger.auth,.live-data .role-more .ideas{margin-top:0}
+.live-data .role-more .ledger.auth{margin-top:0}
 .live-data .role-more #role-side>*+*{margin-top:28px}
 @media (max-width:760px){.live-data .role-more{grid-template-columns:1fr;gap:30px}}

@@ -158,7 +158,6 @@ test("power, roles and climate", () => {
   assert.deepEqual(v.expertVoice, { f: 25, m: 0 });
   assert.equal(v.experts, true);
   assert.deepEqual(v.authority, { voice: { f: 100, m: 81.5 }, title: { f: null, m: null } });
-  assert.deepEqual(v.ideas, { total: 5, f: 40, m: 40, u: null, shared: 20 });
   assert.deepEqual(v.clima, { f: { tec: 50, col: 50, dis: 0 }, m: { tec: 0, col: 0, dis: 100 } });
 });
 

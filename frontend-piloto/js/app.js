@@ -194,7 +194,7 @@ const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
 // empty: no video analysed yet, every figure blank (no sample data passed off as a result)
 function renderLive(v,empty=false){
   LIVE=true;document.body.classList.add('live-data');   // real data: the report stacks its sections (see styles.css)
-  // the roles section keeps the expert comparison in its card; authority, ideas and titles go in a row below it
+  // the roles section keeps the expert comparison in its card; authority and titles go in a row below it
   if(!$('role-more'))document.querySelector('.role').insertAdjacentHTML('afterend','<div class="role-more" id="role-more"><div id="role-auth"></div><div id="role-side"></div></div>');
   $('role-auth').innerHTML=$('role-side').innerHTML='';
   DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes};
@@ -273,16 +273,11 @@ function renderLive(v,empty=false){
     ?`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Tiempo de voz de quienes figuran como <b>experto/a</b>, sobre el total del vídeo:</div><div class="rg-pair"><div class="rg-cell"><div class="rg-num" style="color:var(--f-ink)">${es1(v.expertVoice.f)} %</div><div class="rg-lab">Expertas</div></div><div class="rg-vs">frente a</div><div class="rg-cell"><div class="rg-num" style="color:var(--m-ink)">${es1(v.expertVoice.m)} %</div><div class="rg-lab">Expertos</div></div></div>`
     :`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">${v.experts?'Quienes figuran como experto/a en este vídeo no tienen un género determinado: no hay comparación posible.':'En este vídeo nadie figura como experto/a.'}</div>`;
 
-  // iv · autoridad: from what each gender speaks, how they are introduced and what ideas they bring
+  // iv · autoridad: from what each gender speaks, and how they are introduced
   const share=x=>x==null?'—':es1(x)+' %',arow=(label,sub,o)=>`<tr><td>${label}<span class="who">${sub}</span></td><td class="fig f">${empty?PEND:share(o.f)}</td><td class="fig m">${empty?PEND:share(o.m)}</td></tr>`;
-  $('role-auth').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
+  $('role-auth').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad y presentación, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
     +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
     +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)+'</tbody></table>');
-  // key ideas: who brings each, in groups that add up to 100
-  const ideaSegs=[['f','solo mujeres',v.ideas.f],['m','solo hombres',v.ideas.m],['sh','compartidas entre géneros',v.ideas.shared],['u','solo voces sin género conocido',v.ideas.u]].filter(x=>x[2]);
-  $('role-side').insertAdjacentHTML('beforeend',empty||!v.ideas.total?'':`<div class="ideas"><div class="ideas-t">Ideas clave de la pieza <span class="who">${v.ideas.total} ideas, según quién las aporta</span></div>`
-    +`<div class="ideas-bar" role="img" aria-label="Ideas clave: ${ideaSegs.map(x=>`${es1(x[2])} por ciento ${x[1]}`).join(', ')}.">${ideaSegs.map(x=>`<span class="ib ${x[0]}" style="width:${x[2]}%">${Math.round(x[2])}%</span>`).join('')}</div>`
-    +`<div class="ideas-lg">${ideaSegs.map(x=>`<span><i class="ib ${x[0]}"></i>${x[1]} · ${es1(x[2])} %</span>`).join('')}</div></div>`);
 
   // vii · supervisión humana (front only for now: decisions are not stored)
   renderReview(empty?[]:v.doubtful,empty);

@@ -222,13 +222,7 @@
       authority: {   // shares within each gender, as the API gives them
         voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),
         title: byGender((r.autoridad || {}).presentacion_con_cargo_pct)
-      },
-      // key ideas in groups that add up to 100, as the API gives them
-      ideas: (() => {
-        const i = (r.autoridad || {}).ideas || {}, solo = i.solo_pct || {};
-        return { total: i.total || 0, f: num(solo.mujer), m: num(solo.hombre), u: num(solo.no_determinado),
-                 shared: num(i.compartidas_pct) };
-      })()
+      }
     };
   }
 

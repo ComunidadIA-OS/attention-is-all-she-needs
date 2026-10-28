@@ -242,7 +242,7 @@ Conforme al **Código Ético y Estatuto de Propósito Social (`CODE_OF_CONDUCT.m
 
 ## 7. Checklist Canónico de Despliegue Ético y Auditoría
 
-Este checklist resume los 10 puntos de control obligatorio que certifican la conformidad legal y ética del prototipo ante la AESIA, la CNMV y el tribunal evaluador:
+Este checklist resume los 11 puntos de control obligatorio que certifican la conformidad legal y ética del prototipo ante la AESIA, la CNMV y el tribunal evaluador:
 
 - [x] **1. Ausencia de Prácticas Prohibidas (Art. 5 RIA):** No se realiza reconocimiento de emociones faciales ni acústicas, ni social scoring, ni perfilado discriminatorio.
 - [x] **2. Aviso de Transparencia Activo (Art. 50.3 RIA):** Toda salida analítica declara explícitamente que opera mediante categorización de género percibido.
@@ -254,6 +254,13 @@ Este checklist resume los 10 puntos de control obligatorio que certifican la con
 - [x] **8. Conformidad de Licencias Open Source:** Arquitectura modular desacoplada del copyleft AGPL de Ultralytics mediante API y adaptadores Apache-2.0 / MIT.
 - [x] **9. Rigor Normativo en Benchmarks:** Uso de la Ley Orgánica 2/2024 (suelo del 40 %) y datos oficiales CNMV (ejercicio 2024) como benchmarks comparativos auditables.
 - [x] **10. Trazabilidad de Sesgos y Cobertura:** Declaración transparente de tasas de incertidumbre y porcentaje de muestra en estado `no_determinado`.
+- [ ] **11. Seguridad del despliegue — Pendiente (el piloto es solo para uso local o en red controlada):** Tomando como buena práctica voluntaria la Guía 11 de ciberseguridad del piloto español de *sandbox* regulatorio de IA (Ministerio para la Transformación Digital y de la Función Pública, v2.0, 17/07/2026; pensada para alto riesgo), el estado actual del código en `dev` es:
+  * La API (puerto 8000) y el front (puerto 8080) **no tienen autenticación** ni **TLS (HTTPS)**: no deben exponerse a Internet tal como están. Recomendación de la guía: control de acceso por roles con mínimos privilegios y autenticación robusta, y cifrado en tránsito.
+  * El servicio de la API **monta `/var/run/docker.sock`** para lanzar los contenedores del *worker* (`docker-compose.yml`): quien controle la API controla el Docker del servidor. En producción, aislar el lanzador o sustituirlo por una cola de trabajos.
+  * **CORS abierto** (`api.cors_origins = ["*"]` en `aiasn/settings.py`): restringirlo al dominio del front.
+  * **Datos en reposo sin cifrar:** vídeo original en `landing/` y tablas derivadas en el almacén S3 local (SeaweedFS). La guía recomienda cifrado en reposo y registro de accesos.
+  * **Sin análisis automático de vulnerabilidades en dependencias** (el CI solo ejecuta `pytest`). Recomendación: añadir un escáner de dependencias en el CI.
+  * Lo que ya está: contenedores descritos y reproducibles (Docker Compose, `uv.lock`), secretos fuera del código (`.env`, con `.env.example` de muestra).
 
 ---
 

@@ -315,10 +315,11 @@ function renderLive(v,empty=false){
   // vii · supervisión humana (front only for now: decisions are not stored)
   renderReview(empty?[]:v.doubtful,empty);
 
-  // iv · cargos: the word2vec gender bias of each title, on the same axis as the topics
-  const titled=v.people.filter(p=>p.sesgoCargo!=null);
+  // iv · cargos: the word2vec gender bias of each title, on the same axis as the topics; every title is listed,
+  // also those word2vec has no vector for, so that none drops out unnoticed
+  const titled=v.people.filter(p=>p.cargoEn||p.note);
   if(!empty&&titled.length)$('role-side').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
-    +titled.map(p=>`<tr><td>${esc(p.cargoEn)}<span class="who">${esc(p.name)}</span></td><td class="fig">${bias(p.sesgoCargo)}</td></tr>`).join('')
+    +titled.map(p=>`<tr><td>${esc(p.cargoEn||p.note)}<span class="who">${esc(p.name)}</span></td><td class="fig">${p.sesgoCargo==null?'<span class="mb none">sin vector en word2vec</span>':bias(p.sesgoCargo)}</td></tr>`).join('')
     +`</tbody></table><div class="rg-note">◆ hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
 
   // v · clima

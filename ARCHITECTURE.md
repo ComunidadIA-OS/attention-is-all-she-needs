@@ -29,25 +29,32 @@ Nota: Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpe
 
 ## Orden de ejecución
 
-Dos cadenas corren a la vez en hilos: audio y después NLP (que necesita la transcripción), y vídeo y después rótulos (que necesita los textos del OCR). Cuando acaban las dos, silver une lo que dicen y gold calcula el dictamen. Cada paso queda anotado en el manifest; si el worker se repite, salta los pasos ya hechos.
+Dos pipelines corren a la vez en hilos: audio y después NLP (que necesita la transcripción), y vídeo y después rótulos (que necesita los textos del OCR). Cuando acaban los dos, silver une lo que dicen y gold calcula el dictamen. Cada paso queda anotado en el manifest; si el worker se repite, salta los pasos ya hechos.
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "step"}}}%%
 flowchart LR
     L["landing/<br/>vídeo.mp4"]
-    subgraph C1["cadena 1 · en paralelo"]
+    subgraph C1["pipeline 1 · en paralelo"]
         A[Audio] --> AT[(audio_turns)] --> N[NLP] --> NT[("nlp_topics · mentions<br/>references · roles<br/>ideas · tone")]
     end
-    subgraph C2["cadena 2 · en paralelo"]
+    subgraph C2["pipeline 2 · en paralelo"]
         V[Vídeo] --> VT[("video_detections<br/>video_texts")] --> R[Rótulos] --> RT[(video_captions)]
     end
     L --> A
     L --> V
     NT --> S["Silver<br/>6 transforms"]
     RT --> S
-    S -- cuando acaban las dos --> G["Gold<br/>4 transforms"]
+    S -- cuando acaban los dos --> G["Gold<br/>4 transforms"]
+    classDef bronze fill:#f6e9dc,stroke:#9a5a22,color:#5a3410
+    classDef silver fill:#e9edf1,stroke:#5f6b78,color:#2e353d
+    classDef gold fill:#f7efd2,stroke:#8a6b0c,color:#4d3c06
+    class AT,NT,VT,RT bronze
+    class S silver
+    class G gold
 ```
 
-Los cilindros son tablas de bronze, la salida de los modelos. Silver lee 9 de las 10 tablas de bronze: todas menos `video_texts`, que solo usan los rótulos. Gold lee silver (y la tabla de cuadrantes que él mismo produce).
+Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silver y gold llevan el color de su capa. Silver lee 9 de las 10 tablas de bronze: todas menos `video_texts`, que solo usan los rótulos. Gold lee silver (y la tabla de cuadrantes que él mismo produce).
 
 ## Pipeline de audio
 
@@ -116,49 +123,34 @@ Los cilindros son tablas de bronze, la salida de los modelos. Silver lee 9 de la
 Seis transformaciones deterministas, en pandas, sin modelos (salvo la tabla fija de word2vec). Aquí se decide quién es cada persona, de qué género (con abstención por debajo de 0,80, ADR-0005) y qué dijo.
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "step", "nodeSpacing": 24, "rankSpacing": 40}}}%%
 flowchart LR
-    subgraph B["bronze que lee"]
-        VD[(video_detections)]
-        AT[(audio_turns)]
-        CM[("video_captions<br/>nlp_mentions")]
-        NL[("nlp_topics · roles<br/>references · ideas · tone")]
-    end
-    subgraph T["transformación"]
-        video
-        audio
-        identity
-        names
-        nlp
-        word_bias
-    end
-    subgraph S["silver que escribe"]
-        S1[("video_people · video_presence")]
-        S2[("audio_speakers · audio_turns")]
-        S3[("speaker_person · people")]
-        S4[("person_names · people")]
-        S5[(term_bias)]
-        S6[("nlp_topics · roles · references<br/>nlp_ideas · nlp_tone")]
-    end
-    VD --> video
-    AT --> audio
-    CM --> names
-    NL --> nlp
+    VD[(video_detections)] --> video
+    AT[(audio_turns)] --> audio
     video --> identity
     audio --> identity
     identity -- personas --> names
+    CM[("video_captions<br/>nlp_mentions")] --> names
     names -- nombres --> nlp
     identity -- voces --> nlp
+    NL[("nlp_topics · roles<br/>references · ideas · tone")] --> nlp
     nlp -- temas --> word_bias
     names -- cargos --> word_bias
-    video -.-> S1
-    audio -.-> S2
-    identity -.-> S3
-    names -.-> S4
-    word_bias -.-> S5
-    nlp -.-> S6
+
+    video -.-> S1[("video_people<br/>video_presence")]
+    audio -.-> S2[("audio_speakers<br/>audio_turns")]
+    identity -.-> S3[("speaker_person<br/>people")]
+    names -.-> S4[("person_names<br/>people")]
+    nlp -.-> S6[("nlp_topics · roles · references<br/>nlp_ideas · nlp_tone")]
+    word_bias -.-> S5[(term_bias)]
+
+    classDef bronze fill:#f6e9dc,stroke:#9a5a22,color:#5a3410
+    classDef silver fill:#e9edf1,stroke:#5f6b78,color:#2e353d
+    class VD,AT,CM,NL bronze
+    class S1,S2,S3,S4,S5,S6 silver
 ```
 
-Flechas continuas: lo que una transformación necesita de otra. Discontinuas: lo que escribe. `people` lo crea identity y lo completa names; es la tabla central de silver, con un participante por fila (`p…` si sale en pantalla, `v…` si solo es una voz).
+De izquierda a derecha, en el orden en que se ejecutan. Flechas continuas: lo que cada transformación lee (de bronze, en color bronce, o de otra transformación). Discontinuas: lo que escribe en silver. `people` lo crea identity y lo completa names; es la tabla central de silver, con un participante por fila (`p…` si sale en pantalla, `v…` si solo es una voz).
 
 | Transformación | Qué decide | Escribe |
 |---|---|---|
@@ -174,6 +166,7 @@ Flechas continuas: lo que una transformación necesita de otra. Discontinuas: lo
 Cuatro transformaciones. La fusión cruza voz y pantalla en el tiempo y de ahí salen los cuadrantes y el veredicto.
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "step"}}}%%
 flowchart LR
     S[("silver/<br/>audio_turns · speaker_person<br/>video_people · video_presence<br/>people · person_names<br/>nlp_topics · roles · references<br/>nlp_ideas · nlp_tone<br/>term_bias")]
     S --> fusion --> Q[("quadrants<br/>summary")]
@@ -181,6 +174,11 @@ flowchart LR
     Q -- los cuadrantes --> kpis
     K --> index --> I[(index)]
     S --> GT[graph] --> GR[("graph_nodes<br/>graph_edges")]
+    classDef bronze fill:#f6e9dc,stroke:#9a5a22,color:#5a3410
+    classDef silver fill:#e9edf1,stroke:#5f6b78,color:#2e353d
+    classDef gold fill:#f7efd2,stroke:#8a6b0c,color:#4d3c06
+    class S silver
+    class Q,K,I,GR gold
 ```
 
 Cada KPI se guarda como `valor` y `base`: la cifra de un vídeo es valor / base, y la de varios vídeos, la suma de valores entre la suma de bases.

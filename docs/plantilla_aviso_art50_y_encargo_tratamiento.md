@@ -4,6 +4,8 @@
 
 ## 1. Reparto de papeles
 
+> El contrato completo (objeto, obligaciones, responsabilidad, condiciones de uso y del Sello) está en el [borrador de contrato de servicios y condiciones de uso](./contrato_servicios_y_condiciones_de_uso_borrador.md), también pendiente de revisión jurídica.
+
 | Papel | Quién | Qué implica |
 |---|---|---|
 | **Responsable del tratamiento y *deployer*** | La organización que analiza su contenido | Decide para qué y cómo se usa; informa a las personas que salen; responde ante la persona afectada y la autoridad |

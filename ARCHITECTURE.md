@@ -5,39 +5,27 @@ SPDX-License-Identifier: Apache-2.0
 
 # Arquitectura de AIASN
 
-Cómo un vídeo subido desde el navegador pasa por cuatro pipelines de modelos, se ordena en un lago de tres capas (bronze, silver y gold) y vuelve al front como el dictamen de paridad.
+Cada vídeo es procesado por cuatro pipelines de datos y los resultados se organizan en un Data Lake de tres capas siguiendo una arquitecturaMedallion:bronze, silver y gold. Los resultados vuelven al front para completar el análisis de paridad.
 
 **Contenido:** [Visión general](#visión-general) · [Orden de ejecución](#orden-de-ejecución) · [Audio](#pipeline-de-audio) · [Vídeo](#pipeline-de-vídeo) · [NLP](#pipeline-de-nlp) · [Rótulos](#pipeline-de-rótulos) · [Silver](#silver-de-las-detecciones-a-las-personas) · [Gold](#gold-el-dictamen) · [API y front](#api-y-front) · [Todas las tablas](#todas-las-tablas-del-lago)
 
 ## Visión general
 
-Cuatro contenedores en un `docker compose`: el front, la API, el almacén S3 y el worker. El worker no corre siempre: la API arranca un contenedor nuevo para cada vídeo y procesa uno cada vez.
+La demo local consiste en cuatro contenedores en un `docker compose`: el front, la API, el almacén S3 y el worker. El worker no está levantado siempre, sino que la API arranca un contenedor cuando se quiere iniciar el procesamiento de un vídeo, simulando un comportamiento serverless. Ningún procesamiento sucede en la API. Solo manda el vídeo al backend, lanza el worker y finalmente, lee los datos resultantes de gold. El worker es el único que escribe bronze, silver y gold. 
 
-<!-- Diagrama de la arquitectura: guardar la imagen en img/ y ajustar el nombre del fichero -->
-![Arquitectura de AIASN](img/arquitectura.png)
+![Arquitectura de AIASN](img/arquitectura-aiasn.drawio.png)
 
-La API nunca procesa nada: guarda el vídeo, deja el manifest «en cola», lanza el worker y después solo lee. El worker es el único que escribe bronze, silver y gold. Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpeta local `data/`.
+Nota: Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpeta local `data/`.
 
-| Componente | Qué es |
+| Componente | Descripción |
 |---|---|
-| Front | nginx en `:8080` con `frontend-piloto/`; pasa `/api` a la API. |
-| API | FastAPI en `:8000`; un vídeo a la vez. Lanza los workers por `docker.sock`. |
+| Front | nginx en `:8080` con `frontend-piloto/`; |
+| API | FastAPI en `:8000`. Lanza los workers por `docker.sock`. |
 | Worker | `python -m aiasn.run_pipelines --video-id ID`, un contenedor por vídeo, con GPU NVIDIA si la hay. Modelos locales en el volumen `aiasn-models` (`/models`). |
-| Almacén S3 | SeaweedFS, bucket `s3://aiasn`, Parquet por `video_id=`. Carpetas `landing/` (vídeo subido), `bronze/` (salida de modelos, 10 tablas), `silver/` (personas y hechos, 13 tablas), `gold/` (KPIs y dictamen, 6 tablas) y `runs/` (manifest con el estado de cada paso). |
-| OVHcloud AI Endpoints | Whisper large v3 (voz a texto) y Llama 3.3 70B (lenguaje). |
+| Almacén S3 | SeaweedFS, bucket `s3://aiasn`, Parquet por `video_id=`. Carpetas `landing/` (vídeo subido), `bronze/` (salida de modelos, 10 tablas), `silver/` (personas y hechos, 13 tablas), `gold/` (KPIs y dictamen, 6 tablas) y `runs/` (manifest con el estado de cada paso del pipeline). |
+| OVHcloud AI Endpoints | Whisper large v3 para speech to text y Llama 3.3 70B como LLM. |
 | Langfuse (opcional) | Perfil `langfuse` del compose: trazas de las llamadas al LLM, agrupadas por vídeo. Se activa con `LANGFUSE_ENABLED`. |
 
-**Lo que no se guarda nunca**
-
-- Fotogramas y audio extraídos: en `tmp/` del worker mientras dura el vídeo.
-- Vectores de cara (ArcFace) de la reidentificación: solo en memoria (ADR-0004).
-- Pendiente: el vídeo de `landing/` aún se conserva tras procesarlo.
-
-**Tiempos medidos**
-
-- Vídeo de 96 s con GPU: unos 2 min (vídeo 81 s, NLP 17 s, rótulos 9 s, audio 8,5 s, silver y gold 5 s).
-- Primer vídeo tras instalar: unos 6,5 min más, para descargar unos 2,5 GB de modelos.
-- Sin GPU, el paso de vídeo tarda unas 5 veces la duración del vídeo.
 
 ## Orden de ejecución
 

@@ -27,21 +27,23 @@ Al trasladar este concepto al análisis de **contenidos informativos, debates, m
 
 * **Opción A (Test de Bechdel Rígido Clásico 0 a 3):** Evaluar siempre los tres puntos clásicos con puntuación numérica entera (0, 1, 2 o 3) en cualquier tipo de vídeo. *(Descartada: penaliza piezas unipersonales femeninas y no discrimina formatos donde no hay hombres).*
 * **Opción B (Adopción - Test de Interlocución Femenina con Árbol de Decisión en Tres Estados):** Rediseñar la metodología como una adaptación pericial específica para el audiovisual profesional (**Test de Interlocución Femenina — TIF**):
-  1. **Condición Previa de Activación:** El test solo se activa para emitir veredicto cuando la pieza reúne condiciones de debate plural: presencia de al menos **dos mujeres ($M \ge 2$) y al menos un hombre ($H \ge 1$)**.
+  1. **Aplicabilidad (orden de evaluación en el código):** sin datos de género determinado, con menos de dos personas con voz (de cualquier género) o sin ningún hombre presente → `no_evaluable`; sin mujeres o con una sola → `no_supera`; en cualquier otro caso → `evaluado`.
   2. **Tres Reglas Profesionales Deterministas:**
      * **R1 (Pluralidad Femenina / Superación del Efecto Token):** Al menos 2 mujeres intervienen con voz activa ($\%V > 0$).
      * **R2 (Acreditación y Autoridad Propia):** Al menos 2 mujeres son acreditadas con nombre propio o cargo profesional mediante OCR de rótulos o transcripción (`naming`).
      * **R3 (Interlocución Horizontal Directa):** Existe al menos una transición consecutiva de turno de palabra $\text{Mujer}_A \to \text{Mujer}_B$ sin mediación ni interrupción masculina intermedia.
   3. **Árbol de Decisión en 3 Estados:**
-     * `evaluado_supera`: Cumple la condición previa y supera R1, R2 y R3.
-     * `evaluado_no_supera`: Cumple la condición previa pero suspende alguna de las reglas (reportando qué regla falló: tokenismo, falta de cargo o mediación masculina).
-     * `no_evaluable`: La pieza no reúne la condición previa (ej. menos de dos mujeres o formato femenino exclusivo), explicitando el motivo para no penalizar el cómputo global.
+     * `evaluado` (puntuación 0–3): supera solo con 3/3 (campo `supera_bechdel_digital`); reporta qué regla falló (tokenismo, falta de cargo o mediación masculina).
+     * `no_supera`: no aparece ninguna mujer (`sin_mujeres`) o solo una (`una_mujer`), por lo que no puede haber interlocución entre mujeres.
+     * `no_evaluable`: sin datos (`sin_datos`), una sola persona con voz (`sin_conversacion`) o solo mujeres (`sin_hombres`); se explicita el motivo para no penalizar el cómputo global.
 
 ---
 
 ## 3. Decisión Adoptada
 
-Se aprueba formalmente por unanimidad la **Opción B**, codificando el **Test de Interlocución Femenina (TIF)** en `aiasn/core/fusion.py`, exponiendo su veredicto en `aiasn/api/schemas.py` y visualizándolo en el panel frontend (`frontend-piloto/`) mediante un semáforo accesible de 3 estados (`✅ Superado`, `❌ No superado`, `⚪ No evaluable`).
+Se aprueba formalmente por unanimidad la **Opción B**, codificando el **Test de Interlocución Femenina (TIF)** en `aiasn/core/fusion.py`, exponiendo su veredicto en `aiasn/api/schemas.py` y visualizándolo en el panel frontend (`frontend-piloto/`) mediante un semáforo accesible de 3 estados (estado y motivo siempre en texto, no solo en color).
+
+> **Corrección (28/10/2026):** el texto original describía una condición previa «M ≥ 2 y H ≥ 1» y los estados `evaluado_supera` / `evaluado_no_supera`. Se ha alineado con la implementación real de `aiasn/core/fusion.py` (estados `evaluado`, `no_supera` y `no_evaluable`, con los motivos indicados arriba). En la lógica vigente, con una sola mujer el resultado es `no_supera`, no `no_evaluable`.
 
 ---
 

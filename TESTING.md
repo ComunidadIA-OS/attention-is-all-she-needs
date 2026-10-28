@@ -106,8 +106,8 @@ python scripts/run_tests.py
    - **Fase 1 ($P_{\text{NB}} \le 20\%$):** Descuento íntegro del techo masculino ($60\% \to 40\%$) protegiendo el suelo femenino del 40 %.
    - **Fase 2 ($P_{\text{NB}} > 20\%$):** Reparto simétrico 50/50 del exceso entre ambos sexos binarios al quedar igualados en el 40 %.
    - **Fase 3 (`mesa_monografica_diversidad=True`):** Aprobación de paneles monográficos de colectivos LGTBIQ+/diversidad si no hay sobrerrepresentación masculina.
-7. **`test_bechdel_conversacional_determinista`:**  
-   Verifica las 3 reglas del Test de Bechdel Digital / Conversacional: pluralidad femenina ($\ge 2$ mujeres con voz activa), identidad acreditada por rótulo/cargo (`rotulo_nombre`/`rotulo_cargo`) e interlocución horizontal directa ($\text{Mujer}_A \to \text{Mujer}_B$ sin intermediación masculina).
+7. **`test_bechdel_conversacional_determinista` y `test_tif_casos_minimos_doc26[...]` (7 casos):**  
+   Verifican el Test de Interlocución Femenina (TIF, ADR-0011) y su árbol de tres estados: `no_evaluable` (sin conversación, sin hombres), `no_supera` (sin mujeres, una sola mujer) y `evaluado` (puntuación 0–3 según pluralidad femenina, identidad acreditada por rótulo/cargo e interlocución horizontal directa Mujer_A → Mujer_B; solo supera con 3/3).
 
 ### 3.4. Casos de Prueba de Compliance, Adaptadores y Sello B2B (`tests/test_compliance_adapters.py`)
 

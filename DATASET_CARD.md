@@ -30,5 +30,7 @@ Esta ficha de datos documenta los corpus y fuentes audiovisuales utilizados para
    * La extracción de metadatos, transcripciones estadísticas y tiempos de pantalla constituye **minería de textos y datos (TDM)** legítima sobre contenidos a los que se tiene acceso lícito.
    * El repositorio **no redistribuye los archivos de vídeo o audio originales en bruto** (`*.mp4`, `*.wav` excluidos en `.gitignore`), sino exclusivamente el código de análisis y las tablas de resultados derivados reproducibles.
 3. **Privacidad y Datos Personales (RGPD):**
-   * El análisis audiovisual se realiza de forma efímera en memoria.
-   * No se construyen ni comercializan perfiles biométricos permanentes de las personas intervinientes.
+   * Los vectores faciales se calculan solo en memoria y se descartan antes de escribir en el lake; no se construyen ni comercializan perfiles biométricos de las personas intervinientes.
+   * El pipeline escribe ficheros temporales (fotogramas, audio y vídeo remuestreado) en `tmp/` y conserva el vídeo original en `landing/`; **en el prototipo no se borran automáticamente** (limpieza prevista, véase `ETHICS_CHECKLIST.md`, 3.5). Ambas rutas están fuera del repositorio (`data/` y `tmp/` en `.gitignore`).
+   * Se guarda una estimación de edad por detección que no interviene en ninguna métrica; está prevista su eliminación (minimización de datos).
+4. **Limitación técnica del MVP:** los vídeos de prueba deben ser cortos (se recomiendan clips de 2–3 min) por el tiempo de procesado; el análisis de vídeos largos queda como línea de trabajo futura.

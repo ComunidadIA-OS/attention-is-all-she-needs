@@ -19,7 +19,7 @@ SPDX-License-Identifier: Apache-2.0
 | :-: | :--- | :---: | :--- | :--- |
 | **1** | **Agencia y Supervisión Humana** | ✅ **Verificado** | Pantalla de revisión con botón operativo *«Asumo / No asumo»* (*HitL*). | Karina Gibert (`1:00:50`) y Ángela Gasch |
 | **2** | **Robustez Técnica y Seguridad** | ✅ **Verificado** | Separación determinista: Inferencia IA abierta + Cálculo Python sin alucinaciones. | Fonollosa (VAD/Whisper), Vilaplana (VLMs) |
-| **3** | **Privacidad y Gobernanza de Datos** | ✅ **Verificado** | *Zero Facial Retention* (biometría efímera en RAM) y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
+| **3** | **Privacidad y Gobernanza de Datos** | ⚠️ **Parcial (ver 3.5)** | *Zero Facial Retention* (biometría efímera en RAM) y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
 | **4** | **Transparencia y Explicabilidad** | ✅ **Verificado** | Declaración RIA (obligatoria desde ago 2026) y *Data Profile* de `Àgora` (14%). | Jorge Teixeira y Karina Gibert (`0:40:41`) |
 | **5** | **Diversidad, Equidad y No Sesgo** | ✅ **Verificado** | Detector de *Equality-Washing* (4 cuadrantes) y tratamiento de bolsa `unknown`. | Vilaplana (Diap. 91-92) y Karina (Diap. 10) |
 | **6** | **Bienestar Social y Ambiental** | ✅ **Verificado** | *Green AI*: Muestreo STRIDE (1-5 fps) con ahorro $>80\%$ en GPU y coste $<0,30$ €/h. | Montse Guàrdia (`1:55:45`) y David Buenhombre |
@@ -57,13 +57,17 @@ SPDX-License-Identifier: Apache-2.0
 ## 3. Privacidad y Gobernanza de Datos (*Privacy & Data Governance*)
 
 - [x] **3.1. Principio de *Zero Facial Retention* (Biometría Efímera en Memoria):**  
-  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales**. La detección facial (`InsightFace` / `miVOLO`) se ejecuta en memoria volátil (RAM) únicamente para clasificar atributos estadísticos agregados y se destruye en caliente.
+  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales** y no identifica a nadie contra una base de datos. Los *embeddings* faciales (`InsightFace`) se calculan en memoria únicamente para agrupar apariciones de la misma persona dentro de un vídeo y se descartan antes de escribir en el lake (`aiasn/pipelines/video.py`; purga adicional en `aiasn/core/compliance.py`).
 - [x] **3.2. Prioridad Absoluta al Dato Declarado sobre la Biometría:**  
   *Justificación:* Siguiendo la regla de oro de Verónica Vilaplana (Diap. 68), la lectura de rótulos mediante OCR (*«Dra. Maria Pons — Catedràtica d'Economia»*) o las actas oficiales tienen **prevalencia jerárquica estricta** sobre cualquier inferencia física facial o vocal.
 - [x] **3.3. Amparo Legal de Datos en Fase de Prototipo (Art. 67 RDL 24/2021):**  
   *Justificación:* Los vídeos de prueba públicos (como *«Quanta, quanta IA!»*) se tratan bajo la excepción de **Minería de Textos y Datos (TDM) con fines de investigación e innovación** sin redistribución comercial del material audiovisual bruto.
 - [x] **3.4. Prohibición de *Web Scraping* Indiscriminado y Plan de Despliegue:**  
   *Justificación:* Conforme a la instrucción de Karina Gibert (`2:05:10`), se prohíbe el scraping masivo. El Plan de Producción estipula una **Fase 0 de Convenios Formales y Conexión vía API Oficial Autorizada** con las entidades emisoras.
+- [ ] **3.5. Ficheros temporales y minimización de datos (PENDIENTE para la 1.0):**  
+  *Estado real:* el pipeline de vídeo escribe en `tmp/<video_id>/` los fotogramas completos en JPG (que contienen rostros), el audio (`audio.wav`) y el vídeo remuestreado, y el vídeo original permanece en `landing/`. **No hay borrado automático al terminar el procesado**, y se guardan `gender` y `age` estimados por detección (la edad no se utiliza en el cálculo). *Mitigación en el prototipo:* `tmp/` está en `.gitignore` y el vídeo anotado es solo una utilidad de desarrollo. *Acción prevista:* paso final de limpieza de `tmp/` y `landing/` (activable por configuración, porque la depuración y la reanudación necesitan esos ficheros) y retirada de la edad; en producción, borrado periódico conforme a los plazos del RGPD. *Hasta entonces, no se debe afirmar que el tratamiento sea «solo en RAM».*
+- [ ] **3.6. Consulta pendiente sobre nombres de personas (Karina Gibert / Ángela Gasch):**  
+  *Estado real:* los nombres proceden únicamente de rótulos en pantalla (OCR) y de menciones en el audio transcrito; no se deducen de la cara ni se contrastan con ninguna base de datos de identidades. Está pendiente confirmar con las mentoras la licitud de reconocer y conservar esos nombres, especialmente para vídeos privados (consentimiento, plazos de conservación).
 - [x] **3.5. Cláusula de Usos Permitidos y Cruces Prohibidos:**  
   *Justificación:* Todo archivo `.parquet` o exportación de la herramienta incorpora una cabecera que limita su uso a auditoría de paridad agregada y **prohíbe expresamente cualquier cruce para perfilado ideológico o re-identificación de personas físicas**.
 
@@ -93,7 +97,7 @@ SPDX-License-Identifier: Apache-2.0
 - [x] **5.4. Respeto a Identidades No Binarias (ADR-0006):**  
   *Justificación:* El esquema de datos no impone un binarismo forzado; acepta categorías de género autoidentificadas y declaradas en actas oficiales sin detraer del suelo del 40 % femenino.
 - [x] **5.5. Soberanía Lingüística Cooficial, Inclusividad y Accesibilidad Universal por Diseño (ADR-0010 / Pilar 5 ALTAI):**  
-  *Justificación:* Soporte nativo sin traducción intermedia para todas las lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) más inglés (`en`), cumpliendo el **Art. 157 de la Ley 40/2015 (LRJSP)** y el **Esquema Nacional de Interoperabilidad (ENI)** para su reutilización en todas las Administraciones Públicas, junto con **Accesibilidad Universal** (**Directiva UE 2019/882**, **RD 1112/2018**, **WCAG 2.2 AA** con paleta Okabe-Ito, **Lectura Fácil UNE 153101** en `resumen_lectura_facil` para lectores de pantalla y subtitulado **UNE 153010**).
+  *Justificación:* Soporte nativo sin traducción intermedia para todas las lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) más inglés (`en`), facilitando su reutilización por las Administraciones Públicas (**Esquema Nacional de Interoperabilidad, ENI**), junto con **Accesibilidad Universal** (**Directiva UE 2019/882**, **RD 1112/2018**, **WCAG 2.2 AA** con paleta Okabe-Ito, **Lectura Fácil UNE 153101** en `resumen_lectura_facil` para lectores de pantalla y subtitulado **UNE 153010**).
 
 ---
 

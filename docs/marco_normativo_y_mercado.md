@@ -6,7 +6,7 @@
 **Bases Legales de Referencia:** Ley Orgánica 2/2024 (BOE), Reglamento (UE) 2024/1689 (RIA / DOUE), Directiva (UE) 2022/2381 (*Women on Boards*), Directiva (UE) 2022/2464 (CSRD / ESRS S1), Directiva (UE) 2024/825 (*Social Claims*), RGPD (UE 2016/679) y Art. 67 RDL 24/2021.  
 **Créditos y Reparto de Autoría Colegiada (Taxonomía CRediT / Doc 10):**
 * **Investigación Técnico-Jurídica (RIA, RGPD, Propiedad Intelectual), Marco Ético y Epistemología:** Alba Camiña García (`@ewigkeitt-cloud`) — *Conceptualization, Methodology, Formal Analysis (EU AI Act DOUE, RGPD Zero Facial Retention, IP/TDM RDL 24/2021, Epistemic Framework & Vaswani formulation)*.
-* **Investigación de Mercado B2B, Datos CNMV 2025 y Cuotas Corporativas (Issue #8):** Pilar de la Fuente Diez (`@pilarvolatixia-cloud`) — *Data Curation, Investigation (CNMV 2025 Reports, Ley 2/2024 Corporate Targets, TAM Market Sizing)*.
+* **Investigación de Mercado B2B, Datos CNMV y Cuotas Corporativas (Issue #8):** Pilar de la Fuente Diez (`@pilarvolatixia-cloud`) — *Data Curation, Investigation (CNMV Reports, Ley 2/2024 Corporate Targets, TAM Market Sizing)*.
 * **Supervisión Técnica de Requisitos Multimodales (Audio/NLP):** Rocío Jiménez Villén (`@rjvillen`) — *Validation (Audio/NLP Interface Requirements)*.
 
 ---
@@ -51,26 +51,26 @@ La **Directiva (UE) 2024/825** (*Empowering Consumers for the Green Transition /
 
 ---
 
-## 2. La Realidad Fáctica del Mercado: Evidencia Oficial CNMV 2025
+## 2. La Realidad Fáctica del Mercado: Evidencia Oficial CNMV (ejercicio 2024)
 
 El punto de partida del proyecto es la divergencia estructural entre la paridad cuantitativa en órganos formales y el ejercicio real de la autoridad:
 
 ```mermaid
 xychart-beta
-    title "Presencia Femenina en Cotizadas: De la Foto al Poder Real (CNMV 2025)"
+    title "Presencia Femenina en Cotizadas: De la Foto al Poder Real (CNMV, ejercicio 2024)"
     x-axis ["Consejos IBEX-35", "Consejos Todas Cotizadas", "Alta Dirección", "Consejeras Ejecutivas", "Piloto Audiovisual (CSIC)"]
     y-axis "Porcentaje (%)" 0 --> 50
-    bar [42.1, 37.5, 27.7, 10.0, 26.8]
+    bar [41.3, 37.5, 27.7, 8.6, 26.8]
 ```
 
-### 2.1. Cifras Oficiales de Gobierno Corporativo (CNMV 2025)
-* **Consejos de Administración del IBEX 35:** Las mujeres alcanzaron el **42,1 %** en 2025, superando anticipadamente el objetivo legal del 40 %.
-* **Total de Sociedades Cotizadas:** La presencia femenina en consejos se sitúa en el **~37,5 %** (37,4 % – 37,52 %).
-* **Alta Dirección:** Se reduce al **27,7 %** en el IBEX 35 y al **~25 %** en el resto de cotizadas.
-* **Consejeras Ejecutivas (Máximo Poder de Decisión):** Apenas alcanzan el **10 %**.
+### 2.1. Cifras Oficiales de Gobierno Corporativo (CNMV, ejercicio 2024)
+* **Consejos de Administración del IBEX 35:** Las mujeres alcanzaron el **41,3 %** (ejercicio 2024), por encima del objetivo legal del 40 %.
+* **Total de Sociedades Cotizadas:** La presencia femenina en consejos se sitúa en el **~37,5 %** (37,4 % – 37,52 %) *(cifra pendiente de reverificar para el ejercicio 2024)*.
+* **Alta Dirección:** Se reduce al **27,7 %** en el IBEX 35 y al **~25 %** en el resto de cotizadas *(cifras pendientes de reverificar para el ejercicio 2024)*.
+* **Consejeras Ejecutivas (Máximo Poder de Decisión):** Apenas alcanzan el **8,6 %** (ejercicio 2024).
 
 ### 2.2. La Tesis Pericial: «Presencia Formal frente a Presencia Real»
-El análisis de la CNMV demuestra que la presencia femenina se concentra mayoritariamente en puestos no ejecutivos e institucionales, produciéndose un desplome conforme se accede a los comités ejecutivos y a las portavocías directivas (del 42,1 % al 10 %).
+El análisis de la CNMV demuestra que la presencia femenina se concentra mayoritariamente en puestos no ejecutivos e institucionales, produciéndose un desplome conforme se accede a los comités ejecutivos y a las portavocías directivas (del 41,3 % al 8,6 %).
 
 **La traslación al plano audiovisual:**  
 La ley tradicional mide exclusivamente la composición nominal en registros mercantiles. Ningún regulador audita lo que ocurre en la comunicación externa, eventos y campañas:
@@ -205,7 +205,7 @@ Para salvaguardar la licencia abierta permisiva del proyecto (**Apache 2.0**) re
 * **El Problema Detectado:** A raíz de la alerta preventiva planteada por Pilar sobre el cambio de licencia de la librería Ultralytics YOLO a **AGPL-3.0** (cuyo efecto de copyleft de red obligaría a publicar todo el software vinculado bajo AGPL-3.0).
 * **La Solución de Arquitectura Desacoplada (ADR-0002 y ADR-0008):**
   1. *Por Archivo Tabular (`.csv` / `.tsv` — `CSVPrecomputedAdapter`):* Conforme a la doctrina de la *Free Software Foundation* (FSF), los notebooks experimentales de investigación que usan `YOLO11m` exportan tablas de datos planas que el motor determinista lee como programa independiente, impidiendo cualquier contaminación de licencia.
-  2. *En Local Permisivo B2B (`PermissiveYOLOXAdapter`):* Gracias al patrón adaptador (`aiasn/model_adapters/vision_adapter.py`), el motor permite ejecutar la detección con **YOLOX** (Apache-2.0 de Megvii vía ONNX Runtime MIT), **InsightFace** (MIT) e **EasyOCR** (Apache-2.0), o vía API HTTP REST en los AI Endpoints de OVHcloud, garantizando una vía 100 % libre de copyleft viral.
+  2. *En Local Permisivo B2B (`PermissiveYOLOXAdapter`):* El patrón adaptador (`aiasn/core/compliance.py`) prevé ejecutar la detección con **YOLOX** (Apache-2.0 de Megvii vía ONNX Runtime MIT) y **EasyOCR** (Apache-2.0), o vía API HTTP REST en los AI Endpoints de OVHcloud, como vía libre de copyleft. **Estado actual: hoja de ruta.** El prototipo usa Ultralytics YOLO (AGPL-3.0) e InsightFace (código MIT, pesos de uso no comercial), y `PermissiveYOLOXAdapter` es un esqueleto sin inferencia sobre vídeo; un despliegue comercial requeriría completarlo y revisar la licencia de los pesos faciales.
 
 ### 6.3. Primacía del Valor Social, Democratización de la Validación, Círculo Virtuoso (`Top Rosies Talent`) y Blindaje del Sello Oficial frente al Lavado de Cara
 Conforme al **Código Ético y Estatuto de Propósito Social (`CODE_OF_CONDUCT.md`)** del proyecto:
@@ -240,7 +240,7 @@ Este checklist resume los 10 puntos de control obligatorio que certifican la con
 - [x] **6. Desacoplamiento Algorítmico (Inferencia vs. Cálculo):** Ratios y veredictos calculados por código determinista en Python, no por clasificadores generativos opacos.
 - [x] **7. Amparo Legal de Minería de Datos:** Análisis amparado en el Art. 67 del RDL 24/2021; no redistribución de archivos brutos con derechos de autor.
 - [x] **8. Conformidad de Licencias Open Source:** Arquitectura modular desacoplada del copyleft AGPL de Ultralytics mediante API y adaptadores Apache-2.0 / MIT.
-- [x] **9. Rigor Normativo en Benchmarks:** Uso de la Ley Orgánica 2/2024 (suelo del 40 %) y datos oficiales CNMV 2025 como benchmarks comparativos auditables.
+- [x] **9. Rigor Normativo en Benchmarks:** Uso de la Ley Orgánica 2/2024 (suelo del 40 %) y datos oficiales CNMV (ejercicio 2024) como benchmarks comparativos auditables.
 - [x] **10. Trazabilidad de Sesgos y Cobertura:** Declaración transparente de tasas de incertidumbre y porcentaje de muestra en estado `no_determinado`.
 
 ---
@@ -250,7 +250,7 @@ Este checklist resume los 10 puntos de control obligatorio que certifican la con
 1. **Reglamento Europeo de IA (RIA):** Reglamento (UE) 2024/1689 del Parlamento Europeo y del Consejo, DOUE L 1689 de 12/07/2024.
 2. **Directrices sobre Prácticas Prohibidas de IA:** Comisión Europea, Comunicación `C(2025) 884`, 04/02/2025.
 3. **Ley Orgánica 2/2024 de Representación Paritaria:** BOE núm. 186 de 02/08/2024.
-4. **Informes Oficiales de Gobierno Corporativo CNMV 2025:** Comisión Nacional del Mercado de Valores (`https://www.cnmv.es`).
+4. **Informes Oficiales de Gobierno Corporativo CNMV (ejercicio 2024):** Comisión Nacional del Mercado de Valores (`https://www.cnmv.es`).
 5. **Directiva de Equilibrio de Género en Consejos:** Directiva (UE) 2022/2381 del Parlamento Europeo y del Consejo (*Women on Boards*).
 6. **Directiva de Información de Sostenibilidad Corporativa (CSRD):** Directiva (UE) 2022/2464 y Estándar ESRS S1 (*Own Workforce*).
 7. **Directiva contra Alegaciones Engañosas:** Directiva (UE) 2024/825 sobre el empoderamiento de los consumidores para la transición ecológica y alegaciones sociales.

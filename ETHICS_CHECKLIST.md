@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 ## Proyecto: «Attention Is All She Needs» (AIASN) — Reto «Mujeres por la IA Abierta»
 
 > **Ficha Técnica de Conformidad:**  
-> * **Marcos de Referencia Oficiales:** Directrices Éticas para una IA Fiable (*Ethics Guidelines for Trustworthy AI* / `ALTAI`, Comisión Europea HLEG 2019/2020), Reglamento (UE) 2024/1689 (*Reglamento Europeo de Inteligencia Artificial / RIA*), Guías Técnicas del Sandbox Regulatorio Español de IA (SEDIA / AESIA) y Modelo `PIO` (*Principis d'Intel·ligència Artificial Oberta*, OEIAC / UdG).  
+> * **Marcos de Referencia Oficiales:** Directrices Éticas para una IA Fiable (*Ethics Guidelines for Trustworthy AI* / `ALTAI`, Comisión Europea HLEG 2019/2020), Reglamento (UE) 2024/1689 (*Reglamento Europeo de Inteligencia Artificial / RIA*), Guías Técnicas del Sandbox Regulatorio Español de IA (SEDIA / AESIA) y Modelo `PIO` (*Principis d'Intel·ligència Artificial Oberta*, OEIAC / UdG). **Contexto normativo a 28/10/2026:** Reglamento (UE) 2026/1744 (Ómnibus Digital de IA, que solo modifica calendarios) y Proyecto de Ley Orgánica para el buen uso y la gobernanza de la IA (BOCG, Serie A, núm. 97-1, 12/06/2026), que conocemos y tomamos como norte y filosofía de uso, **sin presentarlo como norma vigente** ([ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md)).  
 > * **Clasificación de Riesgo según el RIA:** Sistema de **Riesgo Limitado / Transparencia (Art. 50 RIA)** en fase de prototipo de I+D, incorporando de forma preventiva salvaguardas de sistemas de Alto Riesgo (*High-Risk AI*) por diseño.  
 > * **Equipo de Auditoría:** Alba Camiña García, Rocío Jiménez Villén y Pilar de la Fuente Diez (Equipo 1).
 

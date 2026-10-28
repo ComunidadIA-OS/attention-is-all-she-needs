@@ -154,6 +154,7 @@ flowchart TD
 3. **Categorización Biométrica de Género Percibido:**
    * El Art. 5.1.g prohíbe la categorización biométrica que deduzca origen racial, convicciones políticas, afiliación sindical, religión u orientación sexual. **La presentación de género y la edad no forman parte de este catálogo prohibido**.
    * Al destinarse a la auditoría agregada de medios y no a decisiones laborales o policiales individuales, **no es un sistema de alto riesgo**; queda encuadrado en el régimen de **riesgo limitado con obligación de transparencia del Artículo 50.3 del RIA**.
+* *Fundamento adicional:* el Anexo III.1.b y el considerando 54 del RIA remiten, para la categorización biométrica de alto riesgo, a los atributos protegidos por el **Art. 9.1 RGPD**, entre los que no figura el sexo. Es una **interpretación del equipo, pendiente de validar con Ángela Gasch y Karina Gibert** (ADR-0012).
 
 ### 4.2. La Frontera entre Biometría y Texto: Exclusión de Emociones y Rescate del Clima Conversacional (ADR-0009)
 En estricta coherencia con las directrices de la Comisión Europea (`C(2025) 884`) y las enseñanzas de la Dra. Karina Gibert, el sistema formaliza una separación metodológica tajante:
@@ -172,6 +173,17 @@ El sistema materializa la supervisión humana preceptiva en tres niveles operati
 3. **Pantalla de Arbitraje Operativo:** La operadora técnica dispone del control **«Validar Clasificación / Asumir Abstención»**, garantizando que ninguna métrica dudosa altere el veredicto sin supervisión.
 
 ---
+
+### 4.4. Actualización regulatoria (28/10/2026): Ómnibus Digital de IA y Proyecto de Ley Orgánica de gobernanza de la IA
+
+> Justificación completa, contraste norma por norma y fuentes en [ADR-0012](./adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md).
+
+1. **Ómnibus Digital de IA (Reglamento (UE) 2026/1744, DOUE 24/07/2026, en vigor el 27/07/2026).** Según fuentes secundarias (**texto oficial pendiente de contrastar**), aplaza las obligaciones del **Anexo III al 02/12/2027** y las del Anexo I al 02/08/2028. **No aplaza** las prácticas prohibidas (desde el 02/02/2025) ni la **transparencia del Art. 50**, aplicable desde el 02/08/2026.
+   * *Efecto para AIASN:* siguen aplicándose hoy el Art. 5 y el Art. 50.3. Si el sistema llegara a clasificarse en el Anexo III, sus obligaciones no serían exigibles hasta el 02/12/2027, pero **adelantamos voluntariamente** los requisitos que encajan con nuestra arquitectura (gobierno del dato, documentación, registro de eventos, supervisión humana, solidez).
+2. **Proyecto de Ley Orgánica para el buen uso y la gobernanza de la IA** (Expediente 121/000096; BOCG, XV Legislatura, Serie A, núm. 97-1, 12/06/2026). Adapta el ordenamiento español al RIA: autoridades (AESIA por defecto; AEPD para el Art. 5.1.e y g y la biometría del Anexo III.1.a y b), espacio controlado de pruebas (Art. 11), buen uso en el sector público estatal (Art. 12: inventario, delegado/a de IA, evaluación de sesgo discriminatorio) y régimen sancionador (Arts. 13 a 41).
+   * **Estado:** según las mentoras, **decayó con la disolución de las Cortes** (dato pendiente de verificar en congreso.es). No es norma vigente.
+   * **Cómo lo usamos:** lo **conocemos y lo tomamos como norte y filosofía general de uso** (acompañamiento antes que sanción, proporcionalidad, buen uso en el sector público), **sin presentarlo nunca como norma en vigor**.
+   * *Efecto para AIASN:* nuestras fichas (`MODEL_CARD.md`, `DATASET_CARD.md`) recogen lo que pediría el inventario del Art. 12 (proveedor, responsable del despliegue y categorización), y la herramienta sirve de apoyo a las evaluaciones de sesgo del Art. 12.8.
 
 ## 5. Protección de Datos (RGPD) y Privacidad por Diseño
 
@@ -258,3 +270,4 @@ Este checklist resume los 10 puntos de control obligatorio que certifican la con
 9. **Marco Ético ALTAI:** *Assessment List for Trustworthy Artificial Intelligence*, Grupo de Expertos de Alto Nivel de la Comisión Europea (AI HLEG).
 10. **Demografía Empresarial DIRCE 2024:** Instituto Nacional de Estadística (INE), Directorio Central de Empresas.
 
+**Actualización regulatoria (28/10/2026):** véase [ADR-0012](./adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md). Fuentes: BOCG, Serie A, núm. 97-1 (https://www.congreso.es/public_oficiales/L15/CONG/BOCG/A/BOCG-15-A-97-1.PDF) y Reglamento (UE) 2026/1744 (texto del DOUE pendiente de contrastar en EUR-Lex).

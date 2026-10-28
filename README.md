@@ -262,6 +262,14 @@ AIASN es un **prototipo** del reto. Esta sección dice con claridad qué hay, qu
 | **Marco legal para terceros** | Revisión jurídica del contrato de servicios y de la plantilla del Art. 50.3, contrato de encargo con OVHcloud, y revisión de las directrices finales de la Comisión sobre clasificación (previstas a finales de 2026) | [ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md), [plantilla Art. 50.3](./docs/plantilla_aviso_art50_y_encargo_tratamiento.md) |
 | **Fichas** | Versión final de `MODEL_CARD.md` y `DATASET_CARD.md` | PR de fichas |
 
+### Alcance de esta entrega
+
+| | |
+| :--- | :--- |
+| **Dentro del alcance (entrega y demostración del reto)** | Análisis de **vídeos cortos** (se recomiendan clips de 2 a 3 minutos), subidos de uno en uno · métricas **agregadas** de presencia y voz de mujeres y hombres · género **atribuido o percibido** con abstención por debajo de 0,80 y revisión humana de los casos dudosos · ejecución en local o con Docker Compose en una **red controlada** · datos de prueba públicos con licencia abierta |
+| **Fuera del alcance (hoja de ruta o decisión futura)** | Servicio multiusuario o expuesto a Internet · producción con terceros y contrato de servicios (solo borrador) · evaluación, selección o vigilancia de personas · identificación biométrica · análisis masivo de canales o *scraping* · vídeos largos · certificación pública con el Sello · tratamiento de **menores** o de categorías especiales de datos · garantías de disponibilidad, tiempos de respuesta o exactitud |
+| **Límites declarados** | Prototipo: los resultados son orientativos y exigen revisión humana · las cifras de ahorro de cómputo y coste son estimaciones sin *benchmark* · la clasificación normativa del sistema está en revisión ([ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md)) · los vídeos de calibración interna no se redistribuyen ([`DATASET_CARD.md`](./DATASET_CARD.md), 1.1) |
+
 Seguimiento día a día en el [tablero del equipo](https://github.com/users/ewigkeitt-cloud/projects/1).
 
 ## ⚖️ Declaración de Transparencia (EU AI Act - Art. 50)

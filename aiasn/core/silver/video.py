@@ -9,7 +9,7 @@ import pandas as pd
 from aiasn.core.silver.gender import UNDETERMINED, decide_gender, female_prob
 from aiasn.core.transform import Transform
 
-PEOPLE = ["person_id", "genero", "prob_mujer", "age", "screen_time_s", "speaking_time_s", "area", "centrality"]
+PEOPLE = ["person_id", "genero", "prob_mujer", "screen_time_s", "speaking_time_s", "area", "centrality"]
 PRESENCE = ["person_id", "tiempo_i", "tiempo_f", "hablando"]
 FUSION_VIDEO = ["tiempo_i", "tiempo_f", "track_id", "person_id", "hablando", "genero_visual", "prob_genero",
                 "rotulo_nombre", "rotulo_cargo", "area", "centrality"]
@@ -52,14 +52,14 @@ class VideoSilver(Transform):
         return votes > 0.5
 
     def _people(self, d: pd.DataFrame) -> pd.DataFrame:
-        """Gender by vote of the detections with a face, median age, seconds on screen and speaking, mean area and
+        """Gender by vote of the detections with a face, seconds on screen and speaking, mean area and
         centrality. Too few faces (`min_face_share`): no gender."""
         step = self.settings.video.stride / self.settings.video.fps   # seconds each detection stands for
         rows = []
         for person, g in d.groupby("person_id"):
             gender, p = ((UNDETERMINED, np.nan) if g.face.mean() < self.settings.silver.min_face_share
                          else decide_gender(g.female, self.settings.silver.gender_threshold))
-            rows.append([person, gender, p, g.age.median(), len(g) * step, g.speaking.sum() * step,
+            rows.append([person, gender, p, len(g) * step, g.speaking.sum() * step,
                          g.area.mean(), g.centrality.mean()])
         return pd.DataFrame(rows, columns=PEOPLE).astype({"person_id": "Int64"})
 

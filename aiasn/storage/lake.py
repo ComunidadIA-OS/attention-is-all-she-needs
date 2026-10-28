@@ -51,6 +51,12 @@ class Lake:
             shutil.copyfileobj(data, f)
         return target
 
+    def delete_landing(self, video_id: str) -> None:
+        """Deletes the uploaded video of `video_id` (its landing folder); nothing happens if it is not there."""
+        folder = self.landing_dir(video_id)
+        if self.fs.exists(folder):
+            self.fs.rm(folder, recursive=True)
+
     def fetch_landing(self, video_id: str, folder: Path) -> Path:
         """The video of `video_id` as a local file: itself in a local lake, else downloaded into `folder`."""
         remote = self.landing_file(video_id)

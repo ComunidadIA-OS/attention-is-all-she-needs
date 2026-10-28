@@ -16,15 +16,15 @@ FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def annotate(ctx: RunContext) -> Path:
-    """Each person's box labelled `P<id> | gender | age`, a green "speaking" box on the face of whoever speaks,
+    """Each person's box labelled `P<id> | gender`, a green "speaking" box on the face of whoever speaks,
     and the texts read by the OCR.
 
-    Gender and age are the most common and median values of each person. Returns the annotated mp4.
+    Gender is the most common value of each person. Returns the annotated mp4.
     """
     cfg, work = ctx.settings.video, ctx.tmp_dir / "video"
     detections = ctx.lake.read("bronze", "video_detections", ctx.video_id)
     texts = ctx.lake.read("bronze", "video_texts", ctx.video_id)
-    person = detections.groupby("person_id").agg(gender=("gender", lambda g: g.mode()[0]), age=("age", "median"))
+    person = detections.groupby("person_id").agg(gender=("gender", lambda g: g.mode()[0]))
 
     frames = sorted((work / "frames").glob("*.jpg"))
     raw, out = work / "annotated.avi", work / "annotated.mp4"
@@ -43,7 +43,7 @@ def annotate(ctx: RunContext) -> Path:
             p = person.loc[r.person_id]
             x1, y1 = int(r.x1), int(r.y1)
             cv2.rectangle(image, (x1, y1), (int(r.x2), int(r.y2)), COLOR[p.gender], 3)
-            _label(image, f"P{r.person_id} | {p.gender} | {p.age:.0f}", x1, y1, COLOR[p.gender])
+            _label(image, f"P{r.person_id} | {p.gender}", x1, y1, COLOR[p.gender])
             if r.speaking_score > 0:
                 if pd.notna(r.face_x1):
                     fx1, fy1 = int(r.face_x1), int(r.face_y1)

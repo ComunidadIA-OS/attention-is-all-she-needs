@@ -34,6 +34,8 @@ services:
       MODELS_DIR: /models
       HF_HOME: /models/huggingface
       API__LAUNCHER: docker
+      # Data minimisation: each worker deletes the video and its frames once processed (false: keep them to debug)
+      PRIVACY__DELETE_MEDIA_AFTER_RUN: ${DELETE_MEDIA_AFTER_RUN:-true}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock   # to start the worker containers
     depends_on:

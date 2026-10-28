@@ -62,7 +62,7 @@ SPDX-License-Identifier: Apache-2.0
 - [x] **3.2. Prioridad Absoluta al Dato Declarado sobre la Biometría:**  
   *Justificación:* Siguiendo la regla de oro de Verónica Vilaplana (Diap. 68), la lectura de rótulos mediante OCR (*«Dra. Maria Pons — Catedràtica d'Economia»*) o las actas oficiales tienen **prevalencia jerárquica estricta** sobre cualquier inferencia física facial o vocal.
 - [x] **3.3. Amparo Legal de Datos en Fase de Prototipo (Art. 67 RDL 24/2021):**  
-  *Justificación:* Los vídeos de prueba públicos (como *«Quanta, quanta IA!»*) se tratan bajo la excepción de **Minería de Textos y Datos (TDM) con fines de investigación e innovación** sin redistribución comercial del material audiovisual bruto.
+  *Justificación:* Los vídeos de calibración públicos (como *«Quanta, quanta IA!»*, **sin permiso expreso** de la organización) se tratan en local bajo la excepción de **Minería de Textos y Datos (TDM)** (amparo pendiente de validar con Karina Gibert y Ángela Gasch), sin redistribuir el material audiovisual bruto y fuera de la demostración pública. Las pruebas públicas reproducibles usan vídeos con licencia abierta (`DATASET_CARD.md`, 1.1).
 - [x] **3.4. Prohibición de *Web Scraping* Indiscriminado y Plan de Despliegue:**  
   *Justificación:* Conforme a la instrucción de Karina Gibert (`2:05:10`), se prohíbe el scraping masivo. El Plan de Producción estipula una **Fase 0 de Convenios Formales y Conexión vía API Oficial Autorizada** con las entidades emisoras.
 - [ ] **3.5. Ficheros temporales y minimización de datos (PENDIENTE para la 1.0):**  

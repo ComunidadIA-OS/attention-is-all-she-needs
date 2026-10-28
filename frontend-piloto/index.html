@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
-<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
@@ -88,13 +88,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block">
-      <div class="ex-head" id="s-temas"><span class="ex-rn">2</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
-      <div class="m-axislabels"><span class="ml">◂ Hombres</span><span class="mc" id="mirror-mc"></span><span class="mr">Mujeres ▸</span></div>
-      <div class="mirror" id="mirror" role="img" aria-label="Segregación temática por género, como porcentaje del tiempo de voz de cada grupo. Mujeres: cuidados 46, ética 28, tecnología 18, liderazgo 5, financiación 3. Hombres: cuidados 6, ética 14, tecnología 34, liderazgo 24, financiación 22."></div>
-    </div>
-
-    <div class="ex-block">
-      <div class="ex-head" id="s-poder"><span class="ex-rn">3</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
+      <div class="ex-head" id="s-poder"><span class="ex-rn">2</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
       <table class="ledger">
         <caption class="sr-only">Señales de rol protagonista en la pieza, por género</caption>
         <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
@@ -105,6 +99,12 @@ SPDX-License-Identifier: Apache-2.0
           <tr><td>Referentes citados</td><td class="fig f">1</td><td class="fig m">7</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="ex-block">
+      <div class="ex-head" id="s-temas"><span class="ex-rn">3</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
+      <div class="m-axislabels"><span class="ml">◂ Hombres</span><span class="mc" id="mirror-mc"></span><span class="mr">Mujeres ▸</span></div>
+      <div class="mirror" id="mirror" role="img" aria-label="Segregación temática por género, como porcentaje del tiempo de voz de cada grupo. Mujeres: cuidados 46, ética 28, tecnología 18, liderazgo 5, financiación 3. Hombres: cuidados 6, ética 14, tecnología 34, liderazgo 24, financiación 22."></div>
     </div>
 
     <div class="ex-block">

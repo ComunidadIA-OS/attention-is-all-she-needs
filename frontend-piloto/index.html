@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
-<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
@@ -80,39 +80,36 @@ SPDX-License-Identifier: Apache-2.0
   <section class="report">
     <div class="r-intro">
       <h2>La lectura</h2>
-      <div class="ri-note">Seis exhibiciones sobre la misma pieza: de qué se habla, quién habla, en qué rol, en qué tono y quién decide.</div>
+      <div class="ri-note">Cinco exhibiciones sobre la misma pieza: quién se ve y quién se oye, de qué se habla, quién ocupa el plano, en qué rol y en qué tono.</div>
     </div>
 
     <div class="ex-block">
-      <div class="ex-head" id="s-temas"><span class="ex-rn">i</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
+      <div class="ex-head" id="s-voz"><span class="ex-rn">1</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
+      <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
+    </div>
+
+    <div class="ex-block">
+      <div class="ex-head" id="s-temas"><span class="ex-rn">2</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
       <div class="m-axislabels"><span class="ml">◂ Hombres</span><span class="mc" id="mirror-mc"></span><span class="mr">Mujeres ▸</span></div>
       <div class="mirror" id="mirror" role="img" aria-label="Segregación temática por género, como porcentaje del tiempo de voz de cada grupo. Mujeres: cuidados 46, ética 28, tecnología 18, liderazgo 5, financiación 3. Hombres: cuidados 6, ética 14, tecnología 34, liderazgo 24, financiación 22."></div>
     </div>
 
     <div class="ex-block">
-      <div class="ex-cols">
-        <div>
-          <div class="ex-head" id="s-voz"><span class="ex-rn">ii</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
-          <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
-        </div>
-        <div>
-          <div class="ex-head" id="s-poder"><span class="ex-rn">iii</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
-          <table class="ledger">
-            <caption class="sr-only">Señales de rol protagonista en la pieza, por género</caption>
-            <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
-            <tbody id="power">
-              <tr><td>Abre y cierra el acto<span class="who">Marc Vidal, moderador</span></td><td class="fig">0</td><td class="fig m">2</td></tr>
-              <tr><td>Centralidad media en plano</td><td class="fig f">0,38</td><td class="fig m">0,62</td></tr>
-              <tr><td>Interrupciones recibidas</td><td class="fig f">8</td><td class="fig m">2</td></tr>
-              <tr><td>Referentes citados</td><td class="fig f">1</td><td class="fig m">7</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <div class="ex-head" id="s-poder"><span class="ex-rn">3</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
+      <table class="ledger">
+        <caption class="sr-only">Señales de rol protagonista en la pieza, por género</caption>
+        <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
+        <tbody id="power">
+          <tr><td>Abre y cierra el acto<span class="who">Marc Vidal, moderador</span></td><td class="fig">0</td><td class="fig m">2</td></tr>
+          <tr><td>Centralidad media en plano</td><td class="fig f">0,38</td><td class="fig m">0,62</td></tr>
+          <tr><td>Interrupciones recibidas</td><td class="fig f">8</td><td class="fig m">2</td></tr>
+          <tr><td>Referentes citados</td><td class="fig f">1</td><td class="fig m">7</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="ex-block">
-      <div class="ex-head" id="s-roles"><span class="ex-rn">iv</span><div><h3>Jerarquía de rol: ¿se nos presenta como expertas?</h3><div class="ex-cap">Qué papel tiene cada persona en la pieza (moderación, experta, testimonio…) y si, con el mismo papel de experta, ellas hablan tanto como ellos.</div></div></div>
+      <div class="ex-head" id="s-roles"><span class="ex-rn">4</span><div><h3>Jerarquía de rol: ¿se nos presenta como expertas?</h3><div class="ex-cap">Qué papel tiene cada persona en la pieza (moderación, experta, testimonio…) y si, con el mismo papel de experta, ellas hablan tanto como ellos.</div></div></div>
       <div class="role">
         <div class="role-ladder" id="ladder">
           <div class="rl-row">
@@ -146,7 +143,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block" style="border-bottom:0">
-      <div class="ex-head" id="s-clima"><span class="ex-rn">v</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
+      <div class="ex-head" id="s-clima"><span class="ex-rn">5</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
       <div class="clima">
         <div id="clima-rows"><div class="cl-row">
           <div class="cl-top"><div class="cl-name"><i style="background:var(--f)"></i>Mujeres</div></div>
@@ -175,7 +172,7 @@ SPDX-License-Identifier: Apache-2.0
     </div>
 
     <div class="ex-block review" id="review" style="border-bottom:0;display:none">
-      <div class="ex-head" id="s-supervision"><span class="ex-rn">vii</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (art. 14 del Reglamento Europeo de IA).</div></div></div>
+      <div class="ex-head" id="s-supervision"><span class="ex-rn">6</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (art. 14 del Reglamento Europeo de IA).</div></div></div>
       <div class="rv-bar"><span id="rv-count" role="status" aria-live="polite"></span><span class="rv-note">Las decisiones aún no se guardan: se pierden al recargar.</span></div>
       <table class="ledger rv-table"><caption class="sr-only">Tramos por revisar</caption><thead><tr><th>Persona</th><th>Cuándo sale</th><th>Su género</th></tr></thead><tbody id="rv-body"></tbody></table>
     </div>

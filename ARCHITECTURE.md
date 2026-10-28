@@ -29,10 +29,9 @@ Nota: Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpe
 
 ## Orden de ejecución
 
-Dos pipelines corren a la vez en hilos: audio y después NLP (que necesita la transcripción), y vídeo y después rótulos (que necesita los textos del OCR). Cuando acaban los dos, silver une lo que dicen y gold calcula el dictamen. Cada paso queda anotado en el manifest; si el worker se repite, salta los pasos ya hechos.
+Dos pipelines corren a la vez en distintos hilos: audio y después NLP (que necesita la transcripción), y vídeo y después rótulos (que necesita los textos del OCR). Cuando acaban los dos, silver une lo que dicen, limpia y transforma y gold calcula los KPIs, el dictamen y los datos para generar la constelación en el frontend.
 
 ```mermaid
-%%{init: {"flowchart": {"curve": "step"}}}%%
 flowchart LR
     L["landing/<br/>vídeo.mp4"]
     subgraph C1["pipeline 1 · en paralelo"]
@@ -45,7 +44,7 @@ flowchart LR
     L --> V
     NT --> S["Silver<br/>6 transforms"]
     RT --> S
-    S -- cuando acaban los dos --> G["Gold<br/>4 transforms"]
+    S ----> G["Gold<br/>4 transforms"]
     classDef bronze fill:#f6e9dc,stroke:#9a5a22,color:#5a3410
     classDef silver fill:#e9edf1,stroke:#5f6b78,color:#2e353d
     classDef gold fill:#f7efd2,stroke:#8a6b0c,color:#4d3c06
@@ -54,7 +53,6 @@ flowchart LR
     class G gold
 ```
 
-Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silver y gold llevan el color de su capa. Silver lee 9 de las 10 tablas de bronze: todas menos `video_texts`, que solo usan los rótulos. Gold lee silver (y la tabla de cuadrantes que él mismo produce).
 
 ## Pipeline de audio
 
@@ -63,8 +61,8 @@ Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silve
 | Paso | Modelo | Qué hace |
 |---|---|---|
 | 1. `extract` | ffmpeg | Audio mono a 16 kHz, en `tmp/`. |
-| 2. `asr` | Whisper large v3 · OVHcloud | Transcripción con diarización: turnos con inicio, fin, hablante y texto. |
-| 3. `gender` | Common-Voice-Gender-Detection (wav2vec2) | Género de la voz por turno, con su probabilidad; usa de 0,5 a 15 s de cada turno. |
+| 2. `asr` | Whisper large v3 de OVHcloud | Transcripción con diarización: turnos con inicio, fin, hablante y texto. |
+| 3. `gender` | prithivMLmods/Common-Voice-Gender-Detection | Clasificador binario de Género de la voz por turno, con su probabilidad |
 
 | Tabla | Una fila por | Columnas |
 |---|---|---|
@@ -78,10 +76,10 @@ Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silve
 |---|---|---|
 | 1. `extract` | ffmpeg | Fotogramas a 25 fps y audio a 16 kHz, en `tmp/`. |
 | 2. `shots` | TransNetV2 | Cortes de plano. |
-| 3. `detect` | YOLO11m-pose · InsightFace buffalo_l · MiVOLO v2 | Personas y su seguimiento (1 de cada 4 fotogramas), caras, y género y edad por cara y cuerpo. |
-| 4. `reid` | ArcFace (InsightFace) | Une las pistas de una misma cara entre planos (distancia < 0,6). Los vectores no se guardan. |
-| 5. `asd` | TalkNet | Quién está hablando en cada fotograma, cruzando cara y audio. |
-| 6. `ocr` | EasyOCR | Textos en pantalla a 1 fps; descarta los de las esquinas (logos). |
+| 3. `detect` | YOLO11m-pose · InsightFace buffalo_l · MiVOLO v2 | Personas y su seguimiento (1 de cada 4 fotogramas), caras, y género por cara y cuerpo. |
+| 4. `RE-ID` | ArcFace (InsightFace) | Reidentificación: Une las pistas de una misma persona entre planos: agrupa la cara media de cada pista por distancia coseno (< 0,6). Los vectores no se guardan.  |
+| 5. `asd` | TalkNet | Active Speaker Recognition: Reconoce quién está hablando en cada fotograma, cruzando cara y audio. |
+| 6. `ocr` | EasyOCR | Textos en pantalla a 1 fps |
 
 | Tabla | Una fila por | Columnas |
 |---|---|---|
@@ -90,16 +88,16 @@ Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silve
 
 ## Pipeline de NLP
 
-`lee bronze/audio_turns` → `escribe 6 tablas nlp_*`. Seis tareas independientes sobre la transcripción, lanzadas a la vez (hasta 6 llamadas) al LLM Llama 3.3 70B de OVHcloud por LiteLLM. Cada cita que devuelve el modelo se comprueba contra la transcripción (`found`): lo que no aparece en el texto se descarta.
+Lee `bronze/audio_turns` → `escribe 6 tablas nlp_*`. Seis tareas independientes sobre la transcripción, lanzadas a la vez (hasta 6 llamadas) al LLM Llama 3.3 70B de OVHcloud por LiteLLM. Para evitar alucinaciones, cada cita que devuelve el modelo se comprueba contra la transcripción (`found`) y lo que no aparece en el texto se descarta.
 
-| Tarea (en paralelo) | Qué extrae |
+| Tarea | Qué extrae |
 |---|---|
-| `mentions` | Quién nombra a quién en la conversación, y si dice su cargo. |
-| `topics` | Temas de la conversación entera y qué hablantes tratan cada uno, guiado por una lista de temas de una palabra. |
-| `references` | Personas conocidas citadas como referente, con su género. El modelo razona antes si cada una lo es. |
-| `roles` | Formato de la pieza y rol de cada hablante: presentador/a, experto/a, testimonio… |
+| `mentions` | Quién alude a quién en la conversación, y si dice su nombre y cargo. |
+| `topics` | Temas de la conversación entera y qué hablantes tratan cada uno, guiado por una lista de temas incluidos en el prompt. |
+| `references` | Personas históricas, famosas o conocidas citadas como referente, con su género. El modelo razona antes si cada una lo es. |
+| `roles` | Formato de la pieza y rol de cada hablante: presentador/a, entrevistado/a, experto/a, testimonio… |
 | `ideas` | Ideas clave de la pieza y quién las aporta. |
-| `tone` | Tono de cada turno: técnico/asertivo, colaborativo o disenso. Con el LLM o, si se elige, con mDeBERTa en local. |
+| `tone` | Tono de cada turno: técnico/asertivo, colaborativo o disenso. Con el LLM o, si se elige desde la configuración, con clasificación zero-shot con mDeBERTa en local. |
 
 | Tabla | Una fila por | Columnas |
 |---|---|---|
@@ -112,45 +110,65 @@ Los cilindros son tablas de bronze, la salida de los modelos; las cajas de silve
 
 ## Pipeline de rótulos
 
-`lee bronze/video_texts` → `escribe bronze/video_captions`. El LLM lee los textos del OCR por bloques (4 por llamada, en paralelo) y separa los rótulos de persona: nombre, cargo, el cargo en inglés (para word2vec) y si el cargo muestra autoridad experta o institucional.
+Lee `bronze/video_texts` y escribe`bronze/video_captions`. El LLM lee los textos del OCR y separa los rótulos de persona: nombre, cargo, el cargo en inglés (lo necesitaremos para word2vec) y si el cargo muestra autoridad experta o institucional.
 
 | Tabla | Una fila por | Columnas |
 |---|---|---|
 | `video_captions` | rótulo de persona en un fotograma | frame, shot, text, name, title, title_en, title_authority, found |
 
-## Silver: de las detecciones a las personas
+## Silver
 
-Seis transformaciones deterministas, en pandas, sin modelos (salvo la tabla fija de word2vec). Aquí se decide quién es cada persona, de qué género (con abstención por debajo de 0,80, ADR-0005) y qué dijo.
+Seis transformaciones deterministas, en pandas. En esta fase se cruzan los resultados de video y transcripción para decidir quién es cada persona, de qué género (con abstención por debajo de una probabilidad de 0,80) y qué dijo.
 
 ```mermaid
-%%{init: {"flowchart": {"curve": "step", "nodeSpacing": 24, "rankSpacing": 40}}}%%
 flowchart LR
-    VD[(video_detections)] --> video
-    AT[(audio_turns)] --> audio
+    subgraph B["bronze que lee"]
+        VD[(video_detections)]
+        AT[(audio_turns)]
+        CM[("video_captions<br/>nlp_mentions")]
+        NL[("nlp_topics · roles<br/>references · ideas · tone")]
+    end
+    subgraph T["transformación"]
+        video
+        audio
+        identity
+        names
+        nlp
+        word_bias
+    end
+    subgraph S["silver que escribe"]
+        S1[("video_people · video_presence")]
+        S2[("audio_speakers · audio_turns")]
+        S3[("speaker_person · people")]
+        S4[("person_names · people")]
+        S5[(term_bias)]
+        S6[("nlp_topics · roles · references<br/>nlp_ideas · nlp_tone")]
+    end
+    VD --> video
+    AT --> audio
+    CM --> names
+    NL --> nlp
     video --> identity
     audio --> identity
     identity -- personas --> names
-    CM[("video_captions<br/>nlp_mentions")] --> names
     names -- nombres --> nlp
     identity -- voces --> nlp
-    NL[("nlp_topics · roles<br/>references · ideas · tone")] --> nlp
     nlp -- temas --> word_bias
     names -- cargos --> word_bias
-
-    video -.-> S1[("video_people<br/>video_presence")]
-    audio -.-> S2[("audio_speakers<br/>audio_turns")]
-    identity -.-> S3[("speaker_person<br/>people")]
-    names -.-> S4[("person_names<br/>people")]
-    nlp -.-> S6[("nlp_topics · roles · references<br/>nlp_ideas · nlp_tone")]
-    word_bias -.-> S5[(term_bias)]
-
+    video -.-> S1
+    audio -.-> S2
+    identity -.-> S3
+    names -.-> S4
+    word_bias -.-> S5
+    nlp -.-> S6
     classDef bronze fill:#f6e9dc,stroke:#9a5a22,color:#5a3410
     classDef silver fill:#e9edf1,stroke:#5f6b78,color:#2e353d
+    classDef gold fill:#f7efd2,stroke:#8a6b0c,color:#4d3c06
     class VD,AT,CM,NL bronze
     class S1,S2,S3,S4,S5,S6 silver
 ```
 
-De izquierda a derecha, en el orden en que se ejecutan. Flechas continuas: lo que cada transformación lee (de bronze, en color bronce, o de otra transformación). Discontinuas: lo que escribe en silver. `people` lo crea identity y lo completa names; es la tabla central de silver, con un participante por fila (`p…` si sale en pantalla, `v…` si solo es una voz).
+Flechas continuas: lo que una transformación necesita de otra. Discontinuas: lo que escribe. `people` lo crea identity y lo completa names; es la tabla central de silver, con un participante por fila (`p…` si sale en pantalla, `v…` si solo es una voz).
 
 | Transformación | Qué decide | Escribe |
 |---|---|---|
@@ -166,7 +184,6 @@ De izquierda a derecha, en el orden en que se ejecutan. Flechas continuas: lo qu
 Cuatro transformaciones. La fusión cruza voz y pantalla en el tiempo y de ahí salen los cuadrantes y el veredicto.
 
 ```mermaid
-%%{init: {"flowchart": {"curve": "step"}}}%%
 flowchart LR
     S[("silver/<br/>audio_turns · speaker_person<br/>video_people · video_presence<br/>people · person_names<br/>nlp_topics · roles · references<br/>nlp_ideas · nlp_tone<br/>term_bias")]
     S --> fusion --> Q[("quadrants<br/>summary")]

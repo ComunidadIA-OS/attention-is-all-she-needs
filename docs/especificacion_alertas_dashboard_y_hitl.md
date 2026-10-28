@@ -184,7 +184,7 @@ En estricto cumplimiento del **Artículo 14 del Reglamento Europeo de IA (RIA)**
    * El tramo temporal se etiqueta de forma determinista como **`no_determinado`**.
 2. **Derivación a Revisión Humana en la UI:**  
    En el dashboard, estos segmentos dudosos se señalan visualmente con un distintivo visible: **`[ → Revisión Humana ]`**.
-3. **Pantalla Operativa de Arbitraje («Asumo / No asumo»):**  
+3. **Pantalla Operativa de Arbitraje («Asumo / No asumo») — especificación objetivo:**  
    La operadora técnica dispone de dos controles auditables:
    * `[ Validar Clasificación ]`: Asigna manualmente la etiqueta tras contrastar el fotograma y la transcripción.
    * `[ Asumir Abstención ]`: Confirma el tramo como `no_determinado`, excluyéndolo del denominador para no distorsionar las métricas de paridad.

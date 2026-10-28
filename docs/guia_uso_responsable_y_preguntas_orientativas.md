@@ -18,7 +18,7 @@ Adoptamos el formato de las **preguntas orientativas** de las *Directrices para 
 | **Bienestar social y medioambiental** | ¿Qué efectos tiene sobre las personas y el entorno? | No se infieren emociones (ADR-0009). El muestreo selectivo de fotogramas reduce el cómputo; las cifras de ahorro son estimaciones pendientes de *benchmark*. | Parcial |
 | **Solidez técnica y seguridad** | ¿Es fiable y está protegida? | Suite de tests automatizados y cálculo determinista. **La API de la demo no tiene autenticación ni HTTPS y no debe exponerse públicamente tal cual.** | Parcial |
 | **Privacidad y gobernanza de datos** | ¿Qué datos personales trata y durante cuánto tiempo? | Los vectores faciales no se guardan y la edad no se estima ni se almacena en la rama de minimización (`feat/delete-media-after-run`, pendiente de fusionar). **Mientras tanto, el vídeo y los fotogramas temporales no se borran automáticamente** (ver `ETHICS_CHECKLIST.md`, 3.5). | Parcial |
-| **Rendición de cuentas** | ¿Quién responde y puede auditarse? | Registro de decisiones (ADR), historial de PRs con coautoría, fichas de modelo y de datos. La observabilidad con Langfuse está pendiente. | Parcial |
+| **Rendición de cuentas** | ¿Quién responde y puede auditarse? | Registro de decisiones (ADR), historial de PRs con coautoría, fichas de modelo y de datos. La observabilidad con Langfuse está pendiente. Conviene distinguir qué responde cada parte: AIASN como proveedor (calidad del modelo y de la documentación), la organización que despliega (uso y decisiones) y la persona que revisa (su arbitraje). Las decisiones del panel de revisión aún no se guardan. | Parcial |
 
 ## 3. Qué debe hacer quien despliega AIASN
 

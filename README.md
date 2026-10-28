@@ -142,12 +142,16 @@ uv pip install -e ".[dev]"
 
 ### 2. Modos de Verificación para el Tribunal Evaluador
 
-#### 🟢 Modo A: Verificación Inmediata y Determinista (Zero Setup — <3 segundos)
-> **Recomendado para evaluación técnica rápida sin requerir GPUs ni credenciales en la nube.**
-Ejecuta la suite completa de pruebas unitarias sobre datos reales preprocesados del corpus *Àgora* y trazas de vídeo:
+#### 🟢 Modo A: Verificación Inmediata y Automática (Zero Setup — <3 segundos)
+> **Comando atómico con auto-detección inteligente:** Si Docker está activo, ejecuta los tests dentro del contenedor aislado; si Docker no está disponible, conmuta automáticamente a tu entorno local (`uv run pytest` o Python activo) y ejecuta también los 14 tests del frontend piloto si detecta Node.js:
 ```bash
-python -m pytest tests/ -v
+python scripts/run_tests.py
 ```
+*(O si prefieres invocar la herramienta directamente según tu flujo de trabajo:)*
+* **Vía Docker (aislado, sin configurar nada en tu máquina):** `docker compose run --rm backend pytest`
+* **Vía uv (entorno local reproducible):** `uv run pytest`
+* **Vía Python estándar:** `pytest tests/ -v` (requiere `.venv` activado)
+* **Frontend piloto (Node.js):** `node frontend-piloto/tests/run.mjs`
 
 ### 4. Despliegue con Docker (Opcional)
 Para levantar la demo completa (subir un vídeo y ver sus resultados), ver [Demo: subir un vídeo y ver sus resultados](#-demo-subir-un-vídeo-y-ver-sus-resultados).
@@ -246,7 +250,10 @@ En cumplimiento del **Reglamento (UE) 2024/1689 (Reglamento Europeo de IA)** y d
 
 ## 📚 Documentación de Gobernanza y Enlaces Canónicos
 
-* 🖥️ [**docs/especificacion_alertas_dashboard_y_hitl.md**](./docs/especificacion_alertas_dashboard_y_hitl.md): Especificación funcional de las 3 vistas por rol, alertas anti-*equality-washing*, Test de Bechdel Digital y pantalla *«Asumo / No asumo»* (#6).
+* 🖥️ [**docs/especificacion_alertas_dashboard_y_hitl.md**](./docs/especificacion_alertas_dashboard_y_hitl.md): Especificación funcional de las 3 vistas por rol, alertas anti-*equality-washing*, Test de Interlocución Femenina (TIF) y pantalla *«Asumo / No asumo»* (#6).
+* ⚖️ [**docs/marco_normativo_y_mercado.md**](./docs/marco_normativo_y_mercado.md): Marco normativo integral, cumplimiento exhaustivo del RIA (Reglamento UE 2024/1689), Ley Orgánica 2/2024 de Paridad, Directiva CSRD, datos CNMV 2025 y dimensionamiento del mercado B2B (#8).
+* 👥 [**docs/evidencias_trabajo_en_equipo.md**](./docs/evidencias_trabajo_en_equipo.md): Informe oficial de gobernanza paritaria, evidencias de trabajo colaborativo, registro de reuniones sincrónicas y proceso deliberativo del equipo (TyC §13).
+* 📐 [**docs/adr/README.md**](./docs/adr/README.md): Registro Canónico de Decisiones de Arquitectura (ADR-0001 a ADR-0011): justificación formal de la separación inferencia/cálculo, Green AI, biometría efímera, salvaguarda no binaria y TIF.
 * ♿ [**docs/informe_conformidad_accesibilidad.md**](./docs/informe_conformidad_accesibilidad.md): Informe de conformidad de accesibilidad del dashboard (*WCAG 2.2 AA*, UNE 153101 EX, RD 1112/2018 y Directiva UE 2019/882): auditoría `axe-core`, doble codificación de color, contraste verificado y soporte para lectores de pantalla (#18).
 * 📖 [**GLOSSARY.md**](./GLOSSARY.md): Glosario maestro de los 25 términos, elementos clave de la solución y diagrama del Círculo Virtuoso (*Retroalimentación Incremental sin Reentrenamiento*).
 * 📋 [**ETHICS_CHECKLIST.md**](./ETHICS_CHECKLIST.md): Autoevaluación formal bajo los 7 principios de ALTAI y el Sandbox de la SEDIA / AESIA.

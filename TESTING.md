@@ -65,10 +65,15 @@ flowchart TD
 
 El repositorio incluye la suite ejecutable en el directorio `tests/` para verificar de forma determinista la integridad del código:
 
-### 3.1. Ejecución Rápida
+### 3.1. Ejecución Rápida y Automática
 ```bash
-# Ejecutar todas las pruebas unitarias
-pytest tests/ -v
+# Runner inteligente (auto-detecta Docker, uv o Python local y corre backend + frontend):
+python scripts/run_tests.py
+
+# O directamente según tu herramienta:
+# docker compose run --rm backend pytest
+# uv run pytest
+# pytest tests/ -v
 ```
 
 ### 3.2. Casos de Prueba de Contratos Tabulares (`tests/test_contracts.py`)

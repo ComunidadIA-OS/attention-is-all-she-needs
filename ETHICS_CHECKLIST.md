@@ -117,9 +117,9 @@ SPDX-License-Identifier: Apache-2.0
 - [x] **7.2. Arquitectura Agnóstica al Modelo:**  
   *Justificación:* El núcleo del sistema desacopla los adaptadores de inferencia mediante interfaces `Pydantic`. Cualquier modelo (`Whisper`, `miVOLO`, `YOLOX`, `Qwen`, `Llama`) puede sustituirse por otra alternativa abierta sin reescribir la lógica de cálculo ni generar dependencias de un único proveedor.
 - [x] **7.3. Registro Canónico de Decisiones de Arquitectura (ADRs):**  
-  *Justificación:* Trazabilidad técnica exhaustiva documentada en **10 ADRs (`ADR-001` a `ADR-010`, incluyendo exclusión de emociones biométricas Art. 5.1.f RIA y soberanía lingüística/reutilización en AAPP Art. 157 LRJSP)**, explicando el contexto, alternativas descartadas y consecuencias ético-técnicas de cada decisión.
-- [x] **7.4. Gobernanza Comunitaria Completa:**  
-  *Justificación:* Inclusión en el repositorio de los archivos canónicos: `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `MODEL_CARD.md`, `DATASET_CARD.md` y `pyproject.toml`.
+  *Justificación:* Trazabilidad técnica exhaustiva documentada en **11 ADRs ([ADR-0001 a ADR-0011](./docs/adr/README.md), incluyendo exclusión de emociones biométricas Art. 5.1.f RIA, soberanía lingüística/reutilización en AAPP Art. 157 LRJSP y adopción del Test de Interlocución Femenina TIF)**, explicando el contexto, alternativas descartadas y consecuencias ético-técnicas de cada decisión.
+- [x] **7.4. Gobernanza Comunitaria y Marco Regulatorio Completo:**  
+  *Justificación:* Inclusión en el repositorio de los informes y archivos canónicos: [docs/marco_normativo_y_mercado.md](./docs/marco_normativo_y_mercado.md) (análisis RIA / Ley 2/2024 / CSRD), [docs/evidencias_trabajo_en_equipo.md](./docs/evidencias_trabajo_en_equipo.md) (gobernanza paritaria y proceso deliberativo), [docs/informe_conformidad_accesibilidad.md](./docs/informe_conformidad_accesibilidad.md) (auditoría WCAG 2.2 AA), CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, MODEL_CARD.md, DATASET_CARD.md y pyproject.toml.
 
 ---
 

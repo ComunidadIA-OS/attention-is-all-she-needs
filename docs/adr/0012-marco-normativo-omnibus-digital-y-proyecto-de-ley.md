@@ -11,7 +11,13 @@
 
 Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo justificamos nuestras decisiones:
 
-1. **El Ómnibus Digital de IA** modifica el calendario del RIA. Según las fuentes secundarias consultadas (artículos de despachos y de artificialintelligenceact.eu; el texto del DOUE no ha podido descargarse de forma automática y **está pendiente de contrastar a mano**), el Reglamento (UE) 2026/1744 se publicó el 24/07/2026 y entró en vigor el 27/07/2026. **Aplaza** las obligaciones de los sistemas de alto riesgo del Anexo III al **2 de diciembre de 2027** y las del Anexo I al **2 de agosto de 2028**. **No aplaza** las prácticas prohibidas (desde el 02/02/2025) ni las obligaciones de transparencia del **Art. 50**, aplicables desde el **02/08/2026**.
+1. **El Ómnibus Digital de IA** (Reglamento (UE) 2026/1744 del Parlamento Europeo y del Consejo, de 8 de julio de 2026, publicado en el DOUE el 24/07/2026 y en vigor a los tres días, el 27/07/2026; **texto oficial contrastado**) modifica el RIA. Lo que más nos afecta:
+   * **(a)** **Aplaza** las obligaciones del capítulo III, secciones 1 a 3, para los sistemas de alto riesgo del Anexo III al **2 de diciembre de 2027** y para los del Anexo I al **2 de agosto de 2028** (nuevo Art. 113, letra c).
+   * **(b)** **No aplaza** las prácticas prohibidas (desde el 02/02/2025) ni la transparencia del **Art. 50**, aplicable desde el **02/08/2026**; solo concede hasta el 02/12/2026 a los generadores de contenido sintético ya comercializados para cumplir el Art. 50.2 (nuevo Art. 111.4).
+   * **(c)** Añade prohibiciones sobre material íntimo no consentido y de abuso sexual de menores (Art. 5.1.b bis y b ter, desde el 02/12/2026), que no nos afectan.
+   * **(d)** **Suaviza la alfabetización en IA** (Art. 4): se exigen medidas de apoyo, sin garantizar un nivel concreto.
+   * **(e)** Crea una **base jurídica excepcional para tratar categorías especiales de datos con el fin de detectar y corregir sesgos** (nuevo Art. 4 bis, que sustituye al antiguo Art. 10.5), con garantías estrictas. El considerando 9 afirma que «la detección y la corrección de sesgos tienen un interés público significativo».
+   * **(f)** Retrasa al 02/08/2027 la fecha límite del espacio controlado de pruebas nacional (Art. 57.1).
 2. **El Proyecto de Ley Orgánica para el buen uso y la gobernanza de la IA** (Consejo de Ministros, 26/05/2026; presentado en el Congreso el 28/05/2026 y publicado en el BOCG el 12/06/2026; plazo de enmiendas inicial hasta el 30/06/2026, ampliado semanalmente hasta el 07/10/2026) adapta el ordenamiento español al RIA. La **disolución de las Cortes está verificada en el BOE**: el Real Decreto 806/2026, de 5 de octubre (BOE-A-2026-20742, publicado el 06/10/2026), disuelve el Congreso y el Senado y convoca elecciones generales para el **29/11/2026**; las nuevas Cámaras se reunirán el 23/12/2026. Conforme al Art. 207 del Reglamento del Congreso, la disolución provoca el **decaimiento** de los asuntos en tramitación, por lo que el proyecto **ha decaído**: la ficha del expediente en congreso.es (consultada el 28/10/2026) indica «Situación actual: Concluido - (Caducado)» desde el 06/10/2026, lo que coincide con lo que nos trasladaron las mentoras. Para volver a tramitarse, el próximo Gobierno tendría que presentarlo de nuevo. Se cita siempre como «proyecto de ley decaído» y nunca como norma vigente.
 
 **Contenido del proyecto relevante para nosotras** (leído directamente en el BOCG):
@@ -28,7 +34,7 @@ Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo 
 
 ## 2. Decisión
 
-1. **El marco jurídico vinculante es el RIA**, que es de aplicación directa. El Ómnibus solo cambia fechas: para AIASN siguen aplicándose hoy las **prácticas prohibidas (Art. 5)** y la **transparencia (Art. 50.3)**; las obligaciones del Anexo III, **si algún día nos alcanzaran**, no serían exigibles hasta el 02/12/2027.
+1. **El marco jurídico vinculante es el RIA**, que es de aplicación directa. El Ómnibus retrasa el alto riesgo y retoca otros puntos, pero no los que nos afectan hoy: para AIASN siguen aplicándose las **prácticas prohibidas (Art. 5)** y la **transparencia (Art. 50.3)**; las obligaciones del Anexo III, **si algún día nos alcanzaran**, no serían exigibles hasta el 02/12/2027.
 2. **Adelantamos voluntariamente los requisitos de alto riesgo** (gobierno del dato, documentación, registro de eventos, supervisión humana, solidez) aunque no se nos exijan: encajan con nuestra arquitectura y son lo que un cliente B2B o una administración nos pedirá.
 3. **El proyecto de ley es nuestro norte y filosofía de uso, no una obligación.** Lo declaramos expresamente así: conocemos el texto, lo hemos leído y lo tomamos como referencia de buen uso; **no se presenta como norma vigente**. De él retenemos tres ideas: (a) un enfoque de **acompañamiento y guías preventivas** frente a uno meramente punitivo (enmiendas del COEINF/CCII, sesión del 16/10, `0:56:00`); (b) la **proporcionalidad y la simplificación**, que justifican una arquitectura ligera; y (c) el **buen uso en el sector público**: inventario, delegado/a de IA y evaluación de sesgo discriminatorio.
 4. **Fórmulas de cita** (para README, memoria y presentación):
@@ -51,6 +57,8 @@ Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo 
 | RIA Art. 12 | Registro de eventos | Manifest por paso; **observabilidad con Langfuse pendiente de subir** | `aiasn/storage/manifest.py` | Parcial |
 | RIA Art. 14 | Supervisión humana | Panel de supervisión en el frontend; **las decisiones aún no se persisten** | `frontend-piloto/js/app.js` | Parcial |
 | RIA Art. 15 | Exactitud y solidez | Cálculo determinista, abstención con p < 0,80, suite de tests | `tests/` | Implementado |
+| RIA Art. 4 (modificado por el Ómnibus) | Los proveedores y responsables del despliegue adoptan **medidas de apoyo** a la alfabetización en IA de su personal, sin garantizar un nivel concreto | Falta documentar cómo apoyamos la alfabetización de quien use la herramienta (guía de uso, ficha pública) | Documentación | Pendiente |
+| RIA Art. 4 bis (nuevo, Ómnibus) | Base **excepcional** para tratar categorías especiales de datos cuando sea **estrictamente necesario** para detectar y corregir sesgos, con garantías: sin alternativa con datos sintéticos o anonimizados, pseudonimización, acceso controlado, sin cesión a terceros, supresión al corregir el sesgo y registro de por qué era necesario | No tratamos categorías especiales de datos con ese fin: el género percibido no es categoría especial y los vectores faciales se descartan. Las garantías coinciden con nuestras prácticas (supresión, sin cesión, registro) | ADR-0004, `compliance.py` | **No la invocamos**; consulta abierta |
 | Proyecto de ley, Art. 12 | Inventario, delegado/a de IA y evaluación de sesgo | `MODEL_CARD.md` y README recogen proveedor, responsable y categorización del sistema | Documentación | Alineado |
 
 ---
@@ -59,10 +67,10 @@ Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo 
 
 * **Positivas:** decisiones justificadas con cita, un calendario realista (sin sobrerreaccionar a fechas que el Ómnibus ha movido) y una declaración honesta sobre qué es norma y qué es referencia.
 * **Compromisos y riesgos:**
-  * Las fechas del Ómnibus proceden de fuentes secundarias hasta contrastar el DOUE a mano.
+  * El Ómnibus está contrastado con el texto oficial del DOUE; un cambio posterior de calendario habría que revisarlo.
   * El decaimiento del proyecto está verificado en el BOE (Real Decreto 806/2026) y en la ficha del expediente en congreso.es («Concluido - (Caducado)» desde el 06/10/2026).
   * La clasificación de AIASN como «riesgo limitado» es una interpretación del equipo.
-* **Preguntas abiertas para Ángela Gasch y Karina Gibert:** (1) ¿Confirman la clasificación de la categorización de género percibido (Anexo III.1.b frente al Art. 50.3)? (2) ¿Quién es, en un despliegue, el *deployer* que debe informar a las personas expuestas? (3) ¿Se ha publicado alguna guía de la AESIA sobre categorización biométrica?
+* **Preguntas abiertas para Ángela Gasch y Karina Gibert:** (1) ¿Confirman la clasificación de la categorización de género percibido (Anexo III.1.b frente al Art. 50.3)? (2) ¿Quién es, en un despliegue, el *deployer* que debe informar a las personas expuestas? (3) ¿Se ha publicado alguna guía de la AESIA sobre categorización biométrica? (4) ¿Podría el nuevo Art. 4 bis respaldar el tratamiento biométrico transitorio para auditar sesgos, o solo cubre los sesgos de los propios sistemas de IA?
 
 ## 5. Fuentes
 
@@ -70,4 +78,4 @@ Desde el 14 de octubre se han ido concretando dos novedades que afectan a cómo 
 * Ficha del expediente 121/000096 en congreso.es (consultada el 28/10/2026), Situación actual «Concluido - (Caducado)»: https://www.congreso.es/es/busqueda-de-iniciativas?p_p_id=iniciativas&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view&_iniciativas_mode=mostrarDetalle&_iniciativas_legislatura=XV&_iniciativas_id=121%2F000096
 * Real Decreto 806/2026, de 5 de octubre, de disolución del Congreso de los Diputados y del Senado y de convocatoria de elecciones (BOE-A-2026-20742, 06/10/2026): https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-20742
 * Reglamento (UE) 2024/1689 (DOUE, 12/07/2024): ejemplar en `documentacion-tecnica/admin_y_bases/`.
-* Reglamento (UE) 2026/1744 (Ómnibus Digital de IA), DOUE 24/07/2026: **texto oficial pendiente de contrastar** en EUR-Lex.
+* Reglamento (UE) 2026/1744 (Ómnibus Digital de IA), de 8 de julio de 2026, DOUE L 2026/1744, 24/07/2026 (ELI: http://data.europa.eu/eli/reg/2026/1744/oj): texto oficial leído y contrastado (copia aportada por Alba el 28/10/2026).

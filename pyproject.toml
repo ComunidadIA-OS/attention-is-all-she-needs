@@ -55,6 +55,7 @@ worker = [
     "easyocr>=1.7.2",
     "gdown>=5.0",
     "insightface>=0.7.3",
+    "langfuse>=4.0",   # traces of the LLM calls (LANGFUSE_ENABLED); LiteLLM sends them
     "lap>=0.5.12",   # required by the ultralytics trackers
     "litellm>=1.60.2",
     "mivolo",

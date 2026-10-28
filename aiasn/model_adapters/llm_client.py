@@ -5,6 +5,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from aiasn import langfuse_client
 from aiasn.settings import LlmSettings
 
 Schema = TypeVar("Schema", bound=BaseModel)
@@ -31,6 +32,7 @@ class LiteLLMClient(LLMClient):
         response = litellm.completion(
             model=self.cfg.model, api_base=self.cfg.base_url, api_key=self.token, temperature=self.cfg.temperature,
             timeout=self.cfg.timeout, num_retries=self.cfg.retries, response_format=schema,
+            metadata=langfuse_client.metadata(schema.__name__),   # only read when Langfuse is on
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}])
         return schema.model_validate_json(response.choices[0].message.content)
 

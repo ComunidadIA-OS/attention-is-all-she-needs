@@ -97,8 +97,8 @@ document.querySelector('.sky').addEventListener('mouseleave',()=>{hover=null;sho
 const read=$('read');
 function showDefault(){
   read.innerHTML=LIVE
-    ?`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su <b>tamaño</b> es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
-    :`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
+    ?`<h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su tamaño es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
+    :`<h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
 }
 function sharedWith(id){
   const w=(DATA.shared||[]).filter(s=>s[0]===id||s[1]===id).map(s=>[pr(s[0]===id?s[1]:s[0]),s[2]]).sort((a,b)=>b[1]-a[1]);

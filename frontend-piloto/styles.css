@@ -73,7 +73,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .legend .gl{box-shadow:0 0 8px 1px currentColor}
 
 .read{background:linear-gradient(180deg,var(--sky-1),var(--sky-0));color:var(--sky-fg);padding:24px;display:flex;flex-direction:column}
-.read .rtag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sky-faint)}
 .read h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-top:7px;color:var(--sky-fg)}
 .read .cue{margin-top:18px;display:flex;flex-direction:column;gap:14px}
 .read .cue div{font-size:12.5px;color:var(--sky-mut);padding-left:17px;position:relative}

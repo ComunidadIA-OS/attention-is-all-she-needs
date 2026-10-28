@@ -162,7 +162,6 @@
     });
 
     const screen = byGender(mt.pantalla_pct), voice = byGender(mt.voz_pct);
-    const refs = mt.referentes || {};
     const sp = v.salvaguarda_paridad || {};
 
     const roles = {};
@@ -194,7 +193,6 @@
       screen: screen,
       voice: voice,
       ratio: num((mt.ratio_voz_pantalla || {}).mujer),
-      refs: { f: refs.mujer || 0, m: refs.hombre || 0 },
       washing: { on: Boolean(v.alerta_equality_washing), text: v.motivo_alerta || "" },
       underrep: { on: Boolean(v.alerta_infrarrepresentacion), text: v.motivo_infrarrepresentacion || "" },
       parity: { ok: sp.cumple === true, cuota: num(sp.cuota_femenina), suelo: num(sp.suelo_femenino_exigido) },

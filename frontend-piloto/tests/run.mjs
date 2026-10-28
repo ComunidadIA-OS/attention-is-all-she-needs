@@ -131,7 +131,6 @@ test("themes by gender, most female-leaning first", () => {
 
 test("verdict figures are the API ones, none computed here", () => {
   assert.deepEqual([v.screen, v.voice, v.ratio], [{ f: 40, m: 50 }, { f: 25, m: 75 }, 0.42]);
-  assert.deepEqual(v.refs, { f: 0, m: 2 });
   assert.deepEqual(v.parity, { ok: false, cuota: 0.25, suelo: 0.4 });
   assert.deepEqual(v.underrep, { on: true, text: "Por debajo del 40 %." });
   assert.deepEqual(v.coverage, { voz: 0, pantalla: 10 });

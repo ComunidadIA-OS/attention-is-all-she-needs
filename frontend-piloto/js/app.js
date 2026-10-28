@@ -210,7 +210,7 @@ function renderLive(v,empty=false){
   $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
   $('v-ratio-s').textContent=empty?'':v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
   if(empty)$('v-screen-s').textContent='';
-  $('v-refs').textContent=empty?'—':`${v.refs.f} : ${v.refs.m}`;
+  $('v-people').textContent=empty?'—':`${v.power.distinct.f} : ${v.power.distinct.m}`;
   flag($('flag-1'),v.underrep.on,v.underrep.on
     ?`<b>Infrarrepresentación.</b> ${esc(v.underrep.text)}`
     :'<b>Infrarrepresentación</b> — <b>no activada</b>: las mujeres alcanzan el 40 % del tiempo en pantalla, o hablan más de lo que aparecen.');
@@ -251,17 +251,16 @@ function renderLive(v,empty=false){
     +`<div class="q-note">Los tres cuadrantes de Vilaplana: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
 
   // iii · poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
-  document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: cuántas personas distintas, dónde y cuánto ocupan en el plano y a quién se cita como referente.';
+  document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: dónde y cuánto ocupan en el plano y a quién se cita como referente.';
   const fig=(x,g)=>`<td class="fig ${g}">${empty?PEND:x}</td>`;
   $('power').innerHTML=
-    `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
     `<tr><td>Centralidad media en plano<span class="who">1 en el centro del plano, 0 en una esquina</span></td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
     `<tr><td>Área media en plano<span class="who">parte del encuadre que ocupan</span></td>${fig(v.power.area.f==null?'—':es1(v.power.area.f*100)+' %','f')}${fig(v.power.area.m==null?'—':es1(v.power.area.m*100)+' %','m')}</tr>`+
-    `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
+    `<tr><td>Referentes citados</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
 
   // iii · who is cited as a reference, by whom
   const old=$('refs-list');if(old)old.remove();
-  if(!empty)$('power').closest('table').insertAdjacentHTML('afterend',`<div class="refs" id="refs-list"><div class="refs-t">Referentes citados</div>`
+  if(!empty)$('power').closest('table').insertAdjacentHTML('afterend',`<div class="refs" id="refs-list"><div class="refs-t">A quién se cita</div>`
     +(v.power.references.length?'<ul>'+v.power.references.map(r=>`<li><span class="rchip ${r.g==='f'||r.g==='m'?r.g:'u'}">${esc(r.name)}</span><span class="who">${gname(r.g).toLowerCase()} · ${r.times} ${r.times===1?'vez':'veces'} · por ${r.by.map(esc).join(', ')||'—'}</span></li>`).join('')+'</ul>'
       :'<div class="who">Nadie cita a ninguna persona como referente en este vídeo.</div>')+'</div>');
 

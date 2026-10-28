@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
-<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Poder</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
@@ -52,7 +52,7 @@ SPDX-License-Identifier: Apache-2.0
     <div class="verdict" id="s-veredicto">
       <div class="vcell"><div class="vk">Tiempo en pantalla · mujeres</div><div id="v-screen" class="vv tnum" style="color:var(--sky-f)">26,8<span class="unit">%</span></div><div id="v-screen-s" class="vs">frente al 69 % de hombres</div></div>
       <div class="vcell"><div class="vk">Ratio voz / pantalla · mujeres</div><div id="v-ratio" class="vv tnum" style="color:var(--sky-crit)">0,71</div><div id="v-ratio-s" class="vs">aparecen más de lo que hablan</div></div>
-      <div class="vcell"><div class="vk">Referentes citados · M : H</div><div id="v-refs" class="vv tnum">1 : 7</div><div id="v-refs-s" class="vs">a quién se cita como autoridad</div></div>
+      <div class="vcell"><div class="vk">Personas distintas · M : H</div><div id="v-people" class="vv tnum">3 : 4</div><div class="vs">cuántas mujeres y hombres intervienen</div></div>
       <div class="vflag" id="flag-1" style="grid-column:1/-1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0ZM12 9v4M12 17h.01"/></svg>
         <div><b>Infrarrepresentación con brecha de voz.</b> 26,8 % del tiempo en pantalla —por debajo del objetivo legal del 40 %— y solo 19 % del tiempo de voz: la presencia visible no se traduce en voz.</div>
@@ -96,16 +96,15 @@ SPDX-License-Identifier: Apache-2.0
           <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
         </div>
         <div>
-          <div class="ex-head" id="s-poder"><span class="ex-rn">iii</span><div><h3>El reparto del poder</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
+          <div class="ex-head" id="s-poder"><span class="ex-rn">iii</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
           <table class="ledger">
-            <caption class="sr-only">Señales de reparto de poder en la pieza, por género</caption>
+            <caption class="sr-only">Señales de rol protagonista en la pieza, por género</caption>
             <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
             <tbody id="power">
               <tr><td>Abre y cierra el acto<span class="who">Marc Vidal, moderador</span></td><td class="fig">0</td><td class="fig m">2</td></tr>
-              <tr><td>Personas distintas</td><td class="fig f">3</td><td class="fig m">4</td></tr>
               <tr><td>Centralidad media en plano</td><td class="fig f">0,38</td><td class="fig m">0,62</td></tr>
               <tr><td>Interrupciones recibidas</td><td class="fig f">8</td><td class="fig m">2</td></tr>
-              <tr><td>Veces citado como referente</td><td class="fig f">1</td><td class="fig m">7</td></tr>
+              <tr><td>Referentes citados</td><td class="fig f">1</td><td class="fig m">7</td></tr>
             </tbody>
           </table>
         </div>

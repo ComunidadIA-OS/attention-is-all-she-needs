@@ -238,6 +238,32 @@ O, desde el navegador, abre el front en <http://localhost:8080>: «Elegir vídeo
 
 ---
 
+## 🧭 Estado actual y hoja de ruta (a 28/10/2026)
+
+AIASN es un **prototipo** del reto. Esta sección dice con claridad qué hay, qué está en revisión y qué **se pretende hacer y falta**, para que nadie lo confunda con una funcionalidad ya disponible.
+
+**Hecho en v0.1.0 (rama `dev`):** pipelines de audio, vídeo y NLP con extracción abierta; cálculo determinista de métricas (4 cuadrantes, ratio voz/pantalla, TIF en tres estados, alertas); arquitectura *medallion* (bronze, silver, gold) con trazabilidad por vídeo; API FastAPI con procesado de un vídeo cada vez; frontend piloto (HTML/JS) con panel de revisión de personas con género dudoso; contenedores con Docker Compose; documentación de gobernanza (ADR, fichas, checklist ético).
+
+**En curso (PRs abiertas):** [#28](https://github.com/ComunidadIA-OS/attention-is-all-she-needs/pull/28) primer piloto `dev` → `main` · [#29](https://github.com/ComunidadIA-OS/attention-is-all-she-needs/pull/29) observabilidad opcional con Langfuse · [#30](https://github.com/ComunidadIA-OS/attention-is-all-she-needs/pull/30) `ARCHITECTURE.md` · [#31](https://github.com/ComunidadIA-OS/attention-is-all-she-needs/pull/31) alineación de la documentación y posición normativa · [#32](https://github.com/ComunidadIA-OS/attention-is-all-she-needs/pull/32) borrado de medios al terminar y retirada de la edad.
+
+**Pretendemos hacer y está pendiente (previsto para v1.0 y posteriores):**
+
+| Área | Qué falta | Dónde se detalla |
+| :--- | :--- | :--- |
+| **Seguridad del despliegue** | **HTTPS (TLS)**, autenticación y control de acceso por roles, CORS restringido, cifrado en reposo, aislar el lanzador de contenedores (hoy la API monta `docker.sock`) y análisis de vulnerabilidades en dependencias. **Hoy la API y el front no deben exponerse a Internet.** | `docs/marco_normativo_y_mercado.md` (punto 11 del checklist), Anexo C del [borrador de contrato](./docs/contrato_servicios_y_condiciones_de_uso_borrador.md) |
+| **Privacidad y conservación** | Borrado automático de `tmp/` y `landing/` (PR #32, pendiente de revisión) y plazo de conservación de las tablas derivadas | `ETHICS_CHECKLIST.md` (3.5) |
+| **Supervisión humana** | Guardar las decisiones del panel de revisión, botón «Asumo / No asumo» con identificador pseudonimizado, que la revisión condicione el informe e integrar `emitir_sello_auditoria` en la API | `ETHICS_CHECKLIST.md` (1.1), [ADR-0005](./docs/adr/0005-tratamiento-incertidumbre-abstencion-hitl.md) |
+| **Atribución del género** | Decidir el género solo con evidencias textuales y dejar cara y voz en un modo de investigación (**propuesta, sin implementar**) | [ADR-0013](./docs/adr/0013-atribucion-de-genero-por-evidencias-textuales.md) |
+| **Vistas por rol y capa ciudadana** | Vistas operadora, auditora y ciudadana; valoraciones de la ciudadanía y QR real (hoy solo existe una maqueta en una rama de diseño) | `ETHICS_CHECKLIST.md` (1.3) |
+| **Escala** | Cola de procesado (hoy un vídeo cada vez; la API responde 409 si hay otro en marcha) | `aiasn/api/app.py` (responde 409 si ya hay un vídeo en proceso) |
+| **Licencias** | Sustituir Ultralytics YOLO (AGPL-3.0) por un adaptador permisivo (YOLOX) y revisar la licencia de los pesos faciales (InsightFace: uso no comercial) | Sección «Aislamiento de Licencias» de este README |
+| **Validación** | *Benchmark* con `Àgora` (WER, DER, recuperación del 14 % de habla femenina), medición de las cifras de ahorro y coste, y ejecución reproducible sobre los vídeos CC BY-SA | `DATASET_CARD.md`, `TESTING.md` |
+| **Observabilidad** | Langfuse (opcional, solo llamadas al modelo de lenguaje; PR #29), registro de accesos y de decisiones de revisión | PR #29 |
+| **Marco legal para terceros** | Revisión jurídica del contrato de servicios y de la plantilla del Art. 50.3, contrato de encargo con OVHcloud, y revisión de las directrices finales de la Comisión sobre clasificación (previstas a finales de 2026) | [ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md), [plantilla Art. 50.3](./docs/plantilla_aviso_art50_y_encargo_tratamiento.md) |
+| **Fichas** | Versión final de `MODEL_CARD.md` y `DATASET_CARD.md` | PR de fichas |
+
+Seguimiento día a día en el [tablero del equipo](https://github.com/users/ewigkeitt-cloud/projects/1).
+
 ## ⚖️ Declaración de Transparencia (EU AI Act - Art. 50)
 
 En cumplimiento del **Reglamento (UE) 2024/1689 (Reglamento Europeo de IA)** y de la obligación legal vigente desde agosto de 2026:

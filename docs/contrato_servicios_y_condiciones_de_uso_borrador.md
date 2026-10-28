@@ -176,3 +176,4 @@ Referencia de buenas prácticas voluntarias: Guía 11 de ciberseguridad del pilo
 - Comisión Europea, directrices sobre el Art. 50 (C(2026) 5054, 20/07/2026) y borrador de clasificación de alto riesgo (19/05/2026).
 - Licencia Apache-2.0, §6 (marcas), §7 (exclusión de garantías) y §8 (limitación de responsabilidad).
 - `CODE_OF_CONDUCT.md`, `ETHICS_CHECKLIST.md`, ADR-0012 y ADR-0013, y `docs/plantilla_aviso_art50_y_encargo_tratamiento.md`.
+

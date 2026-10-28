@@ -20,8 +20,7 @@ const SAMPLE={
   topics:{"Tecnología":[.50,.37],"Liderazgo":[.70,.42],"Financiación":[.72,.24],"Ética":[.39,.53],"Cuidados":[.26,.85]},
   tlabel:{"Cuidados":"Cuidados / Conciliación"},
   edges:[["marc","Tecnología"],["marc","Liderazgo"],["javier","Tecnología"],["javier","Liderazgo"],["javier","Financiación"],["carlos","Tecnología"],["carlos","Financiación"],["elena","Ética"],["elena","Tecnología"],["nuria","Cuidados"],["nuria","Ética"],["laura","Cuidados"]],
-  themes:[{t:"Cuidados / Conciliación",f:46,m:6},{t:"Ética",f:28,m:14},{t:"Tecnología",f:18,m:34},{t:"Liderazgo",f:5,m:24},{t:"Financiación",f:3,m:22}],
-  irm:[{k:"Presencia en pantalla",v:27,w:"peso 30 %"},{k:"Tiempo de voz",v:19,w:"peso 30 %"},{k:"Protagonismo visual",v:38,w:"peso 20 %"},{k:"Autoridad · citas, abre/cierra",v:13,w:"peso 20 %"}]
+  themes:[{t:"Cuidados / Conciliación",f:46,m:6},{t:"Ética",f:28,m:14},{t:"Tecnología",f:18,m:34},{t:"Liderazgo",f:5,m:24},{t:"Financiación",f:3,m:22}]
 };
 let DATA=SAMPLE,LIVE=false;
 const pr=id=>DATA.people.find(p=>p.id===id);
@@ -155,18 +154,6 @@ function renderDumb(rows){
   });
 }
 
-/* ---- composición índice ---- */
-const comp=$('comp');
-function renderComp(){
-  comp.innerHTML='';
-  if(!DATA.irm){comp.innerHTML='<div class="comp-pend">El índice de representación y sus cuatro señales aún no los calcula el backend: se mostrarán aquí cuando el equipo cierre su definición.</div>';return}
-  DATA.irm.forEach(r=>{
-    const c=r.v==null?'var(--faint)':r.v<40?'var(--crit)':r.v<70?'var(--warn)':'var(--good)';
-    const el=document.createElement('div');el.className='crow';
-    el.innerHTML=`<div><div class="cl">${r.k}</div><div class="cw">${r.w}</div></div><div class="cbar"><div class="cv" style="color:${c}">${r.v==null?'—':r.v}</div><div class="ctrack"><i style="width:${r.v||0}%;background:${c}"></i></div></div>`;
-    comp.appendChild(el);
-  });
-}
 
 /* ---- tabla para lectores de pantalla ---- */
 function renderSr(){
@@ -210,9 +197,7 @@ function renderLive(v,empty=false){
   // the roles section keeps the expert comparison in its card; authority, ideas and titles go in a row below it
   if(!$('role-more'))document.querySelector('.role').insertAdjacentHTML('afterend','<div class="role-more" id="role-more"><div id="role-auth"></div><div id="role-side"></div></div>');
   $('role-auth').innerHTML=$('role-side').innerHTML='';
-  const W8={pantalla:['Presencia en pantalla','peso 30 %'],voz:['Tiempo de voz','peso 20 %'],espacio:['Protagonismo espacial · centralidad y área','peso 25 %'],autoridad:['Autoridad · provisional','peso 25 %']};
-  const irm=v.index?Object.keys(W8).map(k=>({k:W8[k][0],w:W8[k][1],v:v.index.dims[k]==null?null:Math.round(v.index.dims[k])})):null;
-  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes,irm:irm};
+  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes};
   const nf=v.people.filter(p=>p.g==='f').length,nm=v.people.filter(p=>p.g==='m').length;
   const tag=$('src-tag');tag.textContent=empty?'Sin datos':'Datos reales';tag.classList.toggle('real',!empty);
   $('src-desc').textContent=empty?'Elige un vídeo y pulsa «Analizar».':`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
@@ -220,18 +205,6 @@ function renderLive(v,empty=false){
   cv.setAttribute('aria-label','Constelación del vídeo analizado: cada estrella es una persona; su tamaño es su tiempo de voz y su color y forma, el género percibido. Los datos completos están en la tabla siguiente.');
 
   // veredicto
-  // the index: the gauge in the verdict, and its four signals in "Cómo se compone el índice"
-  const ix=v.index,ixc=x=>x<40?'#f0576e':x<70?'#e0b14a':'#6fcf9f';   // the sky's critical, warning and good hues
-  if(ix){
-    const t=Math.round(ix.total);
-    $('gauge').setAttribute('aria-label',`Índice de Representación ${t} sobre 100${ix.provisional?', provisional':''}`);
-    $('gauge-arc').style.display='';$('gauge-arc').setAttribute('stroke-dasharray',`${t} 100`);$('gauge-arc').setAttribute('stroke',ixc(t));
-    $('gauge-num').textContent=t;$('gauge-num').setAttribute('fill',ixc(t));
-  }else{
-    $('gauge').setAttribute('aria-label','Índice de Representación sin datos');
-    $('gauge-arc').style.display='none';$('gauge-num').textContent='—';
-  }
-  document.querySelector('.vgauge .vg-s').textContent=ix&&ix.provisional?'0–100 · legal 40 · provisional':'0–100 · legal 40';
   $('v-screen').innerHTML=pct(v.screen.f);
   $('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`+(v.coverage.pantalla?` · ${es1(v.coverage.pantalla)} % sin género conocido`:'');
   $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
@@ -327,9 +300,7 @@ function renderLive(v,empty=false){
   $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||`<div class="cl-note">${empty?'Sin datos.':'No hay turnos clasificados por tono en este vídeo.'}</div>`;
   $('clima-note').innerHTML='Los registros <b>técnico-asertivo</b> y <b>disenso</b> son los que una mesa suele leer como autoridad. No se trata de que un registro valga más: lo relevante es cómo se reparten entre géneros.';
 
-  // vi · índice y cierre
-  $('cap-comp').textContent='Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Provisional: la señal de autoridad aún está por definir con el equipo; hoy compara la voz desde la autoridad de mujeres y hombres y cuenta las mujeres entre los referentes citados.';
-  renderComp();
+  // cierre
   const mk=$('mk-screen');mk.hidden=empty;   // the scale ends at 50 %: beyond it, at the edge with its figure
   mk.style.left=Math.min(97,Math.max(0,(v.screen.f||0)*2))+'%';mk.querySelector('.num').textContent=es1(v.screen.f)+' %';
   $('foot-data').innerHTML=empty?'<b>Sin datos</b>: analiza un vídeo para ver aquí sus resultados. Proyecto de código abierto.':`<b>Datos reales</b> del vídeo ${esc(v.videoId)}, procesados por el backend de AIASN. Lo que el backend aún no calcula se marca con «—». Proyecto de código abierto.`;
@@ -463,7 +434,7 @@ async function openVideo(id){
   catch(err){failed(err,'No se pudo abrir el vídeo: ')}
 }
 
-renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderComp();renderSr();
+renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderSr();
 buildOverlay();showDefault();resize();start();
 function repaint(){resize();if(reduce)draw(performance.now())}
 requestAnimationFrame(repaint);addEventListener('load',repaint);

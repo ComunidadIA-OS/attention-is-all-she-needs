@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
-<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Poder</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li><a href="#s-indice">Índice</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Poder</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
@@ -50,16 +50,6 @@ SPDX-License-Identifier: Apache-2.0
     </div>
     <h2 class="sr-only">Veredicto de la pieza</h2>
     <div class="verdict" id="s-veredicto">
-      <div class="vgauge">
-        <svg id="gauge" viewBox="0 0 118 72" aria-label="Índice de Representación 34 sobre 100">
-          <path d="M11 62 A48 48 0 0 1 107 62" fill="none" stroke="#2a2550" stroke-width="9" stroke-linecap="round"/>
-          <path id="gauge-arc" d="M11 62 A48 48 0 0 1 107 62" fill="none" stroke="#f0576e" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="34 100"/>
-          <line x1="44.2" y1="8.3" x2="48.4" y2="16" stroke="#a98ff5" stroke-width="2"/>
-          <text id="gauge-num" x="59" y="55" text-anchor="middle" fill="#f0576e" style="font-family:var(--mono);font-weight:600;font-size:27px;letter-spacing:-.04em">34</text>
-        </svg>
-        <div><div class="vg-t">Índice de<br>Representación</div><div class="vg-s">0–100 · legal 40</div></div>
-      </div>
-      <div class="sep"></div>
       <div class="vcell"><div class="vk">Tiempo en pantalla · mujeres</div><div id="v-screen" class="vv tnum" style="color:var(--sky-f)">26,8<span class="unit">%</span></div><div id="v-screen-s" class="vs">frente al 69 % de hombres</div></div>
       <div class="vcell"><div class="vk">Ratio voz / pantalla · mujeres</div><div id="v-ratio" class="vv tnum" style="color:var(--sky-crit)">0,71</div><div id="v-ratio-s" class="vs">aparecen más de lo que hablan</div></div>
       <div class="vcell"><div class="vk">Referentes citados · M : H</div><div id="v-refs" class="vv tnum">1 : 7</div><div id="v-refs-s" class="vs">a quién se cita como autoridad</div></div>
@@ -156,7 +146,7 @@ SPDX-License-Identifier: Apache-2.0
       </div>
     </div>
 
-    <div class="ex-block">
+    <div class="ex-block" style="border-bottom:0">
       <div class="ex-head" id="s-clima"><span class="ex-rn">v</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
       <div class="clima">
         <div id="clima-rows"><div class="cl-row">
@@ -185,10 +175,6 @@ SPDX-License-Identifier: Apache-2.0
       </div>
     </div>
 
-    <div class="ex-block" style="border-bottom:0">
-      <div class="ex-head" id="s-indice"><span class="ex-rn">vi</span><div><h3>Cómo se compone el índice</h3><div class="ex-cap" id="cap-comp">Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Ponderación provisional, pendiente de validar con el equipo.</div></div></div>
-      <div class="comp" id="comp" role="img" aria-label="Composición del índice de representación sobre 100: presencia en pantalla 27, tiempo de voz 19, protagonismo visual 38, autoridad 13."></div>
-    </div>
     <div class="ex-block review" id="review" style="border-bottom:0;display:none">
       <div class="ex-head" id="s-supervision"><span class="ex-rn">vii</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (ADR-0005, art. 14 del Reglamento Europeo de IA).</div></div></div>
       <div class="rv-bar"><span id="rv-count" role="status" aria-live="polite"></span><span class="rv-note">Las decisiones aún no se guardan: se pierden al recargar.</span></div>

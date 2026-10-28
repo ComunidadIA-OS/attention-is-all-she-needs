@@ -137,7 +137,6 @@ test("verdict figures are the API ones, none computed here", () => {
   assert.deepEqual(v.coverage, { voz: 0, pantalla: 10 });
   assert.deepEqual([v.tif.estado, v.tif.motivo, v.tif.puntuacion], ["no_supera", "una_mujer", null]);
   assert.equal(v.washing.on, false);
-  assert.deepEqual(v.index, { total: 76.6, provisional: true, dims: { pantalla: 89.5, voz: 64.7, espacio: 97.3, autoridad: null } });
 });
 
 test("easy read: the API summary, one sentence per item", () => {

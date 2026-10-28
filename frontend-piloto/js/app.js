@@ -248,7 +248,7 @@ function renderLive(v,empty=false){
   if(!empty&&(v.quadrants.f||v.quadrants.m))dumb.insertAdjacentHTML('afterend',`<div class="quads" id="quads"><div class="q-t">Cómo se reparte su tiempo</div>`
     +qbar('Mujeres',v.quadrants.f)+qbar('Hombres',v.quadrants.m)
     +`<div class="q-lg">${QS.map(([k,l])=>`<span><i class="q ${k}"></i>${l}</span>`).join('')}</div>`
-    +`<div class="q-note">Los tres cuadrantes de Vilaplana: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
+    +`<div class="q-note">Tres cuadrantes: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
 
   // iii · poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
   document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: dónde y cuánto ocupan en el plano y a quién se cita como referente.';

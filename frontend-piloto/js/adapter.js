@@ -100,6 +100,18 @@
     return Array.from(by.values()).map((p) => Object.assign(p, { segundos: round1(p.segundos) }));
   }
 
+  /** The latest human decision stored for the video (POST /videos/{id}/supervision), or none yet: pending. */
+  function review(sup) {
+    const last = (sup && sup.ultima) || {};
+    return { personas: Object.assign({}, last.personas || {}), estado: last.estado || "pendiente",
+             motivo: last.motivo || null, fecha: last.fecha || null };
+  }
+
+  /** «Asumo» only once every doubtful person has a decision, «No determinable» included (spec 21, 8.4). */
+  function canAssume(doubtful, personas) {
+    return doubtful.every((p) => Boolean(personas[p.id]));
+  }
+
   /** Seconds of each gender in the three quadrants of the fusion (KPI parity), and their share of that gender's
    * time in them: speaking on screen (C1), on screen without speaking (C2), speaking off screen (C3). */
   function quadrants(kpis) {
@@ -219,6 +231,7 @@
       clima: { f: tone("mujer"), m: tone("hombre") },
       quadrants: quadrants(r.kpis || []),
       doubtful: doubtfulPeople(r.segmentos_dudosos || [], labelOf),
+      review: review(payload && payload.supervision),
       authority: {   // shares within each gender, as the API gives them
         voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),
         title: byGender((r.autoridad || {}).presentacion_con_cargo_pct)
@@ -226,5 +239,5 @@
     };
   }
 
-  return { toView: toView, layout: layout, easySentences: easySentences };
+  return { toView: toView, layout: layout, easySentences: easySentences, canAssume: canAssume };
 });

@@ -165,6 +165,16 @@ test("spans to review grouped by person, with the name the graph gives them", ()
   assert.deepEqual(v.doubtful.map((d) => [d.persona, d.spans, d.segundos]), [["Persona 3", [[100.5, 109.4], [110, 112]], 5.1]]);
 });
 
+test("the human review: pending until stored, and «Asumo» only with every doubtful person decided", () => {
+  assert.deepEqual(v.review, { personas: {}, estado: "pendiente", motivo: null, fecha: null });
+  const stored = A.toView({ ...PAYLOAD, supervision: { decisiones: 2, ultima: { personas: { p3: "mujer" }, estado: "asumido",
+                                                                               motivo: null, fecha: "2026-10-29T18:00:00+00:00" } } });
+  assert.deepEqual([stored.review.estado, stored.review.personas], ["asumido", { p3: "mujer" }]);
+  assert.equal(A.canAssume(v.doubtful, {}), false);
+  assert.equal(A.canAssume(v.doubtful, { [v.doubtful[0].id]: "no_determinable" }), true);
+  assert.equal(A.canAssume([], {}), true);   // nothing doubtful: the result can be assumed as it is
+});
+
 test("each gender's time in the three quadrants", () => {
   assert.deepEqual(v.quadrants.f, { total: 50, secs: { c1: 20, c2: 20, c3: 10 }, pct: { c1: 40, c2: 40, c3: 20 } });
   assert.equal(v.quadrants.m, null);   // no seconds for men in this payload

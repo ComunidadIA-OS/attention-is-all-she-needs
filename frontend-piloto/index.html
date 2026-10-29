@@ -172,8 +172,18 @@ SPDX-License-Identifier: Apache-2.0
 
     <div class="ex-block review" id="review" style="border-bottom:0;display:none">
       <div class="ex-head" id="s-supervision"><span class="ex-rn">6</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (art. 14 del Reglamento Europeo de IA).</div></div></div>
-      <div class="rv-bar"><span id="rv-count" role="status" aria-live="polite"></span><span class="rv-note">Las decisiones aún no se guardan: se pierden al recargar.</span></div>
+      <div class="rv-bar"><span id="rv-count" role="status" aria-live="polite"></span><span class="rv-note">Métricas calculadas antes de la revisión humana: las decisiones se guardan, pero no las recalculan.</span></div>
       <table class="ledger rv-table"><caption class="sr-only">Tramos por revisar</caption><thead><tr><th>Persona</th><th>Cuándo sale</th><th>Su género</th></tr></thead><tbody id="rv-body"></tbody></table>
+      <div class="rv-verdict">
+        <p class="rv-q" id="rv-q"><b>Dictamen.</b> ¿Asumes estas métricas?</p>
+        <div class="rv-choices" role="group" aria-labelledby="rv-q">
+          <button type="button" class="rv-btn" id="rv-assume" aria-pressed="false" aria-describedby="rv-state">Asumo</button>
+          <button type="button" class="rv-btn" id="rv-reject" aria-pressed="false" aria-describedby="rv-state">No asumo</button>
+        </div>
+        <div class="rv-reason" id="rv-reason" hidden><label for="rv-motivo">Motivo</label>
+          <select id="rv-motivo"><option value="">Elige un motivo…</option><option value="datos_insuficientes">Datos insuficientes</option><option value="error_deteccion">Error de detección</option><option value="otro">Otro</option></select></div>
+        <p class="rv-state" id="rv-state" role="status" aria-live="polite"></p>
+      </div>
     </div>
   </section>
 

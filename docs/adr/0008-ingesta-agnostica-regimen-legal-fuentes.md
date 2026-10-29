@@ -11,7 +11,7 @@
 
 Ante dudas sobre los derechos de autor de emisiones audiovisuales públicas y los términos de servicio de plataformas de vídeo, el equipo elevó consulta formal a la **Dra. Karina Gibert**. Las directrices vinculantes recibidas confirmaron:
 1. *Audio:* Los datos de habla de TV3 son gentileza académica formal de la UPC (grupo del Dr. Adrián Fonollosa).
-2. *Vídeo y Prototipo:* El equipo debe posicionarse como un equipo de profesionales independiente que entrega una auditoría ética y *compliant*.
+2. *Vídeo y Prototipo:* El equipo debe posicionarse como un equipo de profesionales independiente que entrega una auditoría ética y *compliant*. **Esta orientación no concede permiso sobre vídeos concretos** (por ejemplo, los de «Quanta, quanta IA!»): el amparo para analizarlos es la excepción de minería de textos y datos, pendiente de validar, y sin redistribuir los ficheros.
 
 ## Opciones Consideradas
 

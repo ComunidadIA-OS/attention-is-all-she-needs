@@ -129,7 +129,7 @@ A5 ==>|"Multiplica invitaciones"| A1
 
 **Probado en** Ubuntu 24.04 (x86_64): AMD Ryzen 7 7840HS (16 hilos), 30 GB de RAM y GPU NVIDIA RTX 4060 Laptop (8 GB), con Docker 29 y Python 3.13. También en CPU, sin GPU, con 2 núcleos y 6 GB de RAM. En Windows, macOS (Apple Silicon) y Linux ARM las dependencias se resuelven, pero el procesado no se ha probado.
 
-> ⚠️ **Sin GPU funciona, pero es lento.** Con 2 núcleos y 6 GB de RAM, un vídeo de 84 s tardó **45 min**: 32 min la detección de personas y 10 el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 9 min. La primera vez se suman unos minutos para descargar los modelos (~1,6 GB).
+> ⚠️ **Sin GPU funciona, pero es lento.** Un vídeo de 84 s tardó **12 min** con 16 hilos y **45 min** con 2 núcleos y 6 GB de RAM (con GPU, 2 min); casi todo es la detección de personas y el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 9 min. La primera vez se suman unos minutos para descargar los modelos (~1,6 GB).
 
 ### Requisitos
 
@@ -173,6 +173,15 @@ Entre otros, validan:
 docker compose --profile jobs build   # imágenes de la API, el front y el worker (este ocupa ~12,5 GB: 10–20 min la primera vez)
 docker compose up -d                  # almacén S3, API en http://localhost:8000 y front en http://localhost:8080
 ```
+
+**Sin GPU NVIDIA**, o para ocupar menos disco, construye el *worker* sin CUDA: pon `WORKER_DEVICE=cpu` en `.env` antes del `build` (o `WORKER_DEVICE=cpu docker compose --profile jobs build worker`). No hay que cambiar nada más:
+
+| *Worker* | Imagen | Vídeo de 84 s (`csic_javier_oroz.mp4`) |
+|---|---|---|
+| `gpu` (por defecto) | ~12,5 GB | 108 s con una RTX 4060 Laptop |
+| `cpu` | ~4,4 GB | 708 s (~12 min) con 16 hilos, sin GPU |
+
+Los modelos (~1,6 GB, en el volumen `aiasn-models`) y las versiones de las librerías (`uv.lock`) son los mismos; solo cambia el PyTorch y el ONNX Runtime sin CUDA. En la prueba, los KPIs por género salieron iguales; cambió algún *track* corto sin género determinado y el número de ideas, que varía entre ejecuciones porque el LLM no es determinista. Con la imagen `cpu` en un equipo con GPU, la GPU no se usa.
 
 * El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker-<video_id>` por vídeo, y lo borra al lanzar el siguiente. Su log: `docker logs aiasn-worker-<video_id>`.
 * La API usa el socket de Docker, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.

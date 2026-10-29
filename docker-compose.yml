@@ -54,7 +54,11 @@ services:
     restart: unless-stopped
 
   worker:
-    build: { context: ., dockerfile: docker/worker.Dockerfile }
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      args:
+        DEVICE: ${WORKER_DEVICE:-gpu}   # cpu: without the CUDA libraries, for machines with no NVIDIA GPU
     image: aiasn-worker
     profiles: [jobs]   # only built here; the API runs it with the models volume
 

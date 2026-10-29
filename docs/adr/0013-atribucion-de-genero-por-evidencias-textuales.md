@@ -87,7 +87,7 @@ El panel de revisión **no permite asignar género mirando a la persona**. La pe
    * Opción `silver.gender_sources`. **Durante la transición, el valor por defecto sigue siendo el actual (`video`, `audio`)** para no cambiar los tests, la demostración ni los resultados ya publicados. Se pasará a `texto` por defecto solo después de medir la cobertura en el vídeo de prueba (punto 3) y con acuerdo del equipo.
    * Ampliación del extractor de menciones para la autorreferencia.
    * Pruebas unitarias y cambio del panel de revisión.
-3. **Verificación:** ejecutar el vídeo de prueba `robot-social-csic-1526` con las dos configuraciones y comparar género atribuido, cobertura y alertas. El resultado se documenta antes de fijar el mínimo de cobertura.
+3. **Verificación:** ejecutar uno de los vídeos de la demostración (véase `DATASET_CARD.md`, sección 1.1) con las dos configuraciones y comparar género atribuido, cobertura y alertas. El resultado se documenta antes de fijar el mínimo de cobertura.
 
 ## 6. Fuentes
 

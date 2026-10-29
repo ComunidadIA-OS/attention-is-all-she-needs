@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aiasn.model_adapters.gender_direction import PAIRS, GenderDirection, read_word2vec
+from aiasn.model_adapters.gender_direction import PAIRS, GenderDirection, download_word2vec, read_word2vec
 from aiasn.core.silver.word_bias import WordBiasSilver
 from aiasn.settings import BiasSettings, Settings
 
@@ -38,6 +38,17 @@ def test_read_word2vec_keeps_the_most_frequent_words(tmp_path):
     words, vectors = read_word2vec(tiny_model(tmp_path), limit=4)
     assert words == ["woman", "man", "girl", "boy"]
     assert vectors.shape == (4, 3) and np.allclose(np.linalg.norm(vectors, axis=1), 1)
+
+
+def test_download_keeps_only_the_words_read(tmp_path):
+    source = tiny_model(tmp_path)
+    cfg = BiasSettings(model_path=tmp_path / "models" / "w2v.bin.gz", url=source.as_uri(), vocab_limit=4)
+    download_word2vec(cfg)
+    with gzip.open(cfg.model_path) as f:
+        assert f.readline() == b"4 3\n"
+    (words, vectors), (expected_words, expected) = read_word2vec(cfg.model_path, 100), read_word2vec(source, 4)
+    assert words == expected_words and np.array_equal(vectors, expected)
+    assert not cfg.model_path.with_name("w2v.bin.gz.part").exists()
 
 
 def test_score_is_the_projection_on_the_gender_direction(tmp_path):

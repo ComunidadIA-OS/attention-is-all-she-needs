@@ -1,5 +1,6 @@
 '''Model used to transcribe speech and tell speakers apart (Whisper with diarization on OVHcloud AI Endpoints)'''
 
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -22,9 +23,17 @@ class Transcriber:
         data = {"model": self.cfg.model, "response_format": "verbose_json", "diarize": "true"}
         if self.cfg.language:
             data["language"] = self.cfg.language
-        with open(audio, "rb") as f:
-            r = requests.post(f"{self.cfg.base_url}/audio/transcriptions", headers={"Authorization": f"Bearer {self.token}"},
-                              files={"file": (audio.name, f)}, data=data, timeout=self.cfg.timeout)
+        for attempt in range(self.cfg.retries + 1):
+            try:
+                with open(audio, "rb") as f:
+                    r = requests.post(f"{self.cfg.base_url}/audio/transcriptions",
+                                      headers={"Authorization": f"Bearer {self.token}"},
+                                      files={"file": (audio.name, f)}, data=data, timeout=self.cfg.timeout)
+                break
+            except requests.ConnectionError:   # the endpoint sometimes drops the connection: try again
+                if attempt == self.cfg.retries:
+                    raise
+                time.sleep(5)
         if not r.ok:
             raise RuntimeError(f"Transcription failed ({r.status_code}): {r.text[:500]}")
         return self.parse(r.json())

@@ -12,7 +12,7 @@ from aiasn.model_adapters.nlp.base import found, speaker_id, transcript
 from aiasn.model_adapters.nlp.captions import Caption, CaptionExtractor, Captions
 from aiasn.model_adapters.nlp.ideas import Idea, IdeaExtractor, Ideas
 from aiasn.model_adapters.nlp.mentions import Mention, MentionExtractor, Mentions
-from aiasn.model_adapters.nlp.references import Reference, ReferenceExtractor, References
+from aiasn.model_adapters.nlp.references import looks_like_a_name, Reference, ReferenceExtractor, References
 from aiasn.model_adapters.nlp.roles import Piece, RoleExtractor, SpeakerRole
 from aiasn.model_adapters.nlp import tone
 from aiasn.model_adapters.nlp.tone import (LlmToneClassifier, Tones, TurnTone, ZeroShotToneClassifier,
@@ -69,9 +69,9 @@ TOPICS = Topics(topics=[
         TopicSpeaker(speaker="Speaker_1", evidence="Ada Lovelace")]),           # the same topic and speaker again
 ])
 REFERENCES = References(references=[
-    Reference(reasoning="pionera de la informática, citada como inspiración", is_reference=True, turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
-    Reference(reasoning="inventora citada como ejemplo", is_reference=True, turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
-    Reference(reasoning="matemático citado como referente", is_reference=True, turn=8, name="Alan Turing", literal="Turing", gender="M"),
+    Reference(reasoning="pionera de la informática, citada como inspiración", is_person=True, is_well_known=True, is_reference=True, turn=3, name="Ada Lovelace", literal="Ada Lovelace", gender="F"),
+    Reference(reasoning="inventora citada como ejemplo", is_person=True, is_well_known=True, is_reference=True, turn=1, name="Hedy Lamarr", literal="Heidi Lamar", gender="F"),
+    Reference(reasoning="matemático citado como referente", is_person=True, is_well_known=True, is_reference=True, turn=8, name="Alan Turing", literal="Turing", gender="M"),
 ])
 PIECE = Piece(format="interview", roles=[
     SpeakerRole(speaker="Speaker_0", role="interviewer", role_es="entrevistador/a"),
@@ -137,12 +137,26 @@ def test_topics_by_speaker_over_the_whole_piece():
 
 
 def test_references_reason_first_and_keep_only_those_the_reasoning_accepts():
-    assert list(Reference.model_fields)[:2] == ["reasoning", "is_reference"]   # the model reasons, then decides
-    called = Reference(reasoning="se le habla directamente: no es un referente", is_reference=False, turn=0,
-                       name="Pepe", literal="Pepe", gender="M")
-    refs = References(references=[*REFERENCES.references, called])
+    assert list(Reference.model_fields)[:4] == ["reasoning", "is_person", "is_well_known", "is_reference"]   # the model reasons, then decides
+    called = Reference(reasoning="se le habla directamente: no es un referente", is_person=True, is_well_known=False,
+                       is_reference=False, turn=0, name="Pepe", literal="Pepe", gender="M")
+    # Not a person, even if the model still calls it a reference
+    era = Reference(reasoning="movimiento intelectual citado como ejemplo", is_person=False, is_well_known=True,
+                    is_reference=True, turn=3,
+                    name="La Ilustración", literal="Ada Lovelace", gender="M")
+    # A real person, but not a public figure
+    colleague = Reference(reasoning="alguien del público citado", is_person=True, is_well_known=False,
+                          is_reference=True, turn=3, name="Juan Febles", literal="Ada Lovelace", gender="M")
+    refs = References(references=[*REFERENCES.references, called, era, colleague])
     r = ReferenceExtractor(FakeLLM({References: refs}), NlpSettings()).extract(TURNS)
-    assert "Pepe" not in r.name.tolist() and "reasoning" not in r.columns
+    assert not {"Pepe", "La Ilustración", "Juan Febles"} & set(r.name) and "reasoning" not in r.columns
+
+
+def test_references_must_look_like_a_name():
+    assert looks_like_a_name("Ada Lovelace", "Ada Lovelace") and looks_like_a_name("Alan Turing", "Turing")
+    assert looks_like_a_name("Platón", "Platón") and looks_like_a_name("Santiago Ramón y Cajal", "Ramón y Cajal")
+    assert not looks_like_a_name("Ilustración francesa", "la ilustración francesa")
+    assert not looks_like_a_name("La Ilustración", "la Ilustración")   # said after an article
 
 
 def test_references_take_the_speaker_who_mentions_them():
@@ -251,6 +265,14 @@ def test_a_failing_task_does_not_stop_the_others(tmp_path):
         assert ctx.lake.exists("bronze", table, "vid1") == (table != "nlp_ideas")
 
 
+def test_references_use_their_own_model():
+    tasks = NlpPipeline(NlpSettings(references_model="openai/gpt-oss-120b")).tasks
+    models = {type(t).__name__: t.llm.cfg.model for t in tasks if hasattr(t, "llm")}
+    assert models.pop("ReferenceExtractor") == "openai/gpt-oss-120b"
+    assert set(models.values()) == {NlpSettings().llm.model}   # the other tasks keep the general model
+    assert NlpPipeline(NlpSettings(references_model=None)).tasks[2].llm.cfg.model == NlpSettings().llm.model
+
+
 def test_nlp_pipeline_needs_the_transcript(tmp_path):
     settings = Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp")
     ctx = RunContext.for_video(settings, "vid1")
@@ -338,9 +360,13 @@ TEXTS = pd.DataFrame(
     + ocr(125, ("Investigador del ICMAT", 213.0), ("David_Ríos Insua", 180.0))
     + ocr(150, ("David_Ríos Insua", 180.0), ("Investigador del ICMAT", 213.0))
     + ocr(175, ("David Ríos Insua", 174.0), ("Investigador del ICMAT", 213.0)))
-CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT",
-                                      title_en="researcher", title_authority=True),
-                              Caption(block=9, name="Nadie", title=None, title_en=None, title_authority=None)])
+CAPTIONS = Captions(captions=[
+    # The model answers every block; a "no" is dropped even if it still gives a name
+    Caption(block=0, is_person_caption=False, name="Top Secret Rosies", title=None, title_en=None,
+            title_authority=None),
+    Caption(block=1, is_person_caption=True, name="David Ríos Insua", title="Investigador del ICMAT",
+            title_en="researcher", title_authority=True),
+    Caption(block=9, is_person_caption=True, name="Nadie", title=None, title_en=None, title_authority=None)])
 
 
 def test_captions_read_each_distinct_block_once():
@@ -375,8 +401,8 @@ class CaptionLLM(FakeLLM):
     def complete(self, system, user, schema):
         self.calls.append((system, user, schema))
         lines = user.splitlines()
-        return Captions(captions=[Caption(block=i, name="David Ríos Insua", title="Investigador del ICMAT",
-                                          title_en="researcher", title_authority=True)
+        return Captions(captions=[Caption(block=i, is_person_caption=True, name="David Ríos Insua",
+                                          title="Investigador del ICMAT", title_en="researcher", title_authority=True)
                                   for i, line in enumerate(lines) if "David" in line])
 
 

@@ -18,6 +18,18 @@ PAIRS = [("woman", "man"), ("girl", "boy"), ("she", "he"), ("mother", "father"),
          ("female", "male"), ("her", "his"), ("herself", "himself"), ("Mary", "John")]
 
 
+def records(f, n: int, dim: int):
+    """The next `n` (word, vector bytes) of an open binary word2vec file, after its header."""
+    for _ in range(n):
+        word = bytearray()
+        while (c := f.read(1)) != b" ":
+            if not c:
+                raise EOFError("word2vec file cut short")
+            if c != b"\n":   # some files end each vector with a newline
+                word += c
+        yield bytes(word), f.read(4 * dim)
+
+
 def read_word2vec(path: Path, limit: int) -> tuple[list[str], np.ndarray]:
     """The first `limit` words of a binary word2vec file (sorted by frequency) and their unit vectors.
 
@@ -28,22 +40,26 @@ def read_word2vec(path: Path, limit: int) -> tuple[list[str], np.ndarray]:
         total, dim = map(int, f.readline().split())
         n = min(limit, total)
         words, vectors = [], np.empty((n, dim), np.float32)
-        for i in range(n):
-            word = bytearray()
-            while (c := f.read(1)) != b" ":
-                if c != b"\n":   # some files end each vector with a newline
-                    word += c
+        for i, (word, vector) in enumerate(records(f, n, dim)):
             words.append(word.decode("utf-8", errors="replace"))
-            vectors[i] = np.frombuffer(f.read(4 * dim), np.float32)
+            vectors[i] = np.frombuffer(vector, np.float32)
     vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
     return words, vectors
 
 
 def download_word2vec(cfg: BiasSettings) -> None:
+    """Only the first `vocab_limit` words, the only ones read: the file is sorted by frequency, so the download stops
+    there (w2vNEWS: ~0.5 GB of 1.6 GB, and that much less on disk)."""
     target = cfg.model_path.expanduser()
     target.parent.mkdir(parents=True, exist_ok=True)
     partial = target.with_name(target.name + ".part")   # a cut download is not taken as the model
-    urllib.request.urlretrieve(cfg.url, partial)
+    with urllib.request.urlopen(cfg.url) as response, io.BufferedReader(gzip.GzipFile(fileobj=response)) as f, \
+            gzip.open(partial, "wb", compresslevel=6) as out:
+        total, dim = map(int, f.readline().split())
+        n = min(cfg.vocab_limit, total)
+        out.write(f"{n} {dim}\n".encode())
+        for word, vector in records(f, n, dim):
+            out.write(word + b" " + vector)
     partial.rename(target)
 
 

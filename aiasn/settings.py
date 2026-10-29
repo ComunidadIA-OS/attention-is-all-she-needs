@@ -75,6 +75,7 @@ class TranscriberSettings(BaseSettings):
     token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
     language: str | None = None                    # ca, es, en...; None lets Whisper detect it
     timeout: float = Field(600, gt=0)              # seconds
+    retries: int = Field(2, ge=0)                  # after a dropped connection
 
 
 class VoiceGenderClassifierSettings(BaseModel):
@@ -128,6 +129,8 @@ class ToneSettings(BaseModel):
 
 class NlpSettings(BaseModel):
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    # References need a model that tells cited public figures from panelists, institutes and eras; None: `llm.model`
+    references_model: str | None = "openai/gpt-oss-120b"
     tone: ToneSettings = Field(default_factory=ToneSettings)
     device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time

@@ -42,7 +42,7 @@ class WordBiasSilver(Transform):
             from aiasn.model_adapters.gender_direction import GenderDirection, download_word2vec   # numpy only
             cfg = self.settings.bias
             if not cfg.model_path.expanduser().is_file() and cfg.url:
-                log.info("Downloading word2vec (1.6 GB) from %s", cfg.url)
+                log.info("Downloading the first %d words of word2vec from %s", cfg.vocab_limit, cfg.url)
                 try:
                     download_word2vec(cfg)
                 except OSError as e:

@@ -17,7 +17,10 @@ COLUMNS = ["frame", "shot", "text", "name", "title", "title_en", "title_authorit
 
 class Caption(BaseModel):
     block: int = Field(description="Número del bloque, como en [n]")
-    name: str = Field(description="Nombre de la persona tal como aparece, corrigiendo solo errores evidentes del OCR")
+    is_person_caption: bool = Field(description="true solo si el bloque presenta a una persona concreta con su nombre "
+                                                "y apellido; false en cualquier otro caso")
+    name: str | None = Field(description="Nombre de la persona tal como aparece, corrigiendo solo errores evidentes "
+                                         "del OCR; null si is_person_caption es false")
     title: str | None = Field(description="Cargo, profesión o institución que acompaña al nombre; null si no hay")
     title_en: str | None = Field(description="La profesión o cargo principal en inglés, en una o dos palabras en "
                                              "minúscula (researcher, professor, computer scientist...); null si no hay")
@@ -31,11 +34,17 @@ class Captions(BaseModel):
 
 PROMPT = """Recibes los textos que un OCR ha leído en fotogramas de un vídeo (puede haber errores de lectura).
 Cada línea es un bloque: [número de bloque] los textos de un fotograma, de arriba abajo, separados por " | ".
-Indica qué bloques son el rótulo de una persona: su nombre y, si aparece, su cargo, profesión o institución.
-Ignora titulares, nombres de programas o secciones, logotipos, marcas y cualquier otro texto que no presente a una persona.
-Para cada rótulo devuelve: block, name (tal como aparece, corrigiendo solo errores evidentes del OCR como "_" en vez de
-un espacio), title (null si no hay), title_en (la profesión o cargo principal en inglés, en una o dos palabras en
-minúscula: "researcher", "professor", "computer scientist"...; null si no hay cargo) y title_authority:
+Responde a TODOS los bloques, uno por uno, diciendo si cada uno es el rótulo de una persona: su nombre y apellido y, si
+aparece, su cargo, profesión o institución.
+La mayoría de los bloques NO son rótulos: lo normal es responder false. No inventes ni adivines nombres; si dudas, false.
+Son false: titulares, nombres de programas, eventos o secciones, logotipos, marcas, patrocinadores, carteles, fechas,
+números, palabras sueltas o ilegibles, y centros, premios o calles que llevan el nombre de una persona. Ejemplos de
+bloques que son false: "WIKIMANIA 15", "Ask | Google", "BRUKER", "CIB Margarita Salas", "EDICION ONLINE | TIC | MI",
+"ITINERARIOS Cicerón | Biología Estructural para", "Oncinsidod".
+Para cada bloque devuelve block e is_person_caption. Solo si es true, añade también: name (tal como aparece,
+corrigiendo solo errores evidentes del OCR como "_" en vez de un espacio), title (null si no hay), title_en (la
+profesión o cargo principal en inglés, en una o dos palabras en minúscula: "researcher", "professor",
+"computer scientist"...; null si no hay cargo) y title_authority:
 - true si el cargo indica conocimiento experto o autoridad profesional o institucional (catedrática, investigador,
   directora, médica, ingeniero, pedagoga, ministra, presidenta de una asociación...);
 - false si no (estudiante, vecino, paciente, aficionada, familiar...);
@@ -70,4 +79,5 @@ class CaptionExtractor:
         """The captions of one group of blocks, by block key."""
         user = "\n".join(f"[{i}] {text}" for i, text in enumerate(group.text))
         answer = self.llm.complete(PROMPT, user, Captions)
-        return {group.key.iloc[c.block]: c for c in answer.captions if 0 <= c.block < len(group)}
+        return {group.key.iloc[c.block]: c for c in answer.captions
+                if c.is_person_caption and c.name and 0 <= c.block < len(group)}

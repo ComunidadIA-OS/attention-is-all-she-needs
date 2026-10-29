@@ -22,7 +22,7 @@ Nota: Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpe
 | Front | nginx en `:8080` con `frontend-piloto/`; |
 | API | FastAPI en `:8000`. Lanza los workers por `docker.sock`. |
 | Worker | `python -m aiasn.run_pipelines --video-id ID`, un contenedor por vídeo, con GPU NVIDIA si la hay. Modelos locales en el volumen `aiasn-models` (`/models`). |
-| Almacén S3 | SeaweedFS, bucket `s3://aiasn`, Parquet por `video_id=`. Carpetas `landing/` (vídeo subido), `bronze/` (salida de modelos, 10 tablas), `silver/` (personas y hechos, 13 tablas), `gold/` (KPIs y dictamen, 6 tablas) y `runs/` (manifest con el estado de cada paso del pipeline). |
+| Almacén S3 | SeaweedFS, bucket `s3://aiasn`, Parquet por `video_id=`. Carpetas `landing/` (vídeo subido), `bronze/` (salida de modelos, 10 tablas), `silver/` (personas y hechos, 13 tablas), `gold/` (KPIs y dictamen, 6 tablas), `runs/` (manifest con el estado de cada paso del pipeline) y `supervision/` (decisiones de la revisión humana, un fichero por decisión). |
 | OVHcloud AI Endpoints [1] | Whisper large v3 [2] para speech to text; Llama 3.3 70B [3] como LLM y gpt-oss-120b [4] para los referentes. |
 | Langfuse (opcional) | Perfil `langfuse` del compose: trazas de las llamadas al LLM, agrupadas por vídeo. Se activa con `LANGFUSE_ENABLED`. |
 
@@ -214,7 +214,8 @@ flowchart LR
 | Endpoint | Descripción |
 |---|---|
 | `POST /videos` | Guarda el vídeo en `landing/`, deja el manifest en cola y lanza el worker. 409 si ya hay otro en marcha. |
-| `GET /videos/{id}` | Estado y pasos del manifest y, cuando está "ok", el resultado por secciones. Si el worker ha muerto, marca el vídeo como error. |
+| `GET /videos/{id}` | Estado y pasos del manifest y, cuando está "ok", el resultado por secciones y la última decisión de la revisión humana. Si el worker ha muerto, marca el vídeo como error. |
+| `POST /videos/{id}/supervision` | Guarda una decisión de la revisión humana (género de cada persona dudosa, «Asumo» o «No asumo» con su motivo) como un fichero nuevo en `supervision/`, con fecha y huella SHA-256 de las métricas. No recalcula los KPIs. |
 | `GET /videos` | Todos los vídeos del Data Lake con su estado, el más reciente primero. |
 | `GET /health` | Comprueba que la API responde. |
 

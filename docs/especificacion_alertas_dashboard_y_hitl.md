@@ -271,10 +271,10 @@ flowchart TD
 | :--- | :--- |
 | Subir y analizar un vídeo, seguimiento de pasos | ✅ Implementado |
 | Resultado: constelación, veredicto y alertas 1 y 2 | ✅ Implementado |
-| Panel de supervisión por persona (*Mujer / Hombre / No determinable*) | ⚠️ Parcial: **las decisiones solo viven en memoria** y se pierden al recargar |
-| Botones **«Asumo / No asumo»** sobre el dictamen | ❌ Hoja de ruta |
-| Registro con identificador pseudonimizado y bloqueo del informe sin decisión | ❌ Hoja de ruta |
-| Endpoint en la API para guardar las decisiones (por ejemplo POST /videos/{video_id}/supervision) | ❌ Hoja de ruta: hoy la API solo expone /health y /videos |
+| Panel de supervisión por persona (*Mujer / Hombre / No determinable*) | ✅ Implementado: cada decisión se guarda en la API y se recupera al abrir el vídeo |
+| Botones **«Asumo / No asumo»** sobre el dictamen | ✅ Implementado: «Asumo» espera a que todas las personas dudosas tengan decisión y «No asumo» pide el motivo. No recalculan las métricas; la pantalla avisa «Métricas calculadas antes de la revisión humana» |
+| Registro con identificador pseudonimizado y bloqueo del informe sin decisión | ⚠️ Parcial: cada decisión se guarda como un fichero nuevo en `supervision/` del Data Lake, sin sobrescribir las anteriores (fecha, estado, motivo, huella SHA-256 de las métricas y el rol fijo `autodiagnostico_local` como `operador_supervision_id`, sin usuarios en la demo). El informe y su bloqueo siguen en hoja de ruta |
+| Endpoint en la API para guardar las decisiones | ✅ Implementado: `POST /videos/{video_id}/supervision`; `GET /videos/{video_id}` devuelve el resultado y la última decisión |
 | Vistas por rol | ❌ Hoja de ruta: hoy es una única página; «En palabras sencillas» es lo más cercano a una vista no técnica, y la capa ciudadana solo existe como maqueta |
 
 ### 8.6. Alertas

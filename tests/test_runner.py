@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
 # SPDX-License-Identifier: Apache-2.0
 
+from pathlib import Path
+
 import pytest
 
 from aiasn.pipelines.base_pipeline import Pipeline
@@ -136,3 +138,65 @@ def test_nothing_runs_again_when_everything_is_done(tmp_path):
     for _ in range(2):
         process_video("vid1", settings, [[OkPipeline()], [AfterOkPipeline()]], then=[ThenPipeline()])
     assert OkPipeline.runs == AfterOkPipeline.runs == ThenPipeline.runs == 1
+
+
+# Media deleted after the run (data minimisation)
+
+def private_settings(tmp_path, delete: bool = True) -> Settings:
+    return Settings(lake_uri=str(tmp_path / "lake"), tmp_dir=tmp_path / "tmp", privacy={"delete_media_after_run": delete})
+
+
+def staged_media(settings: Settings, tmp_path, video_id: str = "vid1") -> tuple[Path, Path]:
+    """A video in landing and frames in tmp, as the pipelines leave them: (landing folder, tmp folder)."""
+    source = tmp_path / "source.mp4"
+    source.write_bytes(b"video")
+    lake = Lake.from_settings(settings)
+    lake.upload_to_landing(video_id, source)
+    frames = settings.tmp_dir / video_id / "video" / "frames"
+    frames.mkdir(parents=True)
+    (frames / "000001.jpg").write_bytes(b"face")
+    return Path(lake.landing_dir(video_id)), settings.tmp_dir / video_id
+
+
+def test_delete_media_is_opt_in_and_set_by_the_environment(monkeypatch):
+    assert Settings().privacy.delete_media_after_run is False
+    monkeypatch.setenv("PRIVACY__DELETE_MEDIA_AFTER_RUN", "true")
+    assert Settings().privacy.delete_media_after_run is True
+
+
+def test_media_is_kept_by_default(tmp_path):
+    settings = private_settings(tmp_path, delete=False)
+    landing, tmp = staged_media(settings, tmp_path)
+    process_video("vid1", settings, [[OkPipeline()]])
+    assert landing.exists() and tmp.exists()
+
+
+def test_media_is_deleted_after_a_successful_run(tmp_path):
+    settings = private_settings(tmp_path)
+    landing, tmp = staged_media(settings, tmp_path)
+    process_video("vid1", settings, [[OkPipeline()]], then=[ThenPipeline()])
+    assert not landing.exists() and not tmp.exists()
+    assert stored(settings)["status"] == "ok"   # the manifest, like the tables, stays in the lake
+
+
+def test_a_failed_run_deletes_tmp_but_keeps_the_video_to_retry(tmp_path):
+    settings = private_settings(tmp_path)
+    landing, tmp = staged_media(settings, tmp_path)
+    with pytest.raises(RuntimeError, match="boom"):
+        process_video("vid1", settings, [[FailingPipeline()]])
+    assert not tmp.exists() and landing.exists()   # frames with faces go; the source stays for the retry
+    FailingPipeline.fails = False
+    process_video("vid1", settings, [[FailingPipeline()]])
+    assert stored(settings)["status"] == "ok" and not landing.exists()
+
+
+def test_a_failure_to_delete_does_not_fail_the_run(tmp_path, monkeypatch):
+    settings = private_settings(tmp_path)
+    staged_media(settings, tmp_path)
+
+    def boom(self, video_id):
+        raise OSError("store unreachable")
+
+    monkeypatch.setattr(Lake, "delete_landing", boom)
+    process_video("vid1", settings, [[OkPipeline()]])
+    assert stored(settings)["status"] == "ok"

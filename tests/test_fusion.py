@@ -290,7 +290,7 @@ def test_compatibilidad_directa_tablas_bronze_rocio():
         "shot": 0, "track_id": 1, "person_id": 10,
         "x1": 100.0, "y1": 50.0, "x2": 300.0, "y2": 300.0, "head": 1.0,
         "face_x1": 140.0, "face_y1": 60.0, "face_x2": 220.0, "face_y2": 140.0,
-        "gender": "F", "gender_prob": 0.95, "age": 38.0,
+        "gender": "F", "gender_prob": 0.95,
         "frame_width": 640, "frame_height": 360, "speaking_score": 1.2,
         "rotulo_nombre": "Dra. Elena Puig", "rotulo_cargo": "Investigadora",
     }
@@ -298,7 +298,7 @@ def test_compatibilidad_directa_tablas_bronze_rocio():
         "shot": 1, "track_id": 2, "person_id": 20,
         "x1": 120.0, "y1": 50.0, "x2": 320.0, "y2": 300.0, "head": 1.0,
         "face_x1": 160.0, "face_y1": 60.0, "face_x2": 240.0, "face_y2": 140.0,
-        "gender": "F", "gender_prob": 0.92, "age": 44.0,
+        "gender": "F", "gender_prob": 0.92,
         "frame_width": 640, "frame_height": 360, "speaking_score": 0.9,
         "rotulo_nombre": "Dra. Marta Soler", "rotulo_cargo": "Catedratica",
     }

@@ -1,4 +1,7 @@
-'''Model used to estimate perceived gender and age from face and body (MiVOLO v2)'''
+'''Model used to estimate perceived gender from face and body (MiVOLO v2).
+
+MiVOLO also predicts an age; it is never read, kept nor stored (data minimisation: GDPR, EU AI Act).
+'''
 
 import numpy as np
 import pandas as pd
@@ -7,7 +10,7 @@ from transformers import AutoConfig, AutoImageProcessor, AutoModelForImageClassi
 
 from aiasn.settings import GenderEstimatorSettings
 
-COLUMNS = ["gender", "gender_prob", "age"]
+COLUMNS = ["gender", "gender_prob"]
 
 
 class GenderEstimator:
@@ -20,17 +23,16 @@ class GenderEstimator:
         self.processor = AutoImageProcessor.from_pretrained(cfg.model, **hub)
 
     def estimate(self, image: np.ndarray, people: pd.DataFrame) -> pd.DataFrame:
-        """For each person (box x1, y1, x2, y2 and face box face_x1..., NaN if unseen): gender (F/M), its probability and age."""
+        """For each person (box x1, y1, x2, y2 and face box face_x1..., NaN if unseen): gender (F/M) and its probability."""
         if people.empty:
-            return pd.DataFrame(columns=COLUMNS, index=people.index).astype({"gender_prob": float, "age": float})
+            return pd.DataFrame(columns=COLUMNS, index=people.index).astype({"gender_prob": float})
         faces = [_crop(image, b) for b in people[["face_x1", "face_y1", "face_x2", "face_y2"]].to_numpy()]
         bodies = [_crop(image, b) for b in people[["x1", "y1", "x2", "y2"]].to_numpy()]
         with torch.no_grad():
             out = self.model(faces_input=self._pixels(faces), body_input=self._pixels(bodies))
         labels = [self.config.gender_id2label[int(i)] for i in out.gender_class_idx[:, 0]]
         return pd.DataFrame({"gender": ["F" if label == "female" else "M" for label in labels],
-                             "gender_prob": out.gender_probs[:, 0].float().cpu().numpy(),
-                             "age": out.age_output[:, 0].float().cpu().numpy()}, index=people.index)
+                             "gender_prob": out.gender_probs[:, 0].float().cpu().numpy()}, index=people.index)
 
     def _pixels(self, crops: list[np.ndarray | None]) -> torch.Tensor:
         return self.processor(images=crops)["pixel_values"].to(self.device, self.model.dtype)

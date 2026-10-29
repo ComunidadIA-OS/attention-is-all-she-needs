@@ -109,7 +109,7 @@ class VideoPipeline(Pipeline):
     def _detect(self, frames: list[Path]) -> tuple[pd.DataFrame, list[pd.DataFrame]]:
         """Faces in every frame (TalkNet needs them all) and people in 1 of every `stride` frames.
 
-        Returns the people, with their face box and embedding, gender and age and the frame size, and the faces of each frame.
+        Returns the people, with their face box and embedding, gender and the frame size, and the faces of each frame.
         """
         self.person_tracker.reset()
         rows, faces = [], []
@@ -126,7 +126,7 @@ class VideoPipeline(Pipeline):
             rows.append(people.assign(frame=f, frame_width=image.shape[1], frame_height=image.shape[0]))
         detections = pd.concat(rows, ignore_index=True)
         return detections[["frame", "track_id", "x1", "y1", "x2", "y2", "head",
-                           "face_x1", "face_y1", "face_x2", "face_y2", "gender", "gender_prob", "age",
+                           "face_x1", "face_y1", "face_x2", "face_y2", "gender", "gender_prob",
                            "frame_width", "frame_height", "embedding"]], faces
 
     @staticmethod

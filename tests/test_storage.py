@@ -1,3 +1,4 @@
+import io
 import uuid
 from pathlib import Path
 
@@ -83,3 +84,13 @@ def test_manifest_lists_the_videos(lake):
     for video_id in ("b", "a"):
         Manifest(lake, video_id)
     assert Manifest.video_ids(lake) == ["a", "b"]
+
+
+def test_delete_landing(lake):
+    lake.write_landing("vid1", "video.mp4", io.BytesIO(b"one"))
+    lake.write_landing("vid2", "video.mp4", io.BytesIO(b"two"))
+    lake.delete_landing("vid1")
+    with pytest.raises(FileNotFoundError):
+        lake.landing_file("vid1")
+    assert lake.landing_file("vid2").endswith("video.mp4")   # only that video goes
+    lake.delete_landing("vid1")   # nothing there: no error

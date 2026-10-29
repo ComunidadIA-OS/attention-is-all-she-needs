@@ -118,6 +118,8 @@ class ToneSettings(BaseModel):
 
 class NlpSettings(BaseModel):
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    # References need a model that tells cited public figures from panelists, institutes and eras; None: `llm.model`
+    references_model: str | None = "openai/gpt-oss-120b"
     tone: ToneSettings = Field(default_factory=ToneSettings)
     device: Literal["auto", "cuda", "cpu"] = "auto"   # local models (zero-shot tone)
     max_parallel: int = Field(6, gt=0)             # tasks (LLM calls) at the same time

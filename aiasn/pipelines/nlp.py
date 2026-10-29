@@ -24,8 +24,10 @@ class NlpPipeline(Pipeline):
 
     def __init__(self, cfg: NlpSettings, llm: LLMClient | None = None):
         self.cfg = cfg
+        references = llm or make_llm_client(cfg.llm.model_copy(update={"model": cfg.references_model})
+                                            if cfg.references_model else cfg.llm)
         llm = llm or make_llm_client(cfg.llm)
-        self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg), ReferenceExtractor(llm, cfg),
+        self.tasks = [MentionExtractor(llm, cfg), TopicExtractor(llm, cfg), ReferenceExtractor(references, cfg),
                       RoleExtractor(llm, cfg), IdeaExtractor(llm, cfg), make_tone_classifier(llm, cfg)]
 
     def run(self, ctx: RunContext) -> None:

@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -188,6 +189,32 @@ def test_transcriber_request(monkeypatch, tmp_path):
 
     Transcriber(TranscriberSettings(token="abc", language="ca")).transcribe(audio)
     assert calls[1][1]["data"]["language"] == "ca"
+
+
+def test_transcriber_retries_a_dropped_connection(monkeypatch, tmp_path):
+    calls = []
+
+    def post(url, **kw):
+        calls.append(url)
+        if len(calls) == 1:
+            raise requests.ConnectionError("Remote end closed connection without response")
+        return FakeResponse(body=ASR_RESPONSE)
+
+    monkeypatch.setattr(requests, "post", post)
+    monkeypatch.setattr(time, "sleep", lambda s: None)
+    audio = tmp_path / "audio.wav"
+    audio.write_bytes(b"RIFF")
+    assert len(Transcriber(TranscriberSettings(token="abc")).transcribe(audio)) == 3 and len(calls) == 2
+
+    def drop(url, **kw):
+        calls.append(url)
+        raise requests.ConnectionError("Remote end closed connection without response")
+
+    calls.clear()
+    monkeypatch.setattr(requests, "post", drop)
+    with pytest.raises(requests.ConnectionError):   # gives up after `retries`
+        Transcriber(TranscriberSettings(token="abc", retries=1)).transcribe(audio)
+    assert len(calls) == 2
 
 
 def test_transcriber_errors(monkeypatch, tmp_path):

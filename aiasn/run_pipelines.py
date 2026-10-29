@@ -7,6 +7,7 @@
 
 import argparse
 import logging
+import shutil
 from pathlib import Path
 
 from aiasn.pipelines.audio import AudioPipeline
@@ -29,7 +30,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
+    if not shutil.which("ffmpeg"):
+        parser.error("ffmpeg not found: install it (see the README) and try again")
     settings = Settings()
+    if not settings.audio.transcriber.token.get_secret_value().strip():
+        logging.warning("OVH_AI_ENDPOINTS_ACCESS_TOKEN is not set: transcription and the LLM steps will fail")
     video_id = args.video_id
     if args.file:
         video_id = args.file.stem

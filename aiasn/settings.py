@@ -75,6 +75,7 @@ class TranscriberSettings(BaseSettings):
     token: SecretStr = Field(SecretStr(""), validation_alias=AliasChoices("token", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"))
     language: str | None = None                    # ca, es, en...; None lets Whisper detect it
     timeout: float = Field(600, gt=0)              # seconds
+    retries: int = Field(2, ge=0)                  # after a dropped connection
 
 
 class VoiceGenderClassifierSettings(BaseModel):

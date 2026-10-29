@@ -338,9 +338,13 @@ TEXTS = pd.DataFrame(
     + ocr(125, ("Investigador del ICMAT", 213.0), ("David_Ríos Insua", 180.0))
     + ocr(150, ("David_Ríos Insua", 180.0), ("Investigador del ICMAT", 213.0))
     + ocr(175, ("David Ríos Insua", 174.0), ("Investigador del ICMAT", 213.0)))
-CAPTIONS = Captions(captions=[Caption(block=1, name="David Ríos Insua", title="Investigador del ICMAT",
-                                      title_en="researcher", title_authority=True),
-                              Caption(block=9, name="Nadie", title=None, title_en=None, title_authority=None)])
+CAPTIONS = Captions(captions=[
+    # The model answers every block; a "no" is dropped even if it still gives a name
+    Caption(block=0, is_person_caption=False, name="Top Secret Rosies", title=None, title_en=None,
+            title_authority=None),
+    Caption(block=1, is_person_caption=True, name="David Ríos Insua", title="Investigador del ICMAT",
+            title_en="researcher", title_authority=True),
+    Caption(block=9, is_person_caption=True, name="Nadie", title=None, title_en=None, title_authority=None)])
 
 
 def test_captions_read_each_distinct_block_once():
@@ -375,8 +379,8 @@ class CaptionLLM(FakeLLM):
     def complete(self, system, user, schema):
         self.calls.append((system, user, schema))
         lines = user.splitlines()
-        return Captions(captions=[Caption(block=i, name="David Ríos Insua", title="Investigador del ICMAT",
-                                          title_en="researcher", title_authority=True)
+        return Captions(captions=[Caption(block=i, is_person_caption=True, name="David Ríos Insua",
+                                          title="Investigador del ICMAT", title_en="researcher", title_authority=True)
                                   for i, line in enumerate(lines) if "David" in line])
 
 

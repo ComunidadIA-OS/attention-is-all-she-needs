@@ -108,6 +108,16 @@ class LlmSettings(BaseSettings):
     retries: int = Field(2, ge=0)
 
 
+class LangfuseSettings(BaseSettings):
+    """Traces of the LLM calls in a Langfuse server (docker compose --profile langfuse). From LANGFUSE_* or .env."""
+    model_config = SettingsConfigDict(env_prefix="LANGFUSE_", env_file=".env", extra="ignore")
+
+    enabled: bool = False
+    public_key: str = ""
+    secret_key: SecretStr = SecretStr("")
+    base_url: str = "http://localhost:3000"   # LANGFUSE_BASE_URL, as the Langfuse SDK names it
+
+
 class ToneSettings(BaseModel):
     method: Literal["llm", "zero_shot"] = "llm"
     zero_shot_model: str = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"   # multilingual NLI
@@ -204,7 +214,15 @@ class WorkerContainerSettings(BaseModel):
     gpu: bool = True                               # when Docker has it (NVIDIA Container Toolkit); else the CPU
     # Variables of the API's environment passed on, by name or prefix: the worker reads the same settings
     env: list[str] = ["LAKE_URI", "STORAGE__", "MODELS_DIR", "HF_HOME", "OVH_", "TMP_DIR",
-                      "VIDEO__", "AUDIO__", "NLP__", "SILVER__", "BIAS__"]
+                      "VIDEO__", "AUDIO__", "NLP__", "SILVER__", "BIAS__", "PRIVACY__",
+                      "LANGFUSE_ENABLED", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL"]
+
+
+class PrivacySettings(BaseModel):
+    """Data minimisation (GDPR, EU AI Act): what is kept of a video once it is processed."""
+    # Delete its tmp folder (frames with faces, audio) and, if every step succeeded, the uploaded video in landing.
+    # The tables of the lake stay. Off by default: debugging and the annotated video need those files.
+    delete_media_after_run: bool = False
 
 
 class ApiSettings(BaseModel):
@@ -230,6 +248,8 @@ class Settings(BaseSettings):
     silver: SilverSettings = Field(default_factory=SilverSettings)
     bias: BiasSettings = Field(default_factory=BiasSettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
+    privacy: PrivacySettings = Field(default_factory=PrivacySettings)
+    langfuse: LangfuseSettings = Field(default_factory=LangfuseSettings)
 
     @model_validator(mode="after")
     def _paths_in_models_dir(self) -> "Settings":

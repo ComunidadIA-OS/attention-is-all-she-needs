@@ -20,8 +20,7 @@ const SAMPLE={
   topics:{"Tecnología":[.50,.37],"Liderazgo":[.70,.42],"Financiación":[.72,.24],"Ética":[.39,.53],"Cuidados":[.26,.85]},
   tlabel:{"Cuidados":"Cuidados / Conciliación"},
   edges:[["marc","Tecnología"],["marc","Liderazgo"],["javier","Tecnología"],["javier","Liderazgo"],["javier","Financiación"],["carlos","Tecnología"],["carlos","Financiación"],["elena","Ética"],["elena","Tecnología"],["nuria","Cuidados"],["nuria","Ética"],["laura","Cuidados"]],
-  themes:[{t:"Cuidados / Conciliación",f:46,m:6},{t:"Ética",f:28,m:14},{t:"Tecnología",f:18,m:34},{t:"Liderazgo",f:5,m:24},{t:"Financiación",f:3,m:22}],
-  irm:[{k:"Presencia en pantalla",v:27,w:"peso 30 %"},{k:"Tiempo de voz",v:19,w:"peso 30 %"},{k:"Protagonismo visual",v:38,w:"peso 20 %"},{k:"Autoridad · citas, abre/cierra",v:13,w:"peso 20 %"}]
+  themes:[{t:"Cuidados / Conciliación",f:46,m:6},{t:"Ética",f:28,m:14},{t:"Tecnología",f:18,m:34},{t:"Liderazgo",f:5,m:24},{t:"Financiación",f:3,m:22}]
 };
 let DATA=SAMPLE,LIVE=false;
 const pr=id=>DATA.people.find(p=>p.id===id);
@@ -97,8 +96,8 @@ document.querySelector('.sky').addEventListener('mouseleave',()=>{hover=null;sho
 const read=$('read');
 function showDefault(){
   read.innerHTML=LIVE
-    ?`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su <b>tamaño</b> es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
-    :`<div class="rtag">Observación</div><h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
+    ?`<h2>Lee el cielo</h2><div class="cue"><div>Cada estrella es una persona del vídeo; su tamaño es su tiempo de voz.</div><div class="m">El color y la forma indican el género percibido; los rombos, los temas de los que se habla.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`
+    :`<h2>Lee el cielo</h2><div class="cue"><div>Las estrellas grandes concentran el <b>protagonismo</b>. Aquí, casi todas son de hombres.</div><div class="m">Las mujeres brillan en oro, pero son estrellas <b>pequeñas</b>: presentes, poco protagonistas.</div><div class="a">Pasa el cursor o toca una estrella para ver su ficha.</div></div>`;
 }
 function sharedWith(id){
   const w=(DATA.shared||[]).filter(s=>s[0]===id||s[1]===id).map(s=>[pr(s[0]===id?s[1]:s[0]),s[2]]).sort((a,b)=>b[1]-a[1]);
@@ -155,18 +154,6 @@ function renderDumb(rows){
   });
 }
 
-/* ---- composición índice ---- */
-const comp=$('comp');
-function renderComp(){
-  comp.innerHTML='';
-  if(!DATA.irm){comp.innerHTML='<div class="comp-pend">El índice de representación y sus cuatro señales aún no los calcula el backend: se mostrarán aquí cuando el equipo cierre su definición.</div>';return}
-  DATA.irm.forEach(r=>{
-    const c=r.v==null?'var(--faint)':r.v<40?'var(--crit)':r.v<70?'var(--warn)':'var(--good)';
-    const el=document.createElement('div');el.className='crow';
-    el.innerHTML=`<div><div class="cl">${r.k}</div><div class="cw">${r.w}</div></div><div class="cbar"><div class="cv" style="color:${c}">${r.v==null?'—':r.v}</div><div class="ctrack"><i style="width:${r.v||0}%;background:${c}"></i></div></div>`;
-    comp.appendChild(el);
-  });
-}
 
 /* ---- tabla para lectores de pantalla ---- */
 function renderSr(){
@@ -206,13 +193,11 @@ const pct=x=>x==null?'—':es1(x)+'<span class="unit">%</span>';
 
 // empty: no video analysed yet, every figure blank (no sample data passed off as a result)
 function renderLive(v,empty=false){
-  LIVE=true;document.body.classList.add('live-data');   // real data: the report stacks its sections (see styles.css)
-  // the roles section keeps the expert comparison in its card; authority, ideas and titles go in a row below it
+  LIVE=true;document.body.classList.add('live-data');   // real data: the roles section adds a row below it (see styles.css)
+  // the roles section keeps the expert comparison in its card; authority and titles go in a row below it
   if(!$('role-more'))document.querySelector('.role').insertAdjacentHTML('afterend','<div class="role-more" id="role-more"><div id="role-auth"></div><div id="role-side"></div></div>');
   $('role-auth').innerHTML=$('role-side').innerHTML='';
-  const W8={pantalla:['Presencia en pantalla','peso 30 %'],voz:['Tiempo de voz','peso 20 %'],espacio:['Protagonismo espacial · centralidad y área','peso 25 %'],autoridad:['Autoridad · provisional','peso 25 %']};
-  const irm=v.index?Object.keys(W8).map(k=>({k:W8[k][0],w:W8[k][1],v:v.index.dims[k]==null?null:Math.round(v.index.dims[k])})):null;
-  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes,irm:irm};
+  DATA={people:v.people,topics:v.topics,tlabel:{},edges:v.edges,shared:v.shared,themes:v.themes};
   const nf=v.people.filter(p=>p.g==='f').length,nm=v.people.filter(p=>p.g==='m').length;
   const tag=$('src-tag');tag.textContent=empty?'Sin datos':'Datos reales';tag.classList.toggle('real',!empty);
   $('src-desc').textContent=empty?'Elige un vídeo y pulsa «Analizar».':`Vídeo analizado · ${v.videoId} · ${v.people.length} personas`;
@@ -220,24 +205,12 @@ function renderLive(v,empty=false){
   cv.setAttribute('aria-label','Constelación del vídeo analizado: cada estrella es una persona; su tamaño es su tiempo de voz y su color y forma, el género percibido. Los datos completos están en la tabla siguiente.');
 
   // veredicto
-  // the index: the gauge in the verdict, and its four signals in "Cómo se compone el índice"
-  const ix=v.index,ixc=x=>x<40?'#f0576e':x<70?'#e0b14a':'#6fcf9f';   // the sky's critical, warning and good hues
-  if(ix){
-    const t=Math.round(ix.total);
-    $('gauge').setAttribute('aria-label',`Índice de Representación ${t} sobre 100${ix.provisional?', provisional':''}`);
-    $('gauge-arc').style.display='';$('gauge-arc').setAttribute('stroke-dasharray',`${t} 100`);$('gauge-arc').setAttribute('stroke',ixc(t));
-    $('gauge-num').textContent=t;$('gauge-num').setAttribute('fill',ixc(t));
-  }else{
-    $('gauge').setAttribute('aria-label','Índice de Representación sin datos');
-    $('gauge-arc').style.display='none';$('gauge-num').textContent='—';
-  }
-  document.querySelector('.vgauge .vg-s').textContent=ix&&ix.provisional?'0–100 · legal 40 · provisional':'0–100 · legal 40';
   $('v-screen').innerHTML=pct(v.screen.f);
   $('v-screen-s').textContent=`frente al ${es1(v.screen.m)} % de hombres`+(v.coverage.pantalla?` · ${es1(v.coverage.pantalla)} % sin género conocido`:'');
   $('v-ratio').textContent=es2(v.ratio);$('v-ratio').style.color=v.ratio!=null&&v.ratio<1?'var(--sky-crit)':'var(--sky-fg)';
   $('v-ratio-s').textContent=empty?'':v.ratio==null?'sin tiempo en pantalla':v.ratio<1?'aparecen más de lo que hablan':'hablan tanto o más de lo que aparecen';
   if(empty)$('v-screen-s').textContent='';
-  $('v-refs').textContent=empty?'—':`${v.refs.f} : ${v.refs.m}`;
+  $('v-people').textContent=empty?'—':`${v.power.distinct.f} : ${v.power.distinct.m}`;
   flag($('flag-1'),v.underrep.on,v.underrep.on
     ?`<b>Infrarrepresentación.</b> ${esc(v.underrep.text)}`
     :'<b>Infrarrepresentación</b> — <b>no activada</b>: las mujeres alcanzan el 40 % del tiempo en pantalla, o hablan más de lo que aparecen.');
@@ -256,13 +229,13 @@ function renderLive(v,empty=false){
   $('ez-list').innerHTML=(v.easy.length?v.easy:[empty?'Todavía no se ha analizado ningún vídeo.':'El resumen en lectura fácil no está disponible para este vídeo.']).map(s=>`<li>${esc(s)}</li>`).join('')
     +'<li>Cuando el sistema no está seguro de quién es una persona, una persona del equipo lo revisa.</li>';
 
-  // i · temas
-  $('cap-themes').textContent='De qué habla cada género: cada tema, como porcentaje de los temas que tratan sus hablantes. Bajo cada tema, ◆ su sesgo de género en word2vec: hacia la derecha se asocia a «she», hacia la izquierda a «he».';
-  $('mirror-mc').textContent=empty?'':'◆ sesgo word2vec';
+  // temas
+  $('cap-themes').textContent='De qué habla cada género: cada tema, como porcentaje de los temas que tratan sus hablantes. Bajo cada tema, su sesgo de género en word2vec: hacia la derecha se asocia a «she», hacia la izquierda a «he».';
+  $('mirror-mc').textContent=empty?'':'sesgo word2vec';
   mirror.setAttribute('aria-label','Segregación temática por género, como porcentaje de los temas que trata cada grupo, y sesgo de género de cada tema en word2vec (positivo hacia mujer, negativo hacia hombre). '+v.themes.map(t=>`${t.t}: mujeres ${es1(t.f)}, hombres ${es1(t.m)}, sesgo ${t.sesgo==null?'sin dato':es2(t.sesgo)}`).join('. ')+'.');
   renderMirror();
 
-  // ii · pantalla–voz
+  // pantalla–voz
   const rows=[{name:'Mujeres',screen:v.screen.f||0,voice:v.voice.f||0,col:'var(--f)'},{name:'Hombres',screen:v.screen.m||0,voice:v.voice.m||0,col:'var(--m)'}];
   dumb.setAttribute('aria-label','Brecha entre tiempo en pantalla y tiempo de voz. '+rows.map(d=>`${d.name}: ${es1(d.screen)} por ciento en pantalla y ${es1(d.voice)} por ciento de voz`).join('. ')+'.');
   renderDumb(empty?[]:rows);
@@ -275,24 +248,23 @@ function renderLive(v,empty=false){
   if(!empty&&(v.quadrants.f||v.quadrants.m))dumb.insertAdjacentHTML('afterend',`<div class="quads" id="quads"><div class="q-t">Cómo se reparte su tiempo</div>`
     +qbar('Mujeres',v.quadrants.f)+qbar('Hombres',v.quadrants.m)
     +`<div class="q-lg">${QS.map(([k,l])=>`<span><i class="q ${k}"></i>${l}</span>`).join('')}</div>`
-    +`<div class="q-note">Los tres cuadrantes de Vilaplana: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
+    +`<div class="q-note">Tres cuadrantes: si se ven y se oyen, si se ven pero no se oyen, o si se oyen sin verse.</div></div>`);
 
-  // iii · poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
-  document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: cuántas personas distintas, dónde y cuánto ocupan en el plano y a quién se cita como referente.';
+  // poder (who opens, closes or interrupts is out of the pilot: only the mock-up shows it)
+  document.querySelector('#s-poder .ex-cap').textContent='Señales de rol más allá de aparecer: dónde y cuánto ocupan en el plano y a quién se cita como referente.';
   const fig=(x,g)=>`<td class="fig ${g}">${empty?PEND:x}</td>`;
   $('power').innerHTML=
-    `<tr><td>Personas distintas</td>${fig(v.power.distinct.f,'f')}${fig(v.power.distinct.m,'m')}</tr>`+
     `<tr><td>Centralidad media en plano<span class="who">1 en el centro del plano, 0 en una esquina</span></td>${fig(es2(v.power.central.f),'f')}${fig(es2(v.power.central.m),'m')}</tr>`+
     `<tr><td>Área media en plano<span class="who">parte del encuadre que ocupan</span></td>${fig(v.power.area.f==null?'—':es1(v.power.area.f*100)+' %','f')}${fig(v.power.area.m==null?'—':es1(v.power.area.m*100)+' %','m')}</tr>`+
-    `<tr><td>Veces citado como referente</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
+    `<tr><td>Referentes citados</td>${fig(v.power.cited.f,'f')}${fig(v.power.cited.m,'m')}</tr>`;
 
-  // iii · who is cited as a reference, by whom
+  // who is cited as a reference, by whom
   const old=$('refs-list');if(old)old.remove();
-  if(!empty)$('power').closest('table').insertAdjacentHTML('afterend',`<div class="refs" id="refs-list"><div class="refs-t">Referentes citados</div>`
+  if(!empty)$('power').closest('table').insertAdjacentHTML('afterend',`<div class="refs" id="refs-list"><div class="refs-t">A quién se cita</div>`
     +(v.power.references.length?'<ul>'+v.power.references.map(r=>`<li><span class="rchip ${r.g==='f'||r.g==='m'?r.g:'u'}">${esc(r.name)}</span><span class="who">${gname(r.g).toLowerCase()} · ${r.times} ${r.times===1?'vez':'veces'} · por ${r.by.map(esc).join(', ')||'—'}</span></li>`).join('')+'</ul>'
       :'<div class="who">Nadie cita a ninguna persona como referente en este vídeo.</div>')+'</div>');
 
-  // iv · roles
+  // roles
   const chip=p=>`<span class="rchip ${p.g==='f'||p.g==='m'?p.g:'u'}">${esc(p.name)}</span>`;
   $('ladder').innerHTML=v.roles.map(r=>`<div class="rl-row"><div class="rl-tier">${esc(r.rol.charAt(0).toUpperCase()+r.rol.slice(1))}</div><div class="rl-people">${r.people.map(chip).join('')}</div></div>`).join('')
     +(v.undetermined?`<div class="rl-row"><div class="rl-tier">Sin identificar<span class="rl-sub">confianza bajo umbral</span></div><div class="rl-people"><span class="rchip u">${v.undetermined} ${v.undetermined===1?'interviniente':'intervinientes'}</span><span class="hil">Human-in-the-Loop · revisión humana</span></div></div>`:'');
@@ -301,34 +273,28 @@ function renderLive(v,empty=false){
     ?`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">Tiempo de voz de quienes figuran como <b>experto/a</b>, sobre el total del vídeo:</div><div class="rg-pair"><div class="rg-cell"><div class="rg-num" style="color:var(--f-ink)">${es1(v.expertVoice.f)} %</div><div class="rg-lab">Expertas</div></div><div class="rg-vs">frente a</div><div class="rg-cell"><div class="rg-num" style="color:var(--m-ink)">${es1(v.expertVoice.m)} %</div><div class="rg-lab">Expertos</div></div></div>`
     :`<div class="rg-title">Misma etiqueta, distinta voz</div><div class="rg-cap">${v.experts?'Quienes figuran como experto/a en este vídeo no tienen un género determinado: no hay comparación posible.':'En este vídeo nadie figura como experto/a.'}</div>`;
 
-  // iv · autoridad: from what each gender speaks, how they are introduced and what ideas they bring
+  // autoridad: from what each gender speaks, and how they are introduced
   const share=x=>x==null?'—':es1(x)+' %',arow=(label,sub,o)=>`<tr><td>${label}<span class="who">${sub}</span></td><td class="fig f">${empty?PEND:share(o.f)}</td><td class="fig m">${empty?PEND:share(o.m)}</td></tr>`;
-  $('role-auth').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad, presentación e ideas, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
+  $('role-auth').insertAdjacentHTML('beforeend',`<table class="ledger auth"><caption class="sr-only">Autoridad y presentación, por género</caption><thead><tr><th>Dentro de cada género</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead><tbody>`
     +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
     +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)+'</tbody></table>');
-  // key ideas: who brings each, in groups that add up to 100
-  const ideaSegs=[['f','solo mujeres',v.ideas.f],['m','solo hombres',v.ideas.m],['sh','compartidas entre géneros',v.ideas.shared],['u','solo voces sin género conocido',v.ideas.u]].filter(x=>x[2]);
-  $('role-side').insertAdjacentHTML('beforeend',empty||!v.ideas.total?'':`<div class="ideas"><div class="ideas-t">Ideas clave de la pieza <span class="who">${v.ideas.total} ideas, según quién las aporta</span></div>`
-    +`<div class="ideas-bar" role="img" aria-label="Ideas clave: ${ideaSegs.map(x=>`${es1(x[2])} por ciento ${x[1]}`).join(', ')}.">${ideaSegs.map(x=>`<span class="ib ${x[0]}" style="width:${x[2]}%">${Math.round(x[2])}%</span>`).join('')}</div>`
-    +`<div class="ideas-lg">${ideaSegs.map(x=>`<span><i class="ib ${x[0]}"></i>${x[1]} · ${es1(x[2])} %</span>`).join('')}</div></div>`);
 
-  // vii · supervisión humana (front only for now: decisions are not stored)
+  // supervisión humana (front only for now: decisions are not stored)
   renderReview(empty?[]:v.doubtful,empty);
 
-  // iv · cargos: the word2vec gender bias of each title, on the same axis as the topics
-  const titled=v.people.filter(p=>p.sesgoCargo!=null);
+  // cargos: the word2vec gender bias of each title, on the same axis as the topics; every title is listed,
+  // also those word2vec has no vector for, so that none drops out unnoticed
+  const titled=v.people.filter(p=>p.cargoEn||p.note);
   if(!empty&&titled.length)$('role-side').insertAdjacentHTML('beforeend',`<table class="ledger auth titles"><caption class="sr-only">Sesgo de género en word2vec de cada cargo</caption><thead><tr><th>Cargo · persona</th><th class="fig">Sesgo word2vec</th></tr></thead><tbody>`
-    +titled.map(p=>`<tr><td>${esc(p.cargoEn)}<span class="who">${esc(p.name)}</span></td><td class="fig">${bias(p.sesgoCargo)}</td></tr>`).join('')
-    +`</tbody></table><div class="rg-note">◆ hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
+    +titled.map(p=>`<tr><td>${esc(p.cargoEn||p.note)}<span class="who">${esc(p.name)}</span></td><td class="fig">${p.sesgoCargo==null?'<span class="mb none">sin vector en word2vec</span>':bias(p.sesgoCargo)}</td></tr>`).join('')
+    +`</tbody></table><div class="rg-note">Hacia la derecha, el cargo se asocia a «she»; hacia la izquierda, a «he» (w2vNEWS, Bolukbasi 2016).</div>`);
 
-  // v · clima
+  // clima
   const bar=(name,col,c)=>!c?'':`<div class="cl-row"><div class="cl-top"><div class="cl-name"><i style="background:${col}"></i>${name}</div></div><div class="cl-bar" role="img" aria-label="${name}: ${es1(c.tec)} por ciento técnico-asertivo, ${es1(c.col)} por ciento colaborativo, ${es1(c.dis)} por ciento disenso.">${c.tec?`<div class="cl-seg tec" style="width:${c.tec}%">${Math.round(c.tec)}%</div>`:''}${c.col?`<div class="cl-seg col" style="width:${c.col}%">${Math.round(c.col)}%</div>`:''}${c.dis?`<div class="cl-seg dis" style="width:${c.dis}%">${Math.round(c.dis)}%</div>`:''}</div></div>`;
   $('clima-rows').innerHTML=(bar('Mujeres','var(--f)',v.clima.f)+bar('Hombres','var(--m)',v.clima.m))||`<div class="cl-note">${empty?'Sin datos.':'No hay turnos clasificados por tono en este vídeo.'}</div>`;
   $('clima-note').innerHTML='Los registros <b>técnico-asertivo</b> y <b>disenso</b> son los que una mesa suele leer como autoridad. No se trata de que un registro valga más: lo relevante es cómo se reparten entre géneros.';
 
-  // vi · índice y cierre
-  $('cap-comp').textContent='Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Provisional: la señal de autoridad aún está por definir con el equipo; hoy compara la voz desde la autoridad de mujeres y hombres y cuenta las mujeres entre los referentes citados.';
-  renderComp();
+  // cierre
   const mk=$('mk-screen');mk.hidden=empty;   // the scale ends at 50 %: beyond it, at the edge with its figure
   mk.style.left=Math.min(97,Math.max(0,(v.screen.f||0)*2))+'%';mk.querySelector('.num').textContent=es1(v.screen.f)+' %';
   $('foot-data').innerHTML=empty?'<b>Sin datos</b>: analiza un vídeo para ver aquí sus resultados. Proyecto de código abierto.':`<b>Datos reales</b> del vídeo ${esc(v.videoId)}, procesados por el backend de AIASN. Lo que el backend aún no calcula se marca con «—». Proyecto de código abierto.`;
@@ -462,7 +428,7 @@ async function openVideo(id){
   catch(err){failed(err,'No se pudo abrir el vídeo: ')}
 }
 
-renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderComp();renderSr();
+renderMirror();renderDumb([{name:'Mujeres',screen:26.8,voice:19,col:'var(--f)'},{name:'Hombres',screen:69,voice:77,col:'var(--m)'}]);renderSr();
 buildOverlay();showDefault();resize();start();
 function repaint(){resize();if(reduce)draw(performance.now())}
 requestAnimationFrame(repaint);addEventListener('load',repaint);

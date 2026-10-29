@@ -308,7 +308,7 @@ Evidencia de cómo el equipo resolvió colegiadamente un riesgo legal crítico y
 Evidencia de la iniciativa de interacción técnica directa con la comunidad y los mentores en el canal general de Discord:
 
 ```markdown
-![Evidencia 03 — Consulta de Rocío en el Discord oficial sobre despliegue del MVP](../img/evidencias/discord_consulta_rocio_docker_ovh_25oct.jpg)
+![Evidencia 03 — Consulta de Rocío en el Discord oficial sobre despliegue del MVP](../img/evidencias/discord_consulta_rocio_docker_ovh_25oct.png)
 *Figura 3: Consulta técnica de Rocío (`rjvillen`) en el canal público `#reto-mujeres-ia-abierta` (25/10/2026, 16:50 h) sobre las opciones de despliegue del MVP (demo local en Docker Compose vs. plataforma cloud OVHcloud).*
 ```
 

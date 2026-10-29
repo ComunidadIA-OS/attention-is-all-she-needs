@@ -18,14 +18,16 @@ Esta ficha de modelos describe los componentes de Inteligencia Artificial de có
 | :--- | :--- | :--- | :---: | :--- |
 | **Voz (ASR + Diarización)** | `whisper-large-v3` | OpenAI / OVHcloud Kepler API | MIT / Abierta | Transcripción de habla a texto y diarización de turnos en una llamada. |
 | **Voz (Atributos Acústicos)** | `prithivMLmods/Common-Voice-Gender-Detection` | Prithiv Sakthivel (HF) | Apache-2.0 | Clasificador acústico de género percibido en turnos de voz. |
-| **Visión (Género y edad percibidos)** | `MiVOLO v2` (`iitolstykh/mivolo_v2`) | iitolstykh (Hugging Face) | Apache-2.0 | Estimación visual de género y edad sobre recortes faciales/corporales. La edad se almacena pero no interviene en ninguna métrica (se prevé eliminarla). |
+| **Visión (Cortes de plano)** | `TransNetV2` | Souček y Lokoč | MIT | Detecta los cambios de plano. |
+| **Visión (Género percibido)** | `MiVOLO v2` (`iitolstykh/mivolo_v2`) | iitolstykh (Hugging Face) | Apache-2.0 | Estimación visual de género sobre recortes faciales/corporales. El modelo también predice la edad, pero se descarta sin leerla ni guardarla. |
 | **Visión (Caras y agrupación de apariciones)** | `InsightFace` (pack `buffalo_l`) | InsightFace | Código MIT; **pesos preentrenados solo para investigación no comercial** | Detección facial y *embeddings* para agrupar las apariciones de una misma persona dentro de un vídeo. Los *embeddings* no se guardan. |
 | **Visión (Detección y seguimiento de personas)** | `YOLO11m-pose` + BoT-SORT | Ultralytics | **AGPL-3.0** | Detección y seguimiento de personas (`person_tracker.py`). Sustitución por un detector permisivo (p. ej. YOLOX) prevista en Fase 2, no implementada. |
 | **Visión (Hablante activo)** | `TalkNet-ASD` | Tao Ruijie et al. | MIT | Identifica qué persona en pantalla está hablando. |
-| **Texto (OCR)** | `EasyOCR` | JaidedAI | Apache-2.0 | Extracción de nombres, cargos y títulos de rótulos televisivos. |
-| **Texto (Embeddings)** | `bge-m3` | BAAI / OVHcloud | MIT | Representación vectorial densa para análisis semántico y constelación. |
-| **Texto (NLP: roles, menciones, ideas)** | `Llama-3.3-70B-Instruct` (OVHcloud AI Endpoints) | Meta / OVHcloud | Llama 3.3 Community License (pesos abiertos, **no OSI**) | Extracción de roles, menciones y temas; salida probabilística que revisa el HitL. |
-| **Texto (Tono)** | `mDeBERTa-v3-base-xnli` (zero-shot) | MoritzLaurer | MIT | Clasificación de tono del discurso. |
+| **Texto (OCR)** | `EasyOCR` | JaidedAI | Apache-2.0 | Lee los textos en pantalla, una vez por segundo; el LLM decide después cuáles son rótulos de persona. |
+| **Texto (Sesgo de palabras)** | `word2vec` (Google News, 300 dim.) | Google | Apache-2.0 | Sesgo de género de cada tema y cargo, con el método de Bolukbasi et al. (2016). |
+| **Texto (NLP y rótulos)** | `Llama-3.3-70B-Instruct` (OVHcloud AI Endpoints) | Meta / OVHcloud | Llama 3.3 Community License (pesos abiertos, **no OSI**) | Roles, menciones, temas, ideas, tono y rótulos de persona; salida probabilística que revisa el HitL. |
+| **Texto (NLP: referentes)** | `gpt-oss-120b` (OVHcloud AI Endpoints) | OpenAI / OVHcloud | Apache-2.0 | Personas conocidas citadas como referente. Distingue mejor que Llama a las figuras públicas de quienes participan, de los centros con nombre de persona y de las épocas. |
+| **Texto (Tono, opcional)** | `mDeBERTa-v3-base-xnli` (zero-shot) | MoritzLaurer | MIT | Alternativa local para clasificar el tono (por defecto lo hace Llama). |
 
 ---
 
@@ -34,6 +36,7 @@ Esta ficha de modelos describe los componentes de Inteligencia Artificial de có
 Un pilar fundamental de la arquitectura de AIASN es que **los modelos de IA nunca calculan métricas finales**:
 1. Los modelos actúan como **extractores y clasificadores de evidencias con marcas de tiempo**.
 2. Todos los porcentajes de representación, duraciones agregadas, ratios de centralidad, índices de dominancia y alertas son calculados **al 100 % mediante algoritmos deterministas en Python** completamente auditables.
+3. **Contra las alucinaciones del LLM:** cada cita que devuelve se comprueba contra la transcripción y se descarta si no aparece. Además, en los rótulos y en los referentes el modelo responde sí o no por cada elemento (si el texto presenta a una persona concreta; si es una persona real, conocida públicamente y citada como referente), y solo se quedan los que cumplen todo.
 
 ---
 
@@ -54,6 +57,8 @@ Conforme a las recomendaciones de la **Dra. Karina Gibert** y la **Dra. Verónic
 3. **Perspectiva de género no biológica:** Conforme al Art. 50 del RIA, las variables reportadas son estimaciones de **presentación de género percibida a partir de evidencias audiovisuales**, sin atribuir sexo biológico ni orientación identitaria privada.
 4. **Estado de la validación:** la comparación sistemática con anotaciones humanas (p. ej. tasa de habla femenina del corpus `Àgora`, DER) **está pendiente**; las cifras de ahorro de cómputo y coste por hora son estimaciones hasta completar el *benchmark*.
 5. **Licencias de los pesos:** Ultralytics YOLO es AGPL-3.0 y los pesos de InsightFace son de uso no comercial; un despliegue comercial requiere sustituirlos o licenciarlos (hoja de ruta, Fase 2).
-6. **Datos temporales y minimización:** los fotogramas, el audio y el vídeo remuestreado se escriben en `tmp/`, y el vídeo original queda en `landing/`; en el prototipo no se borran automáticamente (véase `ETHICS_CHECKLIST.md`, 3.5). La edad estimada se guarda sin usarse.
-7. **Duración de los vídeos:** el procesado de vídeos largos es lento; en este MVP se recomiendan clips cortos (2–3 min) y se plantea como línea de trabajo futura.
-8. **Género decidido por la cara y la voz:** hoy el género de cada participante se decide con un modelo visual y uno de voz (`fuse_gender`), lo que sitúa al sistema, cuando se usan, en la categorización biométrica del Art. 3.40 RIA y en el aviso del Art. 50(3) a cargo de quien lo despliegue. El [ADR-0013](./docs/adr/0013-atribucion-de-genero-por-evidencias-textuales.md) propone (Propuesta, sin implementar) decidirlo solo con evidencias textuales (nombre, alusiones, autorreferencia, rótulos), dejando cara y voz en un modo de investigación.
+6. **Datos temporales y minimización:** los fotogramas, el audio y el vídeo remuestreado pasan por `tmp/`, y el vídeo original por `landing/`. Con Docker Compose se borran al terminar cada vídeo (`PRIVACY__DELETE_MEDIA_AFTER_RUN`); sin Docker se conservan por defecto, para depurar (véase `ETHICS_CHECKLIST.md`, 3.5). La edad no se guarda.
+7. **Duración de los vídeos:** el procesado de vídeos largos es lento; en este MVP se han probado clips de hasta 5 min, y los vídeos largos quedan como línea de trabajo futura.
+8. **Diarización de OVHcloud:** con algunos audios devuelve un error 500 y el vídeo no se puede procesar. Cuando junta a varias personas en un solo hablante, la probabilidad de género de esa voz baja de 0,80 y queda `no_determinado`; si eso ocurre con buena parte de la voz, las alertas se calculan sobre muy poco tiempo y pueden no ser representativas.
+9. **Rótulos:** el OCR puede leer mal un nombre, y el LLM a veces toma por persona un título de evento o un tratamiento («Dr.», «Dra.») por cargo; los nombres que se muestran se apoyan en lo que se ve y se oye, y conviene revisarlos.
+10. **Género decidido por la cara y la voz:** hoy el género de cada participante se decide con un modelo visual y uno de voz (`fuse_gender`), lo que sitúa al sistema, cuando se usan, en la categorización biométrica del Art. 3.40 RIA y en el aviso del Art. 50(3) a cargo de quien lo despliegue. El [ADR-0013](./docs/adr/0013-atribucion-de-genero-por-evidencias-textuales.md) propone (Propuesta, sin implementar) decidirlo solo con evidencias textuales (nombre, alusiones, autorreferencia, rótulos), dejando cara y voz en un modo de investigación.

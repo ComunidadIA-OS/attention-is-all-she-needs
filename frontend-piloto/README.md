@@ -32,7 +32,7 @@ El front no calcula indicadores: todo viene de la API (ADR-0001). `js/adapter.js
 * **Protagonismo de cada persona.** Mientras tanto, el tamaño de cada estrella es su tiempo de voz, y la leyenda lo indica.
 * **Ratio voz/pantalla por persona.** El del veredicto sí viene de la API (% de voz ÷ % de pantalla).
 
-El índice de representación es provisional hasta que se cierre la definición de su señal de autoridad. Quién abre y cierra la pieza y las interrupciones quedan fuera del piloto: solo aparecen en la maqueta (`?demo`).
+El índice de representación no se muestra: es provisional hasta que se cierre la definición de su señal de autoridad, aunque la API lo sigue dando. Quién abre y cierra la pieza y las interrupciones quedan fuera del piloto: solo aparecen en la maqueta (`?demo`).
 
 Las posiciones de las estrellas se calculan solas: cada persona se coloca cerca de los temas de los que habla, separada de las demás según su tamaño.
 

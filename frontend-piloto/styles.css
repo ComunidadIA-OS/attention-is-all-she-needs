@@ -52,7 +52,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 
 /* lede */
 .lede{padding-block:26px 22px;max-width:730px}
-.kicker{font-family:var(--serif);font-style:italic;font-weight:500;font-size:15px;color:var(--accent);margin-bottom:14px}
 .lede h1{font-family:var(--serif);font-weight:700;font-size:clamp(31px,5.6vw,52px);line-height:1.02;letter-spacing:-.02em}
 .lede p{color:var(--muted);font-size:clamp(14.5px,2.2vw,16.5px);margin:16px 0 0;max-width:60ch}
 .lede .src{margin-top:18px;font-size:12.5px;color:var(--faint);display:flex;gap:11px;align-items:center;flex-wrap:wrap}
@@ -74,7 +73,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .legend .gl{box-shadow:0 0 8px 1px currentColor}
 
 .read{background:linear-gradient(180deg,var(--sky-1),var(--sky-0));color:var(--sky-fg);padding:24px;display:flex;flex-direction:column}
-.read .rtag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--sky-faint)}
 .read h2{font-family:var(--serif);font-weight:500;font-size:20px;margin-top:7px;color:var(--sky-fg)}
 .read .cue{margin-top:18px;display:flex;flex-direction:column;gap:14px}
 .read .cue div{font-size:12.5px;color:var(--sky-mut);padding-left:17px;position:relative}
@@ -96,13 +94,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .pc-note{margin-top:auto;padding-top:17px;font-size:11.5px;color:var(--sky-mut);border-top:1px solid var(--sky-line)}
 
 /* veredicto — integrado en el instrumento */
-.verdict{border-top:1px solid var(--sky-line);background:linear-gradient(180deg,var(--sky-1),#090b1b);display:grid;grid-template-columns:auto 1px repeat(3,1fr);align-items:stretch;color:var(--sky-fg)}
-.verdict>.sep{background:var(--sky-line)}
-.vgauge{padding:20px 26px;display:flex;align-items:center;gap:16px}
-.vgauge svg{width:118px;height:auto;flex:none}
-.vgauge .vg-t{font-family:var(--serif);font-weight:500;font-size:13px;color:var(--sky-fg);line-height:1.25}
-.vgauge .vg-s{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--sky-faint);margin-top:6px;text-transform:uppercase}
+.verdict{border-top:1px solid var(--sky-line);background:linear-gradient(180deg,var(--sky-1),#090b1b);display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch;color:var(--sky-fg)}
 .vcell{padding:20px 22px;display:flex;flex-direction:column;justify-content:center;border-left:1px solid var(--sky-line)}
+.verdict>.vcell:first-child{border-left:0}
 .vcell .vk{font-size:11px;color:var(--sky-faint)}
 .vcell .vv{font-family:var(--mono);font-weight:600;font-size:clamp(23px,3vw,29px);line-height:1;margin-top:8px;letter-spacing:-.03em}
 .vcell .vs{font-size:11px;color:var(--sky-mut);margin-top:6px}
@@ -117,15 +111,12 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .report{margin-top:54px}
 .r-intro{display:flex;align-items:baseline;gap:18px;border-bottom:1.5px solid var(--ink);padding-bottom:12px}
 .r-intro h2{font-family:var(--serif);font-weight:600;font-size:clamp(22px,3.4vw,30px);letter-spacing:-.025em}
-.r-intro .ri-note{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:14px;margin-left:auto;max-width:34ch;text-align:right}
 
 .ex-block{padding-block:34px;border-bottom:1px solid var(--hair)}
 .ex-head{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:baseline;margin-bottom:24px}
 .ex-rn{font-family:var(--serif);font-style:italic;font-weight:500;font-size:20px;color:var(--faint);line-height:1}
 .ex-head h3{font-family:var(--serif);font-weight:600;font-size:19px;letter-spacing:-.02em}
 .ex-head .ex-cap{font-size:13px;color:var(--muted);margin-top:5px;max-width:64ch}
-.ex-cols{display:grid;grid-template-columns:1fr 1fr;gap:40px}
-@media (max-width:760px){.ex-cols{grid-template-columns:1fr;gap:34px}}
 
 /* segregación temática — eje central */
 .mirror{display:flex;flex-direction:column;gap:3px}
@@ -172,15 +163,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .ledger .who{font-size:11px;color:var(--faint);display:block;font-weight:400;margin-top:1px}
 
 /* composición índice */
-.comp{display:flex;flex-direction:column}
-.comp .crow{display:grid;grid-template-columns:1fr 150px;gap:20px;align-items:center;padding:14px 0;border-bottom:1px solid var(--hair)}
-.comp .crow:last-child{border-bottom:0}
-.comp .cl{font-size:13px}
-.comp .cw{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:2px}
-.comp .cbar{position:relative}
-.comp .ctrack{height:6px;background:var(--inset);border-radius:3px;overflow:hidden}
-.comp .ctrack i{display:block;height:100%;border-radius:3px}
-.comp .cv{position:absolute;right:0;top:-18px;font-family:var(--mono);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 
 /* jerarquía de rol */
 .role{display:grid;grid-template-columns:1.1fr .9fr;gap:42px;align-items:start}
@@ -248,8 +230,6 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
   .obs-main{grid-template-columns:1fr}
   .sky{border-right:0;border-bottom:1px solid var(--sky-line)}
   .verdict{grid-template-columns:1fr}
-  .verdict>.sep{display:none}
-  .vgauge{border-bottom:1px solid var(--sky-line)}
   .vcell{border-left:0;border-bottom:1px solid var(--sky-line)}
 }
 @media (max-width:540px){.m-axislabels,.mrow{grid-template-columns:1fr 92px 1fr}}
@@ -310,7 +290,7 @@ footer .fr svg{flex:none;width:15px;height:15px;color:var(--faint);margin-top:2p
 
 /* vídeos analizados */
 .live .lv-open{max-width:220px;appearance:auto;color:var(--ink)}
-/* sesgo word2vec bajo cada tema del espejo: forma (◆) y cifra, no solo color */
+/* sesgo word2vec bajo cada tema del espejo: forma (rombo) y cifra, no solo color */
 .mirror.bias .mrow{height:auto;min-height:34px;padding:3px 0}
 .mirror.bias .mcat{display:flex;flex-direction:column;align-items:center;gap:2px}
 .mb{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--faint);font-weight:500}
@@ -331,7 +311,7 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .tabs a:hover{color:var(--ink);border-color:var(--line)}
 .tabs a[aria-current="true"]{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 8%,transparent);font-weight:600}
 
-/* autoridad, presentación e ideas dentro de "Jerarquía de rol" */
+/* autoridad y presentación dentro de "Jerarquía de rol" */
 .ledger.auth{margin-top:18px}
 
 /* supervisión humana: el estado de cada botón va en su texto y en aria-pressed, no solo en el color */
@@ -350,15 +330,6 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .ledger.titles .fig{width:auto}
 .ledger.titles .mb{justify-content:flex-end}
 
-/* ideas clave en grupos que suman 100: color y trama, nunca solo color */
-.ideas{margin-top:20px}
-.ideas-t{font-size:13px;font-weight:600;color:var(--ink)}.ideas-t .who{font-weight:400;color:var(--faint);margin-left:6px;font-size:11px}
-.ideas-bar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin-top:8px}
-.ib{display:flex;align-items:center;justify-content:center;font:700 11px var(--mono);color:#fff}
-.ib.f{background:var(--f)}.ib.m{background:var(--m)}.ib.u{background:var(--u);color:#1a1530}
-.ib.sh{background-color:var(--accent);background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.28) 5px 7px)}
-.ideas-lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:11.5px;color:var(--muted)}
-.ideas-lg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 
 /* referentes citados */
 .refs{margin-top:16px}
@@ -382,11 +353,9 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .q-lg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
 .q-note{font-size:11.5px;color:var(--faint);margin-top:12px;max-width:60ch;line-height:1.5}
 
-/* con datos reales el informe respira más: pantalla–voz y poder, una debajo de otra; y bajo la jerarquía de rol, una
-   fila a todo el ancho con la autoridad a un lado y las ideas y los cargos al otro */
-.live-data .ex-cols{grid-template-columns:1fr;gap:56px}
+/* con datos reales, bajo la jerarquía de rol, una fila a todo el ancho con la autoridad a un lado y los cargos al otro */
 .role-more{display:none}
 .live-data .role-more{display:grid;grid-template-columns:1fr 1fr;gap:42px;margin-top:34px;align-items:start}
-.live-data .role-more .ledger.auth,.live-data .role-more .ideas{margin-top:0}
+.live-data .role-more .ledger.auth{margin-top:0}
 .live-data .role-more #role-side>*+*{margin-top:28px}
 @media (max-width:760px){.live-data .role-more{grid-template-columns:1fr;gap:30px}}

@@ -19,7 +19,7 @@ def annotate(ctx: RunContext) -> Path:
     """Each person's box labelled `P<id> | gender`, a green "speaking" box on the face of whoever speaks,
     and the texts read by the OCR.
 
-    The gender is the most common value of each person. Returns the annotated mp4.
+    Gender is the most common value of each person. Returns the annotated mp4.
     """
     cfg, work = ctx.settings.video, ctx.tmp_dir / "video"
     detections = ctx.lake.read("bronze", "video_detections", ctx.video_id)

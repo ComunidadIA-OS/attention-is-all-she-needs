@@ -141,10 +141,10 @@ def test_gender_estimator_output(video_pipeline):
     people = video_pipeline._assign_faces(video_pipeline.person_tracker.track(image),
                                           video_pipeline.face_detector.detect(image))
     est = video_pipeline.gender_estimator.estimate(image, people)
-    assert list(est.columns) == ["gender", "gender_prob", "age"]
+    assert list(est.columns) == ["gender", "gender_prob"]   # no age: it is not kept
     assert est.index.equals(people.index)
     assert (est.gender == "M").all()
-    assert est.gender_prob.between(0.5, 1).all() and est.age.between(20, 80).all()
+    assert est.gender_prob.between(0.5, 1).all()
 
     no_face = people.assign(face_x1=np.nan, face_y1=np.nan, face_x2=np.nan, face_y2=np.nan)
     assert video_pipeline.gender_estimator.estimate(image, no_face).gender.isin(["F", "M"]).all()   # body only

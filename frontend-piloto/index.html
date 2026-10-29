@@ -22,14 +22,13 @@ SPDX-License-Identifier: Apache-2.0
   <form class="live" id="live" aria-label="Analizar un vídeo con la API"><select class="pill lv-open" id="live-open" aria-label="Abrir un vídeo ya analizado" style="display:none"><option value="">Vídeos analizados</option></select><label class="pill lv-pick"><input type="file" id="live-file" accept=".mp4,.mov,.webm,.mkv,.avi" class="sr-only"><span id="live-name">Elegir vídeo</span></label><button type="submit" class="pill lv-go" id="live-go">Analizar</button><span class="lv-msg" id="live-msg" role="status" aria-live="polite"></span></form>
   <button class="tbtn" id="theme" type="button" aria-label="Cambiar tema">◐</button>
 </div></div>
-<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Poder</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li><a href="#s-indice">Índice</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
+<nav class="tabs" aria-label="Secciones de la página"><div class="wrap"><ul><li><a href="#s-constelacion">Constelación</a></li><li><a href="#s-veredicto">Veredicto</a></li><li><a href="#s-lectura">En palabras sencillas</a></li><li><a href="#s-voz">Pantalla y voz</a></li><li><a href="#s-poder">Protagonismo</a></li><li><a href="#s-temas">Temas</a></li><li><a href="#s-roles">Roles</a></li><li><a href="#s-clima">Clima</a></li><li id="tab-supervision" style="display:none"><a href="#s-supervision">Supervisión</a></li></ul></div></nav>
 
 <main class="wrap" id="contenido">
 
   <div class="lede">
-    <div class="kicker">Auditoría algorítmica de la representación</div>
-    <h1>El peso de la atención.</h1>
-    <p>Auditamos quién tiene de verdad la voz, el centro del plano y la autoridad en el contenido audiovisual —no solo quién sale en la foto. Cada estrella es una persona; su brillo, su protagonismo.</p>
+    <h1>El peso de la atención</h1>
+    <p>Auditamos los estereotipos de género, la presencia, la voz, la autoridad y el protagonismo de las mujeres en los medios audiovisuales de su organización.</p>
     <div class="src" id="src"><span class="ex" id="src-tag">Datos de muestra</span><span id="src-desc">Mesa redonda · «El futuro de la IA en España» · 48 min · YouTube · 7 voces</span></div>
     <ol class="steps" id="steps" aria-label="Progreso del análisis" style="display:none"></ol>
   </div>
@@ -51,19 +50,9 @@ SPDX-License-Identifier: Apache-2.0
     </div>
     <h2 class="sr-only">Veredicto de la pieza</h2>
     <div class="verdict" id="s-veredicto">
-      <div class="vgauge">
-        <svg id="gauge" viewBox="0 0 118 72" aria-label="Índice de Representación 34 sobre 100">
-          <path d="M11 62 A48 48 0 0 1 107 62" fill="none" stroke="#2a2550" stroke-width="9" stroke-linecap="round"/>
-          <path id="gauge-arc" d="M11 62 A48 48 0 0 1 107 62" fill="none" stroke="#f0576e" stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="34 100"/>
-          <line x1="44.2" y1="8.3" x2="48.4" y2="16" stroke="#a98ff5" stroke-width="2"/>
-          <text id="gauge-num" x="59" y="55" text-anchor="middle" fill="#f0576e" style="font-family:var(--mono);font-weight:600;font-size:27px;letter-spacing:-.04em">34</text>
-        </svg>
-        <div><div class="vg-t">Índice de<br>Representación</div><div class="vg-s">0–100 · legal 40</div></div>
-      </div>
-      <div class="sep"></div>
       <div class="vcell"><div class="vk">Tiempo en pantalla · mujeres</div><div id="v-screen" class="vv tnum" style="color:var(--sky-f)">26,8<span class="unit">%</span></div><div id="v-screen-s" class="vs">frente al 69 % de hombres</div></div>
       <div class="vcell"><div class="vk">Ratio voz / pantalla · mujeres</div><div id="v-ratio" class="vv tnum" style="color:var(--sky-crit)">0,71</div><div id="v-ratio-s" class="vs">aparecen más de lo que hablan</div></div>
-      <div class="vcell"><div class="vk">Referentes citados · M : H</div><div id="v-refs" class="vv tnum">1 : 7</div><div id="v-refs-s" class="vs">a quién se cita como autoridad</div></div>
+      <div class="vcell"><div class="vk">Personas distintas · M : H</div><div id="v-people" class="vv tnum">3 : 4</div><div class="vs">cuántas mujeres y hombres intervienen</div></div>
       <div class="vflag" id="flag-1" style="grid-column:1/-1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0ZM12 9v4M12 17h.01"/></svg>
         <div><b>Infrarrepresentación con brecha de voz.</b> 26,8 % del tiempo en pantalla —por debajo del objetivo legal del 40 %— y solo 19 % del tiempo de voz: la presencia visible no se traduce en voz.</div>
@@ -90,41 +79,36 @@ SPDX-License-Identifier: Apache-2.0
 
   <section class="report">
     <div class="r-intro">
-      <h2>La lectura</h2>
-      <div class="ri-note">Seis exhibiciones sobre la misma pieza: de qué se habla, quién habla, en qué rol, en qué tono y quién decide.</div>
+      <h2>Análisis detallado de la pieza</h2>
     </div>
 
     <div class="ex-block">
-      <div class="ex-head" id="s-temas"><span class="ex-rn">i</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
+      <div class="ex-head" id="s-voz"><span class="ex-rn">1</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
+      <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
+    </div>
+
+    <div class="ex-block">
+      <div class="ex-head" id="s-poder"><span class="ex-rn">2</span><div><h3>Señales de rol protagonista</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
+      <table class="ledger">
+        <caption class="sr-only">Señales de rol protagonista en la pieza, por género</caption>
+        <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
+        <tbody id="power">
+          <tr><td>Abre y cierra el acto<span class="who">Marc Vidal, moderador</span></td><td class="fig">0</td><td class="fig m">2</td></tr>
+          <tr><td>Centralidad media en plano</td><td class="fig f">0,38</td><td class="fig m">0,62</td></tr>
+          <tr><td>Interrupciones recibidas</td><td class="fig f">8</td><td class="fig m">2</td></tr>
+          <tr><td>Referentes citados</td><td class="fig f">1</td><td class="fig m">7</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ex-block">
+      <div class="ex-head" id="s-temas"><span class="ex-rn">3</span><div><h3>Segregación temática</h3><div class="ex-cap" id="cap-themes">De qué habla cada género, como porcentaje de su propio tiempo de voz. Los cuidados gravitan hacia las mujeres; la técnica y el liderazgo, hacia los hombres.</div></div></div>
       <div class="m-axislabels"><span class="ml">◂ Hombres</span><span class="mc" id="mirror-mc"></span><span class="mr">Mujeres ▸</span></div>
       <div class="mirror" id="mirror" role="img" aria-label="Segregación temática por género, como porcentaje del tiempo de voz de cada grupo. Mujeres: cuidados 46, ética 28, tecnología 18, liderazgo 5, financiación 3. Hombres: cuidados 6, ética 14, tecnología 34, liderazgo 24, financiación 22."></div>
     </div>
 
     <div class="ex-block">
-      <div class="ex-cols">
-        <div>
-          <div class="ex-head" id="s-voz"><span class="ex-rn">ii</span><div><h3>La brecha pantalla–voz</h3><div class="ex-cap">Distancia entre cuánto aparece cada género y cuánto habla. Cuando la voz queda a la izquierda de la presencia, esa presencia es figurativa.</div></div></div>
-          <div class="dumb" id="dumb" role="img" aria-label="Brecha entre tiempo en pantalla y tiempo de voz. Mujeres: 26,8 por ciento en pantalla y 19 por ciento de voz, 7,8 puntos menos de voz. Hombres: 69 por ciento en pantalla y 77 por ciento de voz, 8 puntos más."></div>
-        </div>
-        <div>
-          <div class="ex-head" id="s-poder"><span class="ex-rn">iii</span><div><h3>El reparto del poder</h3><div class="ex-cap">Señales de rol más allá de aparecer: quién abre, quién cierra, quién interrumpe.</div></div></div>
-          <table class="ledger">
-            <caption class="sr-only">Señales de reparto de poder en la pieza, por género</caption>
-            <thead><tr><th>Señal</th><th class="fig">Mujeres</th><th class="fig">Hombres</th></tr></thead>
-            <tbody id="power">
-              <tr><td>Abre y cierra el acto<span class="who">Marc Vidal, moderador</span></td><td class="fig">0</td><td class="fig m">2</td></tr>
-              <tr><td>Personas distintas</td><td class="fig f">3</td><td class="fig m">4</td></tr>
-              <tr><td>Centralidad media en plano</td><td class="fig f">0,38</td><td class="fig m">0,62</td></tr>
-              <tr><td>Interrupciones recibidas</td><td class="fig f">8</td><td class="fig m">2</td></tr>
-              <tr><td>Veces citado como referente</td><td class="fig f">1</td><td class="fig m">7</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="ex-block">
-      <div class="ex-head" id="s-roles"><span class="ex-rn">iv</span><div><h3>Jerarquía de rol: ¿expertas o testimonio?</h3><div class="ex-cap">No basta con contar quién aparece: importa en qué rol. El reparto de roles de la pieza y, con él, qué ocurre con la voz cuando la etiqueta —experta— es la misma.</div></div></div>
+      <div class="ex-head" id="s-roles"><span class="ex-rn">4</span><div><h3>Jerarquía de rol: ¿se nos presenta como expertas?</h3><div class="ex-cap">Qué papel tiene cada persona en la pieza (moderación, experta, testimonio…) y si, con el mismo papel de experta, ellas hablan tanto como ellos.</div></div></div>
       <div class="role">
         <div class="role-ladder" id="ladder">
           <div class="rl-row">
@@ -157,8 +141,8 @@ SPDX-License-Identifier: Apache-2.0
       </div>
     </div>
 
-    <div class="ex-block">
-      <div class="ex-head" id="s-clima"><span class="ex-rn">v</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
+    <div class="ex-block" style="border-bottom:0">
+      <div class="ex-head" id="s-clima"><span class="ex-rn">5</span><div><h3>Clima comunicativo del debate</h3><div class="ex-cap">Registro de cada intervención, clasificado sobre el texto transcrito en tres tonos. Mide si la mesa reconoce a todas las voces como interlocutores válidos —la «interlocución válida» de Adela Cortina—, más allá de cuánto habla cada quien.</div></div></div>
       <div class="clima">
         <div id="clima-rows"><div class="cl-row">
           <div class="cl-top"><div class="cl-name"><i style="background:var(--f)"></i>Mujeres</div></div>
@@ -186,12 +170,8 @@ SPDX-License-Identifier: Apache-2.0
       </div>
     </div>
 
-    <div class="ex-block" style="border-bottom:0">
-      <div class="ex-head" id="s-indice"><span class="ex-rn">vi</span><div><h3>Cómo se compone el índice</h3><div class="ex-cap" id="cap-comp">Media ponderada de cuatro señales (0–100), contrastada con la línea legal del 40 %. Ponderación provisional, pendiente de validar con el equipo.</div></div></div>
-      <div class="comp" id="comp" role="img" aria-label="Composición del índice de representación sobre 100: presencia en pantalla 27, tiempo de voz 19, protagonismo visual 38, autoridad 13."></div>
-    </div>
     <div class="ex-block review" id="review" style="border-bottom:0;display:none">
-      <div class="ex-head" id="s-supervision"><span class="ex-rn">vii</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (ADR-0005, art. 14 del Reglamento Europeo de IA).</div></div></div>
+      <div class="ex-head" id="s-supervision"><span class="ex-rn">6</span><div><h3>Supervisión humana</h3><div class="ex-cap">Tramos en los que el sistema no pudo decidir el género (confianza por debajo de 0,80). Una persona del equipo los revisa antes de dar el dictamen por bueno (art. 14 del Reglamento Europeo de IA).</div></div></div>
       <div class="rv-bar"><span id="rv-count" role="status" aria-live="polite"></span><span class="rv-note">Las decisiones aún no se guardan: se pierden al recargar.</span></div>
       <table class="ledger rv-table"><caption class="sr-only">Tramos por revisar</caption><thead><tr><th>Persona</th><th>Cuándo sale</th><th>Su género</th></tr></thead><tbody id="rv-body"></tbody></table>
     </div>
@@ -199,14 +179,14 @@ SPDX-License-Identifier: Apache-2.0
 
   <section class="close">
     <h2>Presencia formal frente a presencia real.</h2>
-    <p>Una empresa puede cumplir la cuota del consejo que exige la ley y seguir sin dar voz real a las mujeres en lo que muestra. La ley mide el consejo; nosotras medimos la pantalla. Entre el 42 % del consejo y el 10 % de las ejecutivas cabe toda la distancia entre la foto y el poder.</p>
+    <p>Una empresa puede cumplir la cuota del consejo que exige la ley y seguir sin dar voz real a las mujeres en lo que muestra. La ley mide el consejo; nosotras medimos la pantalla. Entre el 41,3 % del consejo y el 8,6 % de las consejeras ejecutivas cabe toda la distancia entre la foto y el poder.</p>
     <div class="scale">
       <div class="track"></div>
-      <div class="fill" style="left:20%;right:15.8%"></div>
+      <div class="fill" style="left:17.2%;right:17.4%"></div>
       <div class="goal" style="left:80%"><b>objetivo legal 40 %</b></div>
-      <div class="mk" style="left:20%"><span class="num" style="color:var(--crit)">10 %</span><span class="pt" style="background:var(--crit)"></span><span class="cap">Consejeras<br>ejecutivas</span></div>
+      <div class="mk" style="left:17.2%"><span class="num" style="color:var(--crit)">8,6 %</span><span class="pt" style="background:var(--crit)"></span><span class="cap">Consejeras<br>ejecutivas</span></div>
       <div class="mk" id="mk-screen" style="left:53.6%"><span class="num" style="color:var(--f-ink)">26,8 %</span><span class="pt" style="background:var(--f)"></span><span class="cap">Pantalla<br>(esta pieza)</span></div>
-      <div class="mk" style="left:84.2%"><span class="num" style="color:var(--m-ink)">42 %</span><span class="pt" style="background:var(--m)"></span><span class="cap">Consejo<br>IBEX-35</span></div>
+      <div class="mk" style="left:82.6%"><span class="num" style="color:var(--m-ink)">41,3 %</span><span class="pt" style="background:var(--m)"></span><span class="cap">Consejo<br>IBEX-35</span></div>
     </div>
   </section>
 

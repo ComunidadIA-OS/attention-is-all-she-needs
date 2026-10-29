@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import os
 import subprocess
 
 import pytest
@@ -221,8 +222,11 @@ def test_docker_launcher_runs_one_worker_container(monkeypatch):
     monkeypatch.setenv("LAKE_URI", "s3://aiasn")
     monkeypatch.setenv("OVH_AI_ENDPOINTS_ACCESS_TOKEN", "token")
     monkeypatch.setenv("HOME", "/root")
+    cfg = Settings().api.worker
+    for var in set(jobs.worker_env(cfg.env, dict(os.environ))) - {"LAKE_URI", "OVH_AI_ENDPOINTS_ACCESS_TOKEN"}:
+        monkeypatch.delenv(var)   # litellm loads .env into the environment when imported
     client = FakeClient()
-    launcher = jobs.DockerLauncher(Settings().api.worker, client)
+    launcher = jobs.DockerLauncher(cfg, client)
     assert not launcher.busy()
     launcher.launch("vid1")
     image, command, kwargs = client.containers.runs[0]

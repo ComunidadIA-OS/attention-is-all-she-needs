@@ -1,3 +1,4 @@
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,3 +21,8 @@ class RunContext:
         """The context of one video: its lake and manifest from the settings, and its own tmp folder."""
         lake = Lake.from_settings(settings)
         return cls(video_id, settings, lake, Manifest(lake, video_id), settings.tmp_dir / video_id, force)
+
+    def delete_tmp(self) -> None:
+        """Deletes the video's tmp folder (frames with faces, audio and copies of the video)."""
+        if self.tmp_dir.exists():
+            shutil.rmtree(self.tmp_dir)

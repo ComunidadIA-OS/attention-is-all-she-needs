@@ -107,7 +107,7 @@ def detections(person: int, frames, gender: str, prob: float, speaking=None, box
     n = len(frames)
     return pd.DataFrame({"frame": frames, "person_id": pd.array([person] * n, dtype="Int64"),
                          "x1": box[0], "y1": box[1], "x2": box[2], "y2": box[3], "frame_width": 640, "frame_height": 360,
-                         "gender": gender, "gender_prob": prob, "age": 30.0,
+                         "gender": gender, "gender_prob": prob,
                          "speaking_score": speaking if speaking is not None else [np.nan] * n})
 
 
@@ -129,7 +129,7 @@ def test_video_people():
     assert people.speaking_time_s.tolist() == pytest.approx([0.8, 0, 0])
     assert people.area[1] == pytest.approx(0.25) and people.centrality[1] == pytest.approx(1.0)
     assert people.area[2] == pytest.approx(0.01) and people.centrality[2] < 0.2
-    assert people.age.tolist() == [30, 30, 30]
+    assert "age" not in people.columns   # age is never estimated nor kept (data minimisation)
 
 
 def test_video_presence_splits_on_speaking_and_long_absences():

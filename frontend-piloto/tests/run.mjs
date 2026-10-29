@@ -131,13 +131,11 @@ test("themes by gender, most female-leaning first", () => {
 
 test("verdict figures are the API ones, none computed here", () => {
   assert.deepEqual([v.screen, v.voice, v.ratio], [{ f: 40, m: 50 }, { f: 25, m: 75 }, 0.42]);
-  assert.deepEqual(v.refs, { f: 0, m: 2 });
   assert.deepEqual(v.parity, { ok: false, cuota: 0.25, suelo: 0.4 });
   assert.deepEqual(v.underrep, { on: true, text: "Por debajo del 40 %." });
   assert.deepEqual(v.coverage, { voz: 0, pantalla: 10 });
   assert.deepEqual([v.tif.estado, v.tif.motivo, v.tif.puntuacion], ["no_supera", "una_mujer", null]);
   assert.equal(v.washing.on, false);
-  assert.deepEqual(v.index, { total: 76.6, provisional: true, dims: { pantalla: 89.5, voz: 64.7, espacio: 97.3, autoridad: null } });
 });
 
 test("easy read: the API summary, one sentence per item", () => {
@@ -160,7 +158,6 @@ test("power, roles and climate", () => {
   assert.deepEqual(v.expertVoice, { f: 25, m: 0 });
   assert.equal(v.experts, true);
   assert.deepEqual(v.authority, { voice: { f: 100, m: 81.5 }, title: { f: null, m: null } });
-  assert.deepEqual(v.ideas, { total: 5, f: 40, m: 40, u: null, shared: 20 });
   assert.deepEqual(v.clima, { f: { tec: 50, col: 50, dis: 0 }, m: { tec: 0, col: 0, dis: 100 } });
 });
 

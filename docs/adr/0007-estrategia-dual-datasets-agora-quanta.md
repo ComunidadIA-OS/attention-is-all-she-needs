@@ -1,7 +1,7 @@
 # 0007. Estrategia dual de datasets: calibración en laboratorio (`Àgora`) vs. inferencia en producción (*«Quanta, quanta IA!»*)
 
 * **Fecha:** 2026-10-19
-* **Estado:** Aceptada
+* **Estado:** Aceptada. *Actualización 28/10/2026: no hay permiso expreso para usar «Quanta, quanta IA!» (la respuesta de Karina Gibert garantizó los datos de voz de `Àgora`, no los vídeos de «Quanta»). Esos vídeos quedan como calibración interna, sin redistribuir y fuera de la demostración pública; las pruebas públicas reproducibles usan vídeos con licencia abierta (véase `DATASET_CARD.md`, 1.1). El «Tiempo 2» de abajo debe leerse con esta salvedad.*
 * **Decisores:** Equipo AIASN (Alba Camiña García, Rocío Jiménez Villén, Pilar de la Fuente Diez)
 * **Directriz de referencia:** Dr. José Adrián Rodríguez Fonollosa (TALP-UPC, Diapositiva 41), Dra. Verónica Vilaplana (TALP-UPC, Diapositiva 91) y ALTAI
 

@@ -187,7 +187,7 @@ En estricto cumplimiento del **Artículo 14 del Reglamento Europeo de IA (RIA)**
 3. **Pantalla Operativa de Arbitraje («Asumo / No asumo») — especificación objetivo:**  
    La operadora técnica dispone de dos controles auditables:
    * `[ Validar Clasificación ]`: Asigna manualmente la etiqueta tras contrastar el fotograma y la transcripción.
-   * `[ Asumir Abstención ]`: Confirma el tramo como `no_determinado`, excluyéndolo del denominador para no distorsionar las métricas de paridad.
+   * `[ Asumir Abstención ]`: Confirma el tramo como `no_determinado`, excluyéndolo del denominador para no distorsionar las métricas de paridad (*diseño objetivo*; el comportamiento previsto para la primera versión que guarde decisiones está en la sección 8.4).
 
 ---
 
@@ -258,8 +258,9 @@ flowchart TD
 | Elemento | Regla |
 | :--- | :--- |
 | **Estados** | `pendiente` → `asumido` o `no_asumido`. Mientras esté `pendiente`, el resultado se muestra como **«Sin supervisión humana»** y no se emite informe ni sello. |
-| **Habilitación de «Asumo»** | Solo cuando cada persona dudosa tiene una decisión (incluida *No determinable*). Las personas marcadas *No determinable* se excluyen del denominador, como indica la sección 5. |
+| **Habilitación de «Asumo»** | Solo cuando cada persona dudosa tiene una decisión (incluida *No determinable*). Las personas marcadas *No determinable* se excluyen del denominador, como indica la sección 5, **en el diseño objetivo**. |
 | **«No asumo»** | Exige un motivo breve (lista cerrada: *datos insuficientes*, *error de detección*, *otro*) y marca el vídeo como **derivado a revisión manual**. |
+| **Efecto sobre las métricas (primera versión con persistencia)** | Las decisiones se **guardan y se muestran** en la sección de supervisión, pero **no recalculan** los KPIs ni el grafo: estos se generan en `gold` con las personas de género conocido y no se rehacen tras la revisión. La pantalla avisa «Métricas calculadas antes de la revisión humana». Recalcular `silver` y `gold` (o relanzar solo la capa `gold`) queda en hoja de ruta. |
 | **Registro** | Cada decisión guarda el identificador **pseudonimizado** de la persona operadora (`operador_supervision_id`), la fecha y hora, el estado, el motivo y la huella `SHA-256` de las métricas asumidas. No se guarda ningún dato biométrico. |
 | **Reversibilidad** | Se puede cambiar una decisión mientras no se haya emitido el informe; cada cambio queda registrado. |
 | **Accesibilidad (WCAG 2.2 AA)** | Controles nativos `button`, operables con teclado, estado en texto e icono (nunca solo color), `aria-pressed` y foco visible. |

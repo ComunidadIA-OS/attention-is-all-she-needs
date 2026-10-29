@@ -127,7 +127,7 @@ Siguiendo las pautas de innovación de **Montse Guàrdia** (`0:35:00` y `1:47:19
    * Si el evento cumple o incumple la paridad efectiva.
    * Si la presencia de mujeres fue con voz experta (Cuadrante 1) o meramente decorativa/muda (Cuadrante 2).
 2. **Simulación de la Pantalla «Asumo / No asumo»:**  
-   Se valida que la interfaz no permite exportar el certificado o informe de paridad sin que la persona responsable interactúe con el modal de supervisión humana, revisando los casos dudosos marcados como `no_determinado`.
+   **Objetivo (hoja de ruta):** que la interfaz no permita exportar el certificado o informe de paridad sin que la persona responsable interactúe con el modal de supervisión humana, revisando los casos dudosos marcados como `no_determinado`. **Estado en v0.1.0:** el panel de revisión existe, pero las decisiones no se guardan y la revisión no bloquea nada, por lo que esta prueba aún no puede ejecutarse.
 
 ---
 

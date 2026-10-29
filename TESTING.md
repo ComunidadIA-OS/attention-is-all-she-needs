@@ -47,7 +47,12 @@ flowchart TD
 
 ### 2.1. Validación de Voz y Diarización sobre `Àgora` (UPC)
 * **Objetivo:** Verificar que el pipeline de audio (`whisper-large-v3` diarizado vía AI Endpoints de OVHcloud) recupera de forma consistente la proporción de habla femenina frente a la anotación de referencia a mano.
-* **Corpus de referencia:** Subconjunto de 5 debates del corpus `Àgora` (`agora_trs.gz`), con anotaciones XML formales de cambio de turno, canal de audio y género verificado.
+* **Corpus de referencia:** Corpus `Àgora` de Televisió de Catalunya / UPC (`agora.gz` y `agora_trs.gz`), con anotaciones XML formales de cambio de turno, canal de audio y género verificado.
+* **Estado de la validación:** **Completada el 29/10/2026** (calibración empírica de componentes de audio; informe completo en [`docs/evaluacion_experimental_agora.md`](./docs/evaluacion_experimental_agora.md)).
+* **Resultados consolidados:**
+  * **Cálculo de Ground Truth (57 debates analizados):** **14,61 % de habla femenina** (5,04 h mujeres, 29,47 h hombres, 1,11 h solapes). Confirma el ~14 % señalado por el Dr. Adrián Fonollosa.
+  * **Prueba 1 (Clasificador acústico en 6 debates, 177 min, 438 turnos):** **94,5 % de exactitud global** (100,0 % recall masculino; 74,3 % recall femenino concentrado en dos contertulias con timbre específico donde el modelo asignó certidumbre errónea $p > 0,95$, justificando empíricamente la supervisión humana preceptiva).
+  * **Prueba 2 (Whisper diarizado en OVHcloud + clasificador en 2 debates):** Desviación temporal de detección de turnos de solo $\le 1,4$ puntos porcentuales respecto a la referencia humana; coste medido de 0,049 € en 20 min (equivalente a la tarifa oficial de **0,15 € por hora de audio**), con **0 tokens LLM** consumidos.
 * **Criterio de éxito:**
   $$\left| \text{Ratio Femenino Predicho} - 14\% \right| \le 3.5\%$$
 * **Tratamiento de incertidumbre:** Los turnos con baja relación señal-ruido o solapamiento de voces que obtengan certidumbre $p < 0.80$ se contabilizan en la métrica de cobertura y se derivan a la categoría `no_determinado`.

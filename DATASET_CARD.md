@@ -85,6 +85,16 @@ Tokens del LLM (OVHcloud AI Endpoints):
 
 La transcripción (Whisper large v3) se cobra por duración del audio. Los rótulos son la tarea que más llamadas hace: una por cada 4 bloques de texto leídos por el OCR.
 
+### 1.3. Validación Empírica en Laboratorio sobre el Corpus Àgora (29/10/2026)
+
+Conforme a las directrices formativas del Dr. José Adrián Rodríguez Fonollosa (TALP-UPC) y el registro [ADR-0007](./docs/adr/0007-estrategia-dual-datasets-agora-quanta.md), el 29 de octubre de 2026 el equipo ejecutó la calibración experimental de componentes de audio sobre el corpus de debate `Àgora` (36,9 h de audio en 70 ficheros WAV y 57 transcripciones manuales en XML). El cálculo exhaustivo sobre las 57 anotaciones periciales consolida un **Ground Truth real de habla femenina del 14,61 %** (5,04 h de mujeres, 29,47 h de hombres y 1,11 h de solapes), confirmando con exactitud decimal la hipótesis inicial de aniquilación simbólica. Las pruebas de clasificación acústica sobre 6 debates completos (177 min, 438 turnos) arrojaron un **94,5 % de exactitud global** (100 % en hombres, 74,3 % en mujeres), evidenciando que el clasificador puede errar con alta confianza ($p > 0,95$) ante timbres vocales singulares y justificando de manera concluyente la necesidad de la supervisión humana (*Human-in-the-Loop*, Art. 14 RIA). Por su parte, la prueba con `whisper-large-v3` diarizado en OVHcloud AI Endpoints sobre 20 minutos de debate acreditó una desviación temporal inferior a 1,4 pp respecto al Ground Truth, con un coste real medido de **0,049 € (≈ 0,15 € / hora de audio)** y 0 tokens LLM. Informe técnico íntegro en [`docs/evaluacion_experimental_agora.md`](./docs/evaluacion_experimental_agora.md).
+
+| Dimensión de la Evaluación | Muestra Evaluada | Resultado Obtenido | Referencia / Ground Truth | Desviación / Observación |
+| :--- | :---: | :---: | :---: | :---: |
+| **Ground Truth Global Àgora** | 57 ficheros XML (34,5 h netas) | **14,61 % habla femenina** | ~14 % estimado UPC | Confirmación empírica exacta (5,04 h M vs 29,47 h H) |
+| **Prueba 1: Clasificador de voz** | 6 debates (177 min, 438 turnos) | **94,5 % exactitud** | 100 % acierto en hombres | 74,3 % recall femenino (concentrado en 2 contertulias) |
+| **Prueba 2: Whisper diarizado** | 2 debates (20 min) | **Desviación temporal $\le 1,4$ pp** | Anotación manual TV3 | Latencia ≈ 5 s/min; coste ≈ 0,15 €/h audio; 0 tokens LLM |
+
 ## 2. Régimen Legal y Amparo en Minería de Textos y Datos (TDM)
 
 1. **Uso de Datos en Fase de Hackathon:** El procesado de estos fragmentos audiovisuales se realiza estrictamente en el marco de la investigación científica, formativa y sin fines de lucro del reto.

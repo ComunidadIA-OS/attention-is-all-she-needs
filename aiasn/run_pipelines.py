@@ -9,6 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 
+from aiasn import langfuse_client
 from aiasn.pipelines.audio import AudioPipeline
 from aiasn.pipelines.captions import CaptionsPipeline
 from aiasn.pipelines.gold import GoldPipeline
@@ -34,10 +35,15 @@ def main(argv: list[str] | None = None) -> None:
     if args.file:
         video_id = args.file.stem
         Lake.from_settings(settings).upload_to_landing(video_id, args.file)
+    langfuse_client.init_langfuse(settings.langfuse, session=video_id)   # the LLM calls of this video, in one session
     # NLP reads the transcript and captions the OCR texts, so they go after audio and video; models are loaded once
     chains = [[AudioPipeline(settings.audio), NlpPipeline(settings.nlp)],
               [VideoPipeline(settings.video), CaptionsPipeline(settings.nlp)]]
-    process_video(video_id, settings, chains, then=[SilverPipeline(settings), GoldPipeline(settings)], force=args.force)
+    try:
+        process_video(video_id, settings, chains, then=[SilverPipeline(settings), GoldPipeline(settings)],
+                      force=args.force)
+    finally:
+        langfuse_client.flush()   # the worker exits right after
 
 
 if __name__ == "__main__":

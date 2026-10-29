@@ -110,7 +110,6 @@ tempCodeRunnerFile.py
 # videos and media
 *.mp4
 *.jpg
-*.png
 
 # local lake and ephemeral files
 data/

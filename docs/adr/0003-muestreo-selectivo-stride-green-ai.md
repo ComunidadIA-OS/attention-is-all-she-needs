@@ -18,14 +18,21 @@ El vídeo estándar a 30 fps contiene 108.000 fotogramas por hora. Procesar cada
 
 ## Decisión Adoptada
 
-Se adopta la **Opción B**. El audio diarizado actúa como columna vertebral de sincronización temporal y el vídeo se analiza selectivamente aplicando la constante `STRIDE`.
+Se adopta la **Opción B**, con un muestreo fijo (no guiado por los turnos de audio) que se configura en `VideoSettings` (`aiasn/settings.py`):
+
+* El vídeo se remuestrea a 25 fps (lo exige TalkNet).
+* **Personas** (YOLO11m-pose + BoT-SORT): 1 de cada 4 fotogramas (`stride = 4`, 6,25 fps).
+* **Caras y hablante activo** (InsightFace + TalkNet): todos los fotogramas, porque TalkNet necesita la secuencia continua de la cara.
+* **Rótulos** (EasyOCR): 1 fotograma por segundo (`ocr_fps = 1`).
+
+Audio y vídeo se procesan en paralelo y se cruzan después por tiempo.
 
 ## Consecuencias
 
 * **Positivas:**
-  * Ahorro superior al 95 % de tiempo de GPU y consumo eléctrico.
-  * Coste computacional inferior a 0,30 € por hora de vídeo analizada.
-  * Procesado de 1 hora de vídeo en ~4–6 minutos sobre una única tarjeta NVIDIA V100.
+  * La detección de personas, el paso más pesado, se hace sobre la cuarta parte de los fotogramas, y el OCR sobre 1 por segundo.
+  * Medido el 29/10/2026 en una RTX 4060 Laptop (8 GB): los vídeos de la demo, de 1,4 a 5,2 min, tardan entre 2 y 9 min en total, y el paso de vídeo entre 75 y 453 s (`DATASET_CARD.md`, 1.2). Sin GPU, un vídeo de 84 s tardó 45 min con 2 núcleos.
+  * No se ha medido el ahorro frente al procesado exhaustivo (Opción A) ni el consumo eléctrico.
 * **Compromisos asumidos:**
   * Margen de resolución temporal de $\pm 0.5$ a $1.0$ segundos en la entrada/salida de plano, lo cual resulta estadísticamente inocuo para métricas agregadas de presencia y protagonismo.
 

@@ -216,3 +216,66 @@ En estricto cumplimiento del **Artículo 14 del Reglamento Europeo de IA (RIA)**
    * **Directiva (UE) 2022/2381:** Sobre el equilibrio de género en los consejos de administración (*Women on Boards*).
    * **Ley Orgánica 2/2024, de 1 de agosto:** De representación paritaria y presencia equilibrada.
    * **Ley 34/1988, de 11 de noviembre:** General de Publicidad (art. 3.a).
+
+---
+
+## 8. Flujo de Usuario, Vistas por Rol y Pantalla «Asumo / No asumo» (#6)
+
+> **Naturaleza de esta sección:** especificación funcional **objetivo**. La tabla 8.5 distingue lo que ya existe en el frontend piloto de lo que está en hoja de ruta.
+
+### 8.1. Principios
+
+1. **El sistema nunca emite un informe definitivo de forma autónoma** (Art. 14 RIA; advertencia de Karina Gibert y Ángela Gasch sobre el caso *Toeslagenaffaire*): una persona responsable decide si asume o no el resultado.
+2. **La IA aumenta a la persona, no la sustituye:** el panel presenta la evidencia (tramo, fotograma, texto) para que la decisión sea informada y trazable.
+3. **Dos niveles de decisión humana**, sin mezclarlos:
+   * **Por persona dudosa** (confianza < 0,80): asignar *Mujer*, *Hombre* o *No determinable*. Equivale a los controles `[ Validar Clasificación ]` y `[ Asumir Abstención ]` de la sección 5.
+   * **Sobre el dictamen completo:** botones **«Asumo»** y **«No asumo»**.
+
+### 8.2. Flujo de usuario
+
+```mermaid
+flowchart TD
+    A["1. Elegir y subir un vídeo"] --> B["2. Análisis (seguimiento de los 6 pasos)"]
+    B --> C["3. Resultado: constelación, veredicto y alertas"]
+    C --> D{"¿Hay personas con género dudoso?"}
+    D -- "Sí" --> E["4. Panel de supervisión: decidir por persona<br/>Mujer / Hombre / No determinable"]
+    D -- "No" --> F
+    E --> F["5. Dictamen: ¿Asumo estas métricas?"]
+    F -- "Asumo" --> G["6a. Se registra la decisión y se habilita el informe"]
+    F -- "No asumo" --> H["6b. Se indica el motivo y se deriva a revisión manual; no se emite informe"]
+```
+
+### 8.3. Vistas por rol
+
+| Rol | Objetivo | Qué ve | Qué decide |
+| :--- | :--- | :--- | :--- |
+| **Operadora / técnica** | Inspeccionar y corregir el análisis | Tramos y fotogramas dudosos, métricas de audio y vídeo al segundo, rótulos leídos por OCR, panel de supervisión | Género de las personas dudosas; **Asumo / No asumo** |
+| **Auditora / ESG** | Valorar el cumplimiento y reportar | Semáforos de cumplimiento (LO 2/2024, CSRD), Índice Global, alertas 1 y 2 e informe firmado | Si el informe se incorpora a la memoria de sostenibilidad |
+| **Ciudadana** | Entender el resultado en 5 segundos | Capa de confianza en 4 estados y la constelación, en lenguaje llano | Nada (solo lectura); valoración ciudadana como línea futura |
+
+### 8.4. Especificación funcional de los botones «Asumo / No asumo»
+
+| Elemento | Regla |
+| :--- | :--- |
+| **Estados** | `pendiente` → `asumido` o `no_asumido`. Mientras esté `pendiente`, el resultado se muestra como **«Sin supervisión humana»** y no se emite informe ni sello. |
+| **Habilitación de «Asumo»** | Solo cuando cada persona dudosa tiene una decisión (incluida *No determinable*). Las personas marcadas *No determinable* se excluyen del denominador, como indica la sección 5. |
+| **«No asumo»** | Exige un motivo breve (lista cerrada: *datos insuficientes*, *error de detección*, *otro*) y marca el vídeo como **derivado a revisión manual**. |
+| **Registro** | Cada decisión guarda el identificador **pseudonimizado** de la persona operadora (`operador_supervision_id`), la fecha y hora, el estado, el motivo y la huella `SHA-256` de las métricas asumidas. No se guarda ningún dato biométrico. |
+| **Reversibilidad** | Se puede cambiar una decisión mientras no se haya emitido el informe; cada cambio queda registrado. |
+| **Accesibilidad (WCAG 2.2 AA)** | Controles nativos `button`, operables con teclado, estado en texto e icono (nunca solo color), `aria-pressed` y foco visible. |
+
+### 8.5. Estado de implementación (v0.1.0)
+
+| Pieza | Estado |
+| :--- | :--- |
+| Subir y analizar un vídeo, seguimiento de pasos | ✅ Implementado |
+| Resultado: constelación, veredicto y alertas 1 y 2 | ✅ Implementado |
+| Panel de supervisión por persona (*Mujer / Hombre / No determinable*) | ⚠️ Parcial: **las decisiones solo viven en memoria** y se pierden al recargar |
+| Botones **«Asumo / No asumo»** sobre el dictamen | ❌ Hoja de ruta |
+| Registro con identificador pseudonimizado y bloqueo del informe sin decisión | ❌ Hoja de ruta |
+| Endpoint en la API para guardar las decisiones (por ejemplo POST /videos/{video_id}/supervision) | ❌ Hoja de ruta: hoy la API solo expone /health y /videos |
+| Vistas por rol | ❌ Hoja de ruta: hoy es una única página; «En palabras sencillas» es lo más cercano a una vista no técnica, y la capa ciudadana solo existe como maqueta |
+
+### 8.6. Alertas
+
+Las condiciones visuales y las reglas deterministas de las dos alertas (*equality-washing* e infrarrepresentación) están definidas en la **sección 3**.

@@ -17,9 +17,9 @@ SPDX-License-Identifier: Apache-2.0
 ---
 
 ## 👥 Equipo 1: «Attention Is All She Needs»
-* **Rocío Jiménez Villén** ([@rjvillen](https://github.com/rjvillen)) — Procesamiento de texto, embeddings semánticos, grafos de conocimiento y visión por computador.
-* **Pilar de la Fuente Diez** ([@pilarvolatixia-cloud](https://github.com/pilarvolatixia-cloud)) — Interlocución oficial, estrategia de producto, modelo de negocio B2B (EIPs / Ley 2/2024) y presentación presencial.
-* **Alba Camiña García** ([@ewigkeitt-cloud](https://github.com/ewigkeitt-cloud)) — Marco conceptual, gobernanza ética y regulatoria (RIA / Sandbox), arquitectura desacoplada y Algoritmos Verdes (*Green AI*).
+* **Rocío Jiménez Villén** ([@rjvillen](https://github.com/rjvillen)) — Arquitectura de backend (FastAPI, Docker y Medallion), orquestación de pipelines, procesamiento NLP, embeddings semánticos y convocatoria de reuniones de sincronización.
+* **Pilar de la Fuente Diez** ([@pilarvolatixia-cloud](https://github.com/pilarvolatixia-cloud)) — Interlocución institucional oficial, modelo de negocio B2B (EIPs / Ley 2/2024 / CSRD), mitigación de riesgos de licencia (AGPL), prototipado de frontend y defensa presencial.
+* **Alba Camiña García** ([@ewigkeitt-cloud](https://github.com/ewigkeitt-cloud)) — Giro epistémico de AIASN, motor determinista y TIF (`fusion.py`), gobernanza ética y regulatoria (RIA / Sandbox), gestión ágil del repositorio (GitHub Project, issues e hitos), arquitectura documental SSoT y diseño de innovación (Constelación, Capa Ciudadana y Shift-Left).
 
 ---
 
@@ -32,6 +32,12 @@ En las redes neuronales, el mecanismo de **autoatención (*self-attention*)** ca
 En la esfera pública y mediática, históricamente los «pesos de atención» se han concedido de forma casi exclusiva a los hombres (reflejado en el escaso **14 % de habla femenina** registrado en el corpus de debate `Àgora` de la UPC), relegando a las mujeres a los márgenes (*aniquilación simbólica*) o a la presencia física muda (*equality-washing*).
 
 **AIASN** proclama que lo que las mujeres necesitan no es condescendencia ni cuotas cosméticas de imagen, sino que el foco de la atención algorítmica, mediática y social se pose con rigor objetivo sobre su **voz efectiva, rol experto y liderazgo real**.
+
+### 🎯 Declaración de Propósito y Misión Social
+1. **Justicia Epistémica frente a la Aniquilación Simbólica:** No toleramos la invisibilización de las mujeres en los medios ni su confinamiento a roles testimoniales o asistenciales. Reivindicamos su autoridad intelectual y su protagonismo activo como expertas y líderes de opinión.
+2. **Rigor Matemático contra el *Equality-Washing*:** Rechazamos el postureo corporativo y la paridad cosmética de foto. La igualdad real se acredita con evidencias cuantitativas reproducibles: tiempo de voz activa, interlocución horizontal directa y reconocimiento público en pantalla, calculados determinísticamente y sin alucinaciones generativas.
+3. **Democratización de la Validación (*Social Open Steward*):** Rompemos el monopolio de las auditorías opacas y costosas. La tecnología de AIASN es y será siempre 100 % libre, soberana y gratuita para la ciudadanía, las escuelas, las universidades, los periodistas independientes y las organizaciones sociales.
+4. **Del Círculo Vicioso al Círculo Virtuoso:** Transformamos la auditoría en un motor de cambio sistémico (*Green AI Flywheel*). Cada contenido auditado enriquece los directorios públicos de talento (`Top Rosies Talent`, `WikiMujeres`) para nutrir con referentes femeninos verificados a los futuros modelos de inteligencia artificial y a la sociedad entera.
 
 ---
 
@@ -255,6 +261,7 @@ AIASN es un **prototipo** del reto. Esta sección dice con claridad qué hay, qu
 | **Supervisión humana** | Guardar las decisiones del panel de revisión, botón «Asumo / No asumo» con identificador pseudonimizado, que la revisión condicione el informe e integrar `emitir_sello_auditoria` en la API | `ETHICS_CHECKLIST.md` (1.1), [ADR-0005](./docs/adr/0005-tratamiento-incertidumbre-abstencion-hitl.md) |
 | **Atribución del género** | Decidir el género solo con evidencias textuales y dejar cara y voz en un modo de investigación (**propuesta, sin implementar**) | [ADR-0013](./docs/adr/0013-atribucion-de-genero-por-evidencias-textuales.md) |
 | **Vistas por rol y capa ciudadana** | Vistas operadora, auditora y ciudadana; valoraciones de la ciudadanía y QR real (hoy solo existe una maqueta en una rama de diseño) | `ETHICS_CHECKLIST.md` (1.3) |
+| **Prevención en edición (*Shift-Left Parity*)** | Plugins y extensiones ligeras con disclaimers preventivos en herramientas de grabación y montaje (`OBS Studio`, `DaVinci Resolve`, `Adobe Premiere`, `Audacity`) que alertan en caliente al editor de los ratios de voz, pantalla y reconocimiento del protagonismo femenino antes de emitir | `CODE_OF_CONDUCT.md` (Art. 4.2), `GLOSSARY.md` (término 18) |
 | **Escala** | Cola de procesado (hoy un vídeo cada vez; la API responde 409 si hay otro en marcha) | `aiasn/api/app.py` (responde 409 si ya hay un vídeo en proceso) |
 | **Licencias** | Sustituir Ultralytics YOLO (AGPL-3.0) por un adaptador permisivo (YOLOX) y revisar la licencia de los pesos faciales (InsightFace: uso no comercial) | Sección «Aislamiento de Licencias» de este README |
 | **Validación** | *Benchmark* con `Àgora` (WER, DER, recuperación del 14 % de habla femenina), medición de las cifras de ahorro y coste, y ejecución reproducible sobre los vídeos CC BY-SA | `DATASET_CARD.md`, `TESTING.md` |

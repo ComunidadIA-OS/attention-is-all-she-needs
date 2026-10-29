@@ -3,9 +3,9 @@
 **Proyecto:** «Attention Is All She Needs» (AIASN) — Reto «Mujeres por la IA Abierta»  
 **Equipo:** Equipo 1 — «Attention Is All She Needs»  
 **Integrantes y Reparto Paritario de Responsabilidades:**
-* **Alba Camiña García** (`@ewigkeitt-cloud`) — Investigación técnico-jurídica, epistemología y ética algorítmica, deducción matemática de umbrales, diseño inicial e implementación del pipeline de ingesta y diarización con Whisper en OVHcloud, motor de fusión determinista, arquitectura desacoplada y salvaguardas RIA / Algoritmos Verdes.
-* **Pilar de la Fuente Diez** (`@pilarvolatixia-cloud` / `@pilarfuente1992`) — Mapeo de mercado B2B, datos CNMV 2025, relación institucional y portavocía ante la organización, detección de riesgos de licencia (AGPL) y co-diseño del frontend/dashboard pericial.
-* **Rocío Jiménez Villén** (`@rjvillen`) — Integración modular y evolución del pipeline de audio/ASR diarizado, análisis de embeddings y sesgo léxico en NLP, baseline de visión por computador (`miVOLO`, OCR) y contratos de datos multimodales.
+* **Alba Camiña García** (`@ewigkeitt-cloud`) — Giro epistémico de AIASN, investigación científico-jurídica y arquitectura documental (SSoT), gestión ágil y gobernanza del repositorio GitHub (Project, Kanban, issues e hitos), motor determinista de métricas y TIF (`fusion.py`), diseño de innovación (Constelación del Protagonismo, Capa Ciudadana y Shift-Left Parity), salvaguardas RIA / Sandbox AESIA y Algoritmos Verdes.
+* **Pilar de la Fuente Diez** (`@pilarvolatixia-cloud` / `@pilarfuente1992`) — Interlocución institucional oficial y portavocía ante la organización, modelo de negocio B2B (EIPs / Ley 2/2024 / CSRD), datos CNMV 2025, detección preventiva de riesgos de licencia (AGPL), co-diseño del frontend/dashboard pericial y defensa presencial.
+* **Rocío Jiménez Villén** (`@rjvillen`) — Arquitectura de backend (FastAPI, Docker y almacenamiento Medallion), orquestación de pipelines de audio/visión, procesamiento NLP, análisis de embeddings y convocatoria de reuniones de sincronización del equipo.
 
 **Destino en Repositorio GitHub:** Entregable oficial en `docs/evidencias_trabajo_en_equipo.md` (evaluable bajo el criterio de Software Libre, Gobernanza Abierta y Trabajo en Equipo por la Oficina Técnica de ComunidadIA-OS y el jurado del reto — baremo oficial: 10 % a 25 % de la nota final).  
 **Documentos Vinculados:**

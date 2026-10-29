@@ -12,18 +12,34 @@ import secrets
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, model_validator
 
 from aiasn.api import schemas
 from aiasn.api.jobs import Launcher, make_launcher
 from aiasn.settings import Settings
+from aiasn.storage import supervision
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import ERROR, OK, QUEUED, RUNNING, Manifest
 
 VIDEO_ID = re.compile(r"[A-Za-z0-9_-]+")
 INTERRUPTED = "El procesado se interrumpió: el worker se detuvo antes de terminar. Vuelve a subir el vídeo."
+
+
+class Supervision(BaseModel):
+    """A human decision on a video (spec 21, 8.4): the gender of each doubtful person and whether the result is assumed."""
+    personas: dict[str, Literal["mujer", "hombre", "no_determinable"]] = {}
+    estado: Literal["pendiente", "asumido", "no_asumido"] = "pendiente"
+    motivo: Literal["datos_insuficientes", "error_deteccion", "otro"] | None = None
+
+    @model_validator(mode="after")
+    def reason_when_not_assumed(self):
+        if self.estado == "no_asumido" and not self.motivo:
+            raise ValueError("«No asumo» needs a reason")
+        return self
 
 
 def new_video_id(filename: str) -> str:
@@ -96,7 +112,20 @@ def create_app(settings: Settings | None = None, launcher: Launcher | None = Non
         if manifest is None:
             raise HTTPException(404, "Unknown video")
         done = manifest["status"] == OK
+        decisions = supervision.history(lake, video_id)
         return {"video_id": video_id, "status": schemas.status(manifest),
-                "resultado": schemas.result(lake, video_id) if done else None}
+                "resultado": schemas.result(lake, video_id) if done else None,
+                "supervision": {"ultima": decisions[-1] if decisions else None, "decisiones": len(decisions)}}
+
+    @app.post("/videos/{video_id}/supervision", status_code=201)
+    def supervise(video_id: str, decision: Supervision) -> dict:
+        """Stores a human decision; the KPIs stay as computed before the review."""
+        manifest = Manifest.load(lake, video_id) if VIDEO_ID.fullmatch(video_id) else None
+        if manifest is None:
+            raise HTTPException(404, "Unknown video")
+        if manifest["status"] != OK:
+            raise HTTPException(409, "The video has no result yet")
+        metrics = schemas.result(lake, video_id)["metricas"]
+        return supervision.save(lake, video_id, decision.model_dump() | {"sha256_metricas": supervision.fingerprint(metrics)})
 
     return app

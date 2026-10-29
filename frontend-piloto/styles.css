@@ -325,6 +325,15 @@ html{scroll-padding-top:calc(var(--top-h,64px) + var(--tabs-h,44px) + 12px)}
 .rv-btn{font:inherit;font-size:12px;font-weight:600;cursor:pointer;min-height:32px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--ground);color:var(--muted)}
 .rv-btn:hover{color:var(--ink);border-color:var(--muted)}
 .rv-btn[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.rv-btn:disabled{opacity:.5;cursor:not-allowed}
+.rv-verdict{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.rv-q{margin:0;font-size:14px;color:var(--ink)}
+.rv-verdict .rv-choices{justify-content:flex-start}
+.rv-reason{display:flex;gap:8px;align-items:center;font-size:13px}
+.rv-reason[hidden]{display:none}
+.rv-reason select{font:inherit;font-size:13px;min-height:32px}
+.rv-state{flex-basis:100%;margin:0;font-size:13px;color:var(--muted)}
+.rv-state b{color:var(--ink)}
 .rv-btn[aria-pressed="true"]::before{content:"✓ "}
 @media (max-width:760px){.rv-choices{justify-content:flex-start}}
 .ledger.titles .fig{width:auto}

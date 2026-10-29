@@ -14,6 +14,7 @@ from aiasn.api.app import create_app, new_video_id
 from aiasn.pipelines.context import RunContext
 from aiasn.pipelines.gold import GoldPipeline
 from aiasn.settings import Settings
+from aiasn.storage import supervision
 from aiasn.storage.lake import Lake
 from aiasn.storage.manifest import OK, RUNNING, Manifest
 
@@ -168,6 +169,46 @@ def test_result_by_sections_of_the_front(settings):
             "sesgo": -0.04} in res["temas"]
     assert res["clima"] == {"mujer": {"técnico/asertivo": 100.0}, "hombre": {"disenso": 100.0}}
     assert {n["id"] for n in res["constelacion"]["nodos"]} >= {"p1", "p2", "v1", "tema:technology"}
+
+
+def analysed(settings, video_id="vid1"):
+    ctx = RunContext.for_video(settings, video_id)
+    for ref, df in (SILVER | NLP_SILVER).items():
+        ctx.lake.write(*ref.split("/"), video_id, df)
+    GoldPipeline(settings)(ctx)
+    ctx.manifest.set_status(OK)
+
+
+def test_supervision_keeps_every_decision(settings):
+    analysed(settings)
+    with client(settings, FakeLauncher()) as api:
+        assert api.get("/videos/vid1").json()["supervision"] == {"ultima": None, "decisiones": 0}
+        first = api.post("/videos/vid1/supervision", json={"personas": {"p9": "mujer"}})
+        second = api.post("/videos/vid1/supervision", json={"personas": {"p9": "mujer"}, "estado": "asumido"})
+        sup = api.get("/videos/vid1").json()["supervision"]
+        metrics = api.get("/videos/vid1").json()["resultado"]["metricas"]
+    assert first.status_code == second.status_code == 201
+    assert sup["decisiones"] == 2   # the first one stays: decisions are added, never overwritten
+    last = sup["ultima"]
+    assert last | {"fecha": None} == {"personas": {"p9": "mujer"}, "estado": "asumido", "motivo": None, "fecha": None,
+                                      "operador_supervision_id": "autodiagnostico_local",
+                                      "sha256_metricas": supervision.fingerprint(metrics)}
+    assert len(Lake(settings.lake_uri).fs.glob(f"{settings.lake_uri}/supervision/video_id=vid1/*.json")) == 2
+
+
+def test_supervision_needs_a_reason_to_not_assume(settings):
+    analysed(settings)
+    with client(settings, FakeLauncher()) as api:
+        assert api.post("/videos/vid1/supervision", json={"estado": "no_asumido"}).status_code == 422
+        assert api.post("/videos/vid1/supervision", json={"estado": "no_asumido", "motivo": "otro"}).status_code == 201
+        assert api.post("/videos/vid1/supervision", json={"personas": {"p9": "otra"}}).status_code == 422
+
+
+def test_supervision_of_a_video_without_result(settings):
+    with client(settings, FakeLauncher()) as api:
+        assert api.post("/videos/nope/supervision", json={}).status_code == 404
+        video_id = upload(api).json()["video_id"]
+        assert api.post(f"/videos/{video_id}/supervision", json={}).status_code == 409
 
 
 def test_new_video_id():

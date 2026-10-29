@@ -46,7 +46,7 @@ Conforme a las recomendaciones de la **Dra. Karina Gibert** y la **Dra. Verónic
 * **Umbral de abstención algorítmica ($p < 0.80$):** Cuando la probabilidad asignada por el clasificador de género (acústico o visual) sea inferior a 0.80, el sistema no fuerza una predicción binaria ficticia; categoriza el evento como **`no_determinado`**.
 * **Índice de Cobertura Transparente:** Todo informe reporta explícitamente el porcentaje de tiempo con clasificación fiable:
   $$\text{Cobertura} = \frac{T_{\text{total}} - T_{\text{no\_determinado}}}{T_{\text{total}}} \times 100$$
-* **Supervisión Humana:** Los casos dudosos o con solape de múltiples hablantes se derivan a un panel de revisión humana en el frontend piloto. En v0.1.0 las decisiones del panel no se guardan; la validación expresa («Asumo / No asumo») y su registro están en la hoja de ruta.
+* **Supervisión Humana:** Los casos dudosos o con solape de múltiples hablantes se derivan a un panel de revisión humana en el frontend piloto. En v0.1.0 el panel de revisión de personas con género dudoso y los botones «Asumo / No asumo» guardan cada decisión en la API (`POST /videos/{id}/supervision`) con su fecha, estado, motivo y huella SHA-256 de las métricas, sin recalcularlas; el informe y su bloqueo están en la hoja de ruta.
 
 ---
 

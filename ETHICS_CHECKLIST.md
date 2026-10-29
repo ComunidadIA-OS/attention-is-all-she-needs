@@ -17,7 +17,7 @@ SPDX-License-Identifier: Apache-2.0
 
 | # | Principio de la IA Fiable (ALTAI / RIA) | Estado | Salvaguarda Técnica Principal en el Repositorio | Referencia en Formaciones |
 | :-: | :--- | :---: | :--- | :--- |
-| **1** | **Agencia y Supervisión Humana** | ⚠️ **Parcial (ver 1.1 y 1.3)** | Panel de revisión de personas con género dudoso en el frontend piloto (*HitL*); las decisiones aún no se guardan. El botón *«Asumo / No asumo»* con identificador pseudonimizado está por integrar (hoja de ruta). | Karina Gibert (`1:00:50`) y Ángela Gasch |
+| **1** | **Agencia y Supervisión Humana** | ⚠️ **Parcial (ver 1.1 y 1.3)** | Panel de revisión de personas con género dudoso y botones *«Asumo / No asumo»* en el frontend piloto (*HitL*); las decisiones se guardan, pero no recalculan las métricas ni bloquean el informe (hoja de ruta). | Karina Gibert (`1:00:50`) y Ángela Gasch |
 | **2** | **Robustez Técnica y Seguridad** | ✅ **Verificado** | Separación determinista: Inferencia IA abierta + Cálculo Python sin alucinaciones. | Fonollosa (VAD/Whisper), Vilaplana (VLMs) |
 | **3** | **Privacidad y Gobernanza de Datos** | ⚠️ **Parcial (ver 3.5)** | *Zero Facial Retention* (biometría efímera en RAM) y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
 | **4** | **Transparencia y Explicabilidad** | ✅ **Verificado** | Declaración RIA (obligatoria desde ago 2026) y *Data Profile* de `Àgora` (14%). | Jorge Teixeira y Karina Gibert (`0:40:41`) |
@@ -30,7 +30,7 @@ SPDX-License-Identifier: Apache-2.0
 ## 1. Agencia Humana y Supervisión (*Human Agency & Oversight*)
 
 - [ ] **1.1. Supervisión Operativa en la Interfaz (Botón *«Asumo / No asumo»*) — Parcial:**  
-  *Estado real (v0.1.0):* el frontend piloto incluye un panel de revisión de personas con género dudoso donde una persona puede asignar «Mujer», «Hombre» o «No determinable» a cada persona dudosa, pero **las decisiones no se guardan** (se pierden al recargar), **no hay botón «Asumo / No asumo» como tal** y la revisión **no bloquea** la emisión del informe. Lo que sigue es el **diseño objetivo** (hoja de ruta):  
+  *Estado real (v0.1.0):* el frontend piloto incluye un panel de revisión de personas con género dudoso donde una persona puede asignar «Mujer», «Hombre» o «No determinable» a cada persona dudosa, y botones «Asumo / No asumo» sobre el dictamen. Cada decisión se guarda en la API (fecha, estado, motivo, huella SHA-256 de las métricas y el rol fijo `autodiagnostico_local` como `operador_supervision_id`, sin usuarios en la demo), pero **no recalcula** las métricas y la revisión **no bloquea** la emisión del informe. Lo que sigue es el **diseño objetivo** (hoja de ruta):  
   *Justificación:* Conforme a la advertencia de Karina Gibert y Ángela Gasch sobre el escándalo *Toeslagenaffaire* en Países Bajos, el sistema **nunca emite un informe definitivo de forma autónoma**. La interfaz presenta un panel de supervisión *Human-in-the-Loop* (HitL) donde el personal responsable de igualdad o auditoría debe pulsar expresamente **«Asumo las métricas»** o **«No asumo / Derivar a revisión manual»** tras inspeccionar los casos dudosos.
 - [x] **1.2. Asistente que Aumenta, No que Sustituye:**  
   *Justificación:* El software está conceptualizado como una herramienta de apoyo analítico que automatiza la ingesta tediosa de minutados, pero deja la valoración contextual y jurídica del cumplimiento a la persona operadora.

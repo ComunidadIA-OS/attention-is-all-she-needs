@@ -1,7 +1,7 @@
 # 0005. Tratamiento de la incertidumbre: abstención probabilística ($p < 0.80$) y supervisión humana *HitL*
 
 * **Fecha:** 2026-10-16
-* **Estado:** Aceptada. *Implementación (v0.1.0): parcial. La abstención `no_determinado` y el panel de revisión del frontend piloto existen; las decisiones del panel aún no se guardan ni bloquean el informe, y el botón «Asumo / No asumo» con identificador pseudonimizado está en la hoja de ruta.*
+* **Estado:** Aceptada. *Implementación (v0.1.0): parcial. La abstención `no_determinado` y el panel de revisión del frontend piloto existen; el panel y los botones «Asumo / No asumo» guardan cada decisión en la API, pero no recalculan las métricas ni bloquean el informe (hoja de ruta).*
 * **Decisores:** Equipo AIASN (Alba Camiña García, Rocío Jiménez Villén, Pilar de la Fuente Diez)
 * **Directriz de referencia:** *Gender Shades* (Buolamwini & Gebru, 2018), Diapositiva 91 de Verónica Vilaplana y Dra. Karina Gibert (`1:00:50`)
 

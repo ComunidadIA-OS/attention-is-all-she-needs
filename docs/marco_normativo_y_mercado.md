@@ -246,7 +246,7 @@ Este checklist resume los 11 puntos de control obligatorio que certifican la con
 
 - [x] **1. Ausencia de Prácticas Prohibidas (Art. 5 RIA):** No se realiza reconocimiento de emociones faciales ni acústicas, ni social scoring, ni perfilado discriminatorio.
 - [x] **2. Aviso de Transparencia Activo (Art. 50.3 RIA):** Toda salida analítica declara explícitamente que opera mediante categorización de género percibido.
-- [ ] **3. Supervisión Humana Funcional (*HitL* - Art. 14 RIA) — Parcial:** Panel de revisión con validación o abstención para $p < 0{,}80$ en el frontend piloto; las decisiones aún no se guardan y el botón «Asumo / No asumo» está en la hoja de ruta.
+- [ ] **3. Supervisión Humana Funcional (*HitL* - Art. 14 RIA) — Parcial:** Panel de revisión con validación o abstención para $p < 0{,}80$ en el frontend piloto; las decisiones y los botones «Asumo / No asumo» se guardan, pero no recalculan las métricas ni bloquean el informe (hoja de ruta).
 - [x] **4. Biometría Efímera (*Zero Facial Retention*):** Vectores faciales destruidos en RAM; prohibición absoluta de bases de datos biométricas permanentes.
 - [x] **5. Tratamiento Exclusivo en Agregado:** Métricas calculadas a nivel de pieza o evento; ausencia de juicios morales sobre individuos particulares.
 - [x] **6. Desacoplamiento Algorítmico (Inferencia vs. Cálculo):** Ratios y veredictos calculados por código determinista en Python, no por clasificadores generativos opacos.

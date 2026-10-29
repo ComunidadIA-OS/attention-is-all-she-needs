@@ -279,8 +279,8 @@ function renderLive(v,empty=false){
     +arow('Voz desde la autoridad','por rol o por rótulo con cargo',v.authority.voice)
     +arow('Presentadas con su cargo','al mencionarlas en la conversación',v.authority.title)+'</tbody></table>');
 
-  // supervisión humana (front only for now: decisions are not stored)
-  renderReview(empty?[]:v.doubtful,empty);
+  // supervisión humana: stored by the API, without recalculating the metrics
+  renderReview(empty?[]:v.doubtful,empty,v);
 
   // cargos: the word2vec gender bias of each title, on the same axis as the topics; every title is listed,
   // also those word2vec has no vector for, so that none drops out unnoticed
@@ -302,16 +302,20 @@ function renderLive(v,empty=false){
   hover=null;buildOverlay();showDefault();renderSr();repaint();
 }
 
-/* ---- supervisión humana: decide each doubtful span; kept in memory until the backend stores them ---- */
-let decisions={};
+/* ---- supervisión humana: the gender of each doubtful person and «Asumo / No asumo» on the result (spec 21, 8.4),
+   stored by the API as a new decision each time; they do not recalculate the metrics ---- */
+let decisions={},verdict={estado:'pendiente',motivo:null,fecha:null},doubtful=[],reviewed=null;
 const CHOICES=[['mujer','Mujer'],['hombre','Hombre'],['no_determinable','No determinable']];
+const REASONS={datos_insuficientes:'datos insuficientes',error_deteccion:'error de detección',otro:'otro'};
 const mmss=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
-function renderReview(spans,empty){
-  decisions={};
+function renderReview(spans,empty,v){
+  const stored=(v&&v.review)||{};
+  decisions=Object.assign({},stored.personas);doubtful=spans;reviewed=empty?null:v.videoId;
+  verdict={estado:stored.estado||'pendiente',motivo:stored.motivo||null,fecha:stored.fecha||null};
   const box=$('review'),tab=$('tab-supervision');
   box.style.display=tab.style.display=empty?'none':'';
   const body=$('rv-body');
-  if(!spans.length){body.innerHTML='<tr><td colspan="3">No hay tramos dudosos en este vídeo: todos tienen un género determinado.</td></tr>';reviewCount(0);return}
+  if(!spans.length){body.innerHTML='<tr><td colspan="3">No hay tramos dudosos en este vídeo: todos tienen un género determinado.</td></tr>';reviewCount(0);showVerdict();return}
   // one row and one decision per person, with the spans where they show
   body.innerHTML=spans.map(p=>{
     const when=p.spans.slice(0,4).map(([a,b])=>`${mmss(a)}–${mmss(b)}`).join(', ')+(p.spans.length>4?` y ${p.spans.length-4} más`:'');
@@ -319,9 +323,31 @@ function renderReview(spans,empty){
     return `<tr data-key="${esc(p.id)}"><td>${esc(p.persona)}<span class="who">${p.spans.length} ${p.spans.length===1?'tramo':'tramos'} · ${es1(p.segundos)} s</span></td>`
       +`<td class="rv-when">${when}<span class="who">${said||'sin voz en estos tramos'}</span></td>`
       +`<td><div class="rv-choices" role="group" aria-label="Género de ${esc(p.persona)}">`
-      +CHOICES.map(([k,l])=>`<button type="button" class="rv-btn" data-choice="${k}" aria-pressed="false">${l}</button>`).join('')+'</div></td></tr>';
+      +CHOICES.map(([k,l])=>`<button type="button" class="rv-btn" data-choice="${k}" aria-pressed="${decisions[p.id]===k}">${l}</button>`).join('')+'</div></td></tr>';
   }).join('');
-  reviewCount(spans.length);
+  reviewCount(spans.length);showVerdict();
+}
+function showVerdict(msgText){
+  const can=AIASNAdapter.canAssume(doubtful,decisions);
+  $('rv-assume').disabled=!can;
+  $('rv-assume').setAttribute('aria-pressed',String(verdict.estado==='asumido'));
+  $('rv-reject').setAttribute('aria-pressed',String(verdict.estado==='no_asumido'));
+  $('rv-reason').hidden=verdict.estado!=='no_asumido'&&!$('rv-reject').dataset.open;
+  $('rv-motivo').value=verdict.motivo||'';
+  const when=verdict.fecha?` el ${new Date(verdict.fecha).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'})}`:'';
+  $('rv-state').innerHTML=msgText||(verdict.estado==='asumido'?`<span aria-hidden="true">✓</span> <b>Asumido</b>${when}.`
+    :verdict.estado==='no_asumido'?`<span aria-hidden="true">✕</span> <b>No asumido</b>${when} (${REASONS[verdict.motivo]}): derivado a revisión manual.`
+    :`<span aria-hidden="true">○</span> <b>Sin supervisión humana</b>.`+(can?'':' Decide antes el género de todas las personas dudosas para poder asumirlo.'));
+}
+async function saveReview(){
+  showVerdict();
+  if(!reviewed)return;
+  try{
+    const r=await fetch(API+'/videos/'+encodeURIComponent(reviewed)+'/supervision',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({personas:decisions,estado:verdict.estado,motivo:verdict.motivo})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    verdict.fecha=(await r.json()).fecha;showVerdict();
+  }catch(err){showVerdict(`<span aria-hidden="true">⚠</span> <b>No se pudo guardar la decisión</b> (${esc(err.message)}). Vuelve a intentarlo.`)}
 }
 function reviewCount(total){
   const done=Object.keys(decisions).length;
@@ -333,6 +359,20 @@ $('rv-body').addEventListener('click',e=>{
   if(again)delete decisions[key];else decisions[key]=b.dataset.choice;   // pressing the chosen one again undoes it
   row.querySelectorAll('.rv-btn').forEach(x=>x.setAttribute('aria-pressed',String(!again&&x===b)));
   reviewCount($('rv-body').querySelectorAll('tr[data-key]').length);
+  verdict={estado:'pendiente',motivo:null,fecha:null};   // another decision: the result has to be assumed again
+  saveReview();
+});
+$('rv-assume').addEventListener('click',()=>{
+  verdict={estado:verdict.estado==='asumido'?'pendiente':'asumido',motivo:null,fecha:null};   // pressed again: undone
+  delete $('rv-reject').dataset.open;saveReview();
+});
+$('rv-reject').addEventListener('click',()=>{
+  if(verdict.estado==='no_asumido'){verdict={estado:'pendiente',motivo:null,fecha:null};delete $('rv-reject').dataset.open;saveReview();return}
+  $('rv-reject').dataset.open='1';showVerdict();$('rv-motivo').focus();   // «No asumo» needs a reason first
+});
+$('rv-motivo').addEventListener('change',e=>{
+  if(!e.target.value)return;
+  verdict={estado:'no_asumido',motivo:e.target.value,fecha:null};delete $('rv-reject').dataset.open;saveReview();
 });
 
 /* ---- análisis de un vídeo con la API ---- */

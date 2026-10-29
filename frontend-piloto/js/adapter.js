@@ -162,7 +162,6 @@
     });
 
     const screen = byGender(mt.pantalla_pct), voice = byGender(mt.voz_pct);
-    const refs = mt.referentes || {};
     const sp = v.salvaguarda_paridad || {};
 
     const roles = {};
@@ -194,7 +193,6 @@
       screen: screen,
       voice: voice,
       ratio: num((mt.ratio_voz_pantalla || {}).mujer),
-      refs: { f: refs.mujer || 0, m: refs.hombre || 0 },
       washing: { on: Boolean(v.alerta_equality_washing), text: v.motivo_alerta || "" },
       underrep: { on: Boolean(v.alerta_infrarrepresentacion), text: v.motivo_infrarrepresentacion || "" },
       parity: { ok: sp.cumple === true, cuota: num(sp.cuota_femenina), suelo: num(sp.suelo_femenino_exigido) },
@@ -202,11 +200,6 @@
       tif: v.bechdel && v.bechdel.estado ? {
         estado: v.bechdel.estado, motivo: v.bechdel.motivo || null, diagnostico: v.bechdel.diagnostico || null,
         puntuacion: num(v.bechdel.puntuacion_0_3), reglas: v.bechdel.reglas || {}
-      } : null,
-      // Índice Global de Representación (spec 21 §4) and its four signals, 0-100, as gold computes it
-      index: v.indice_global && v.indice_global.total != null ? {
-        total: num(v.indice_global.total), provisional: v.indice_global.provisional !== false,
-        dims: v.indice_global.dimensiones || {}
       } : null,
       easy: easySentences(v.resumen_lectura_facil),
       power: {
@@ -229,13 +222,7 @@
       authority: {   // shares within each gender, as the API gives them
         voice: byGender((r.autoridad || {}).voz_con_autoridad_pct),
         title: byGender((r.autoridad || {}).presentacion_con_cargo_pct)
-      },
-      // key ideas in groups that add up to 100, as the API gives them
-      ideas: (() => {
-        const i = (r.autoridad || {}).ideas || {}, solo = i.solo_pct || {};
-        return { total: i.total || 0, f: num(solo.mujer), m: num(solo.hombre), u: num(solo.no_determinado),
-                 shared: num(i.compartidas_pct) };
-      })()
+      }
     };
   }
 

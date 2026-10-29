@@ -22,7 +22,7 @@ SPDX-License-Identifier: Apache-2.0
 | **3** | **Privacidad y Gobernanza de Datos** | ⚠️ **Parcial (ver 3.5)** | *Zero Facial Retention* (biometría efímera en RAM) y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
 | **4** | **Transparencia y Explicabilidad** | ✅ **Verificado** | Declaración RIA (obligatoria desde ago 2026) y *Data Profile* de `Àgora` (14%). | Jorge Teixeira y Karina Gibert (`0:40:41`) |
 | **5** | **Diversidad, Equidad y No Sesgo** | ✅ **Verificado** | Detector de *Equality-Washing* (4 cuadrantes) y tratamiento de bolsa `unknown`. | Vilaplana (Diap. 91-92) y Karina (Diap. 10) |
-| **6** | **Bienestar Social y Ambiental** | ✅ **Verificado** | *Green AI*: Muestreo STRIDE (1-5 fps) con ahorro $>80\%$ en GPU y coste $<0,30$ €/h. | Montse Guàrdia (`1:55:45`) y David Buenhombre |
+| **6** | **Bienestar Social y Ambiental** | ⚠️ **Parcial (ver 6.1)** | *Green AI*: personas en 1 de cada 4 fotogramas y rótulos a 1 fps; ahorro y coste pendientes de medir (Whisper en OVHcloud: ≈0,15 € por hora de audio). | Montse Guàrdia (`1:55:45`) y David Buenhombre |
 | **7** | **Rendición de Cuentas** | ✅ **Verificado** | Arquitectura agnóstica al modelo, suite ADRs y trazabilidad fotograma a fotograma. | Jorge Teixeira (ComunidadIA-OS) y ALTAI |
 
 ---
@@ -58,15 +58,15 @@ SPDX-License-Identifier: Apache-2.0
 ## 3. Privacidad y Gobernanza de Datos (*Privacy & Data Governance*)
 
 - [x] **3.1. Principio de *Zero Facial Retention* (Biometría Efímera en Memoria):**  
-  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales** y no identifica a nadie contra una base de datos. Los *embeddings* faciales (`InsightFace`) se calculan en memoria únicamente para agrupar apariciones de la misma persona dentro de un vídeo y se descartan antes de escribir en el lake (`aiasn/pipelines/video.py`; purga adicional en `aiasn/core/compliance.py`).
+  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales** y no identifica a nadie contra una base de datos. Los *embeddings* faciales (`InsightFace`) se calculan en memoria únicamente para agrupar apariciones de la misma persona dentro de un vídeo y se descartan antes de escribir en el lake (`aiasn/pipelines/video.py`).
 - [x] **3.2. Prioridad Absoluta al Dato Declarado sobre la Biometría:**  
   *Justificación:* Siguiendo la regla de oro de Verónica Vilaplana (Diap. 68), la lectura de rótulos mediante OCR (*«Dra. Maria Pons — Catedràtica d'Economia»*) o las actas oficiales tienen **prevalencia jerárquica estricta** sobre cualquier inferencia física facial o vocal.
 - [x] **3.3. Amparo Legal de Datos en Fase de Prototipo (Art. 67 RDL 24/2021):**  
   *Justificación:* Los vídeos de calibración públicos (como *«Quanta, quanta IA!»*, **sin permiso expreso** de la organización) se tratan en local bajo la excepción de **Minería de Textos y Datos (TDM)** (amparo pendiente de validar con Karina Gibert y Ángela Gasch), sin redistribuir el material audiovisual bruto y fuera de la demostración pública. Las pruebas públicas reproducibles usan vídeos con licencia abierta (`DATASET_CARD.md`, 1.1).
 - [x] **3.4. Prohibición de *Web Scraping* Indiscriminado y Plan de Despliegue:**  
   *Justificación:* Conforme a la instrucción de Karina Gibert (`2:05:10`), se prohíbe el scraping masivo. El Plan de Producción estipula una **Fase 0 de Convenios Formales y Conexión vía API Oficial Autorizada** con las entidades emisoras.
-- [ ] **3.5. Ficheros temporales y minimización de datos (PENDIENTE para la 1.0):**  
-  *Estado real:* el pipeline de vídeo escribe en `tmp/<video_id>/` los fotogramas completos en JPG (que contienen rostros), el audio (`audio.wav`) y el vídeo remuestreado, y el vídeo original permanece en `landing/`. **No hay borrado automático al terminar el procesado**, y se guardan `gender` y `age` estimados por detección (la edad no se utiliza en el cálculo). *Mitigación en el prototipo:* `tmp/` está en `.gitignore` y el vídeo anotado es solo una utilidad de desarrollo. *Acción prevista:* paso final de limpieza de `tmp/` y `landing/` (activable por configuración, porque la depuración y la reanudación necesitan esos ficheros) y retirada de la edad; en producción, borrado periódico conforme a los plazos del RGPD. *Hasta entonces, no se debe afirmar que el tratamiento sea «solo en RAM».*
+- [x] **3.5. Ficheros temporales y minimización de datos:**  
+  *Estado real:* el pipeline de vídeo escribe en `tmp/<video_id>/` los fotogramas completos en JPG (que contienen rostros), el audio (`audio.wav`) y el vídeo remuestreado, y el vídeo original permanece en `landing/`. Al terminar, cada vídeo procesado con Docker Compose borra sus ficheros temporales (fotogramas, audio y vídeo remuestreado en `tmp/`) y, si todos los pasos han ido bien, el vídeo subido a `landing/` (`PRIVACY__DELETE_MEDIA_AFTER_RUN`; sin Docker está desactivado por defecto, para depurar). La edad ya no se guarda (MiVOLO la predice, pero se descarta sin leerla). `tmp/` está en `.gitignore` y el vídeo anotado es solo una utilidad de desarrollo (necesita conservar los fotogramas). *Pendiente:* plazo de conservación de las tablas derivadas y, en producción, borrado periódico conforme a los plazos del RGPD. *No se debe afirmar que el tratamiento sea «solo en RAM»: los fotogramas pasan por disco mientras se procesa el vídeo.*
 - [ ] **3.6. Consulta pendiente sobre nombres de personas (Karina Gibert / Ángela Gasch):**  
   *Estado real:* los nombres proceden únicamente de rótulos en pantalla (OCR) y de menciones en el audio transcrito; no se deducen de la cara ni se contrastan con ninguna base de datos de identidades. Está pendiente confirmar con las mentoras la licitud de reconocer y conservar esos nombres, especialmente para vídeos privados (consentimiento, plazos de conservación).
 - [x] **3.5. Cláusula de Usos Permitidos y Cruces Prohibidos:**  
@@ -104,8 +104,8 @@ SPDX-License-Identifier: Apache-2.0
 
 ## 6. Bienestar Social y Ambiental (*Green AI & Sustainability*)
 
-- [x] **6.1. *Energía por Diseño* (Muestreo Temporal `STRIDE`):**  
-  *Justificación:* Atendiendo a las directrices de Montse Guàrdia (`1:55:45`) y Verónica Vilaplana, se rechaza el procesado bruto de 25–30 fps. Se adopta un muestreo de **1 a 5 fps (`STRIDE = 3` a `6`)**, reduciendo el consumo de GPU y la huella de carbono en más de un **80 %** sin pérdida de representatividad estadística.
+- [ ] **6.1. *Energía por Diseño* (Muestreo Temporal `STRIDE`) — Parcial:**  
+  *Estado real:* atendiendo a las directrices de Montse Guàrdia (`1:55:45`) y Verónica Vilaplana, el vídeo se extrae a 25 fps y se buscan caras en todos los fotogramas, porque el detector de hablante activo (TalkNet) los necesita; las personas se detectan en 1 de cada 4 fotogramas y los rótulos a 1 fps. El ahorro frente a analizarlo todo está pendiente de medir, al igual que el coste por hora (solo es oficial el precio de Whisper en OVHcloud: ≈0,15 € por hora de audio).
 - [x] **6.2. Regla de Oro de Depuración de Karina Gibert (`1:56:50`):**  
   *Justificación:* Todo el pipeline se depura en local sobre muestras mínimas de audio y vídeo de pocos segundos antes de desplegarse en las instancias GPU de OVHcloud, evitando el gasto superfluo de cómputo en la nube.
 - [x] **6.3. Optimización para Arquitectura NVIDIA Volta (V100):**  

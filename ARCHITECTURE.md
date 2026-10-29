@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 Cada vídeo es procesado por cuatro pipelines de datos y los resultados se organizan en un Data Lake de tres capas siguiendo una arquitectura Medallion [1]: bronze, silver y gold. Los resultados vuelven al front para completar el análisis de paridad.
 
-**Contenido:** [Visión general](#visión-general) · [Orden de ejecución](#orden-de-ejecución) · [Audio](#pipeline-de-audio) · [Vídeo](#pipeline-de-vídeo) · [NLP](#pipeline-de-nlp) · [Rótulos](#pipeline-de-rótulos) · [Silver](#silver) · [Gold](#gold) · [API y front](#api-y-front) · [Referencias](#referencias)
+**Contenido:** [Visión general](#visión-general) · [Orden de ejecución](#orden-de-ejecución) · [Audio](#pipeline-de-audio) · [Vídeo](#pipeline-de-vídeo) · [NLP](#pipeline-de-nlp) · [Rótulos](#pipeline-de-rótulos) · [Silver](#silver) · [Gold](#gold) · [API y front](#api-y-front) · [Referencias](REFERENCES.md)
 
 ## Visión general
 
@@ -23,7 +23,7 @@ Nota: Sin Docker, la API lanza el worker como proceso hijo y el lago es la carpe
 | API | FastAPI [3] en `:8000`. Lanza los workers por `docker.sock`. |
 | Worker | `python -m aiasn.run_pipelines --video-id ID`, un contenedor por vídeo, con GPU NVIDIA si la hay. Modelos locales en el volumen `aiasn-models` (`/models`). |
 | Almacén S3 | SeaweedFS [4], bucket `s3://aiasn`, Parquet por `video_id=`. Carpetas `landing/` (vídeo subido), `bronze/` (salida de modelos, 10 tablas), `silver/` (personas y hechos, 13 tablas), `gold/` (KPIs y dictamen, 6 tablas) y `runs/` (manifest con el estado de cada paso del pipeline). |
-| OVHcloud AI Endpoints [5] | Whisper large v3 [6] para speech to text y Llama 3.3 70B [7] como LLM. |
+| OVHcloud AI Endpoints [5] | Whisper large v3 [6] para speech to text; Llama 3.3 70B [7] como LLM y gpt-oss-120b [31] para los referentes. |
 | Langfuse [8] (opcional) | Perfil `langfuse` del compose: trazas de las llamadas al LLM, agrupadas por vídeo. Se activa con `LANGFUSE_ENABLED`. |
 
 
@@ -89,13 +89,13 @@ flowchart LR
 
 ## Pipeline de NLP
 
-Lee `bronze/audio_turns` → `escribe 6 tablas nlp_*`. Seis tareas independientes sobre la transcripción, lanzadas a la vez (hasta 6 llamadas) al LLM Llama 3.3 70B [7] de OVHcloud por LiteLLM [22]. Para evitar alucinaciones, cada cita que devuelve el modelo se comprueba contra la transcripción (`found`) y lo que no aparece en el texto se descarta.
+Lee `bronze/audio_turns` → `escribe 6 tablas nlp_*`. Seis tareas independientes sobre la transcripción, lanzadas a la vez (hasta 6 llamadas) a los LLM de OVHcloud por LiteLLM [22]: Llama 3.3 70B [7] y, para los referentes, gpt-oss-120b [31], que distingue mejor a las figuras públicas citadas de quienes participan, de los institutos con nombre de persona y de las épocas. Para evitar alucinaciones, cada cita que devuelve el modelo se comprueba contra la transcripción (`found`) y lo que no aparece en el texto se descarta.
 
 | Tarea | Qué extrae |
 |---|---|
 | `mentions` | Quién alude a quién en la conversación, y si dice su nombre y cargo. |
 | `topics` | Temas de la conversación entera y qué hablantes tratan cada uno, guiado por una lista de temas incluidos en el prompt. |
-| `references` | Personas históricas, famosas o conocidas citadas como referente, con su género. El modelo razona antes si cada una lo es. |
+| `references` | Personas históricas o conocidas públicamente citadas como referente, con su género. Por cada una, el modelo razona y responde sí o no a si es una persona concreta (no una época, un lugar o un instituto), si es conocida públicamente y si se cita como referente; solo quedan las que cumplen las tres y cuyo nombre parece de persona. |
 | `roles` | Formato de la pieza y rol de cada hablante: presentador/a, entrevistado/a, experto/a, testimonio… |
 | `ideas` | Ideas clave de la pieza y quién las aporta. |
 | `tone` | Tono de cada turno: técnico/asertivo, colaborativo o disenso. Con el LLM o, si se elige desde la configuración, con clasificación zero-shot con mDeBERTa [23][24] en local. |
@@ -111,7 +111,7 @@ Lee `bronze/audio_turns` → `escribe 6 tablas nlp_*`. Seis tareas independiente
 
 ## Pipeline de rótulos
 
-Lee `bronze/video_texts` y escribe`bronze/video_captions`. El LLM lee los textos del OCR y separa los rótulos de persona: nombre, cargo, el cargo en inglés (lo necesitaremos para word2vec [25][26]) y si el cargo muestra autoridad experta o institucional.
+Lee `bronze/video_texts` y escribe`bronze/video_captions`. El LLM lee los textos del OCR y responde, bloque a bloque, sí o no a si presenta a una persona concreta (por defecto, no: logotipos, títulos de evento o nombres de centros no lo son). De los rótulos de persona saca nombre, cargo, el cargo en inglés (lo necesitaremos para word2vec [25][26]) y si el cargo muestra autoridad experta o institucional.
 
 | Tabla | Una fila por | Columnas |
 |---|---|---|

@@ -129,7 +129,7 @@ A5 ==>|"Multiplica invitaciones"| A1
 
 **Probado en** Ubuntu 24.04 (x86_64): AMD Ryzen 7 7840HS (16 hilos), 30 GB de RAM y GPU NVIDIA RTX 4060 Laptop (8 GB), con Docker 29 y Python 3.13. También en CPU, sin GPU, con 2 núcleos y 6 GB de RAM. En Windows, macOS (Apple Silicon) y Linux ARM las dependencias se resuelven, pero el procesado no se ha probado.
 
-> ⚠️ **Sin GPU funciona, pero es lento.** Con 2 núcleos y 6 GB de RAM, un vídeo de 84 s tardó **45 min**: 32 min la detección de personas y 10 el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 8 min. La primera vez se suman unos minutos para descargar los modelos (~2,5 GB).
+> ⚠️ **Sin GPU funciona, pero es lento.** Con 2 núcleos y 6 GB de RAM, un vídeo de 84 s tardó **45 min**: 32 min la detección de personas y 10 el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 9 min. La primera vez se suman unos minutos para descargar los modelos (~2,9 GB).
 
 ### Requisitos
 

@@ -1,4 +1,9 @@
-'''Video pipeline results drawn on the video, to check them by eye (debug only: written to tmp, never to the lake)'''
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+'''Video pipeline results drawn on the video, to check them by eye (debug only: written to tmp, never to the lake)
+
+    uv run python scripts/annotate_video.py VIDEO_ID   (after the video pipeline, while tmp/ still has its frames)
+'''
 
 import subprocess
 import unicodedata
@@ -76,7 +81,6 @@ def _ascii(text: str) -> str:
 
 
 if __name__ == "__main__":
-    # Usage: python -m aiasn.pipelines.video_annotation VIDEO_ID   (after the video pipeline, while tmp/ still has its frames)
     import argparse
 
     from aiasn.settings import Settings

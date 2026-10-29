@@ -11,7 +11,7 @@ from conftest import ASR_RESPONSE, CAPTION, LOGO
 
 from aiasn.model_adapters.transcriber import Transcriber
 from aiasn.pipelines.context import RunContext
-from aiasn.pipelines.video_annotation import annotate
+from scripts.annotate_video import annotate
 from aiasn.settings import Settings
 
 

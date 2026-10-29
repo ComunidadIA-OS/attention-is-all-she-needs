@@ -169,18 +169,14 @@ class VideoPipeline(Pipeline):
 
 
 if __name__ == "__main__":
-    # Usage: python -m aiasn.pipelines.video VIDEO_ID [--annotate]   (the video must be inside /data/landing/video_id={VIDEO_ID})
-    from aiasn.pipelines.video_annotation import annotate
+    # Usage: python -m aiasn.pipelines.video VIDEO_ID   (the video must be inside /data/landing/video_id={VIDEO_ID})
     from aiasn.settings import Settings
 
     parser = argparse.ArgumentParser()
     parser.add_argument("video_id")
-    parser.add_argument("--annotate", action="store_true", help="also draw the results on the video, in tmp/")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
 
     settings = Settings()
     ctx = RunContext.for_video(settings, args.video_id, force=True)   # run by hand: redo it
     VideoPipeline(settings.video)(ctx)
-    if args.annotate:
-        logging.getLogger("aiasn").info("annotated video: %s", annotate(ctx))

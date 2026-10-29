@@ -238,7 +238,7 @@ Dibuja sobre el vídeo lo que ha detectado el pipeline:
 Funciona **sin Docker**, después de procesar el vídeo, porque usa los fotogramas que quedan en `tmp/<video_id>/video/frames`. Con Docker, esos fotogramas se borran con el contenedor del *worker*.
 
 ```bash
-uv run python -m aiasn.pipelines.video_annotation <video_id>   # → tmp/<video_id>/video/annotated.mp4
+uv run python scripts/annotate_video.py <video_id>   # → tmp/<video_id>/video/annotated.mp4
 ```
 
 ### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)

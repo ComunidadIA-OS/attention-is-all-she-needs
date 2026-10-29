@@ -11,6 +11,8 @@
 
 ---
 
+> 📌 **Consulta Rápida y Ficha Ejecutiva:** Para ver el encuadramiento normativo preliminar propuesto por el equipo, el catálogo de normas de apoyo y la delimitación de riesgos y exclusiones del RIA, véase [**docs/clasificacion_legal_y_marco_normativo.md**](./clasificacion_legal_y_marco_normativo.md).
+
 ## 0. Resumen Ejecutivo y Objeto Pericial
 
 Este documento consolida el blindaje técnico-jurídico, la fundamentación de mercado y el modelo de gobernanza ética de la plataforma **AIASN**. 
@@ -123,7 +125,7 @@ La jurisprudencia del Tribunal Supremo y los estándares **ISO 37301** (Sistemas
 En el mercado corporativo español, la adopción de herramientas de IA fracasa cuando el departamento de RSC quiere comprarla pero el **Delegado de Protección de Datos (DPO)** o el **Compliance Officer (CCO)** la bloquean por riesgos legales. AIASN está diseñado por arquitectura para obtener el visto bueno simultáneo de los tres decisores:
 
 1. **Responsable de RSC / ESG:** Obtiene de forma automatizada los indicadores cuantitativos del estándar **ESRS S1 (CSRD / Ley 11/2018)** y la **Ley Orgánica 2/2024**, más el sello de confianza para licitaciones públicas y procesos de *Due Diligence* (M&A).
-2. **Delegado de Protección de Datos (DPO — RGPD / LOPDGDD / ISO 27701):** Aprueba la herramienta porque aplica ***Zero Facial Retention* en RAM (ADR-0004)** y **procesamiento *Split* en local** (el vídeo bruto no necesita subirse a nubes externas, enviando únicamente texto y metadatos tabulares anónimos).
+2. **Delegado de Protección de Datos (DPO — RGPD / LOPDGDD / ISO 27701):** Facilita la conformidad porque aplica **biometría efímera sin retención de vectores faciales en disco (ADR-0004)** y **procesamiento en red controlada** (los vectores biométricos no se persisten en las tablas del lake, registrando únicamente metadatos derivados y texto).
 3. **Compliance Officer (CCO — ISO 37301 / LISOS):** Cuenta con un motor determinista auditable bajo licencia empresarial limpia (**Apache-2.0**) que previene sanciones de la LISOS, la CNMV y la AEPD.
 
 * **Benchmarking de Precios en España y Margen Bruto (>90 %):**  
@@ -149,7 +151,7 @@ flowchart TD
 ```
 
 ### 4.1. Delimitación Positiva: Por qué AIASN NO es de Alto Riesgo ni Práctica Prohibida
-1. **Ámbito de Aplicación Material (Auditoría de Contenido Público):** El sistema analiza emisiones audiovisuales públicas y eventos institucionales. No se despliega en salas de contratación laboral, no califica personal en su puesto de trabajo ni evalúa estudiantes en instituciones educativas (excluyéndose de la prohibición del Art. 5.1.f y del Anexo III).
+1. **Ámbito de Aplicación Material (Auditoría de Comunicación, Eventos y Medios):** El sistema audita de forma agregada emisiones audiovisuales, eventos institucionales, juntas corporativas y conferencias. En el entorno empresarial, su función es medir la paridad de la representación corporativa (Ley 2/2024 y reporte CSRD); **no se utiliza para la toma de decisiones individuales sobre personas trabajadoras** (selección de personal, evaluación de rendimiento, asignación de tareas, promoción o despido del Anexo III.4 RIA) ni evalúa estudiantes (excluyéndose de la prohibición del Art. 5.1.f y de los supuestos de alto riesgo del Anexo III).
 2. **Separación entre Inferencia y Cálculo (ADR-0001):** La IA abierta solo extrae texto y rectángulos de detección con marcas temporales ($t_i, t_f$); todo el cálculo de ratios, métricas y veredictos se ejecuta mediante código determinista en Python, impidiendo fallos de caja negra.
 3. **Categorización Biométrica de Género Percibido:**
    * El Art. 5.1.g prohíbe la categorización biométrica que deduzca origen racial, convicciones políticas, afiliación sindical, religión u orientación sexual. **La presentación de género y la edad no forman parte de este catálogo prohibido**.
@@ -247,7 +249,7 @@ Este checklist resume los 11 puntos de control obligatorio que certifican la con
 - [x] **1. Ausencia de Prácticas Prohibidas (Art. 5 RIA):** No se realiza reconocimiento de emociones faciales ni acústicas, ni social scoring, ni perfilado discriminatorio.
 - [x] **2. Aviso de Transparencia Activo (Art. 50.3 RIA):** Toda salida analítica declara explícitamente que opera mediante categorización de género percibido.
 - [ ] **3. Supervisión Humana Funcional (*HitL* - Art. 14 RIA) — Parcial:** Panel de revisión con validación o abstención para $p < 0{,}80$ en el frontend piloto; las decisiones y los botones «Asumo / No asumo» se guardan, pero no recalculan las métricas ni bloquean el informe (hoja de ruta).
-- [x] **4. Biometría Efímera (*Zero Facial Retention*):** Vectores faciales destruidos en RAM; prohibición absoluta de bases de datos biométricas permanentes.
+- [x] **4. Biometría Efímera (No retención de vectores biométricos):** Vectores faciales descartados en memoria antes de persistir tablas; ausencia de bases de datos biométricas permanentes o fichado facial.
 - [x] **5. Tratamiento Exclusivo en Agregado:** Métricas calculadas a nivel de pieza o evento; ausencia de juicios morales sobre individuos particulares.
 - [x] **6. Desacoplamiento Algorítmico (Inferencia vs. Cálculo):** Ratios y veredictos calculados por código determinista en Python, no por clasificadores generativos opacos.
 - [x] **7. Amparo Legal de Minería de Datos:** Análisis amparado en el Art. 67 del RDL 24/2021; no redistribución de archivos brutos con derechos de autor.

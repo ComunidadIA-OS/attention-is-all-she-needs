@@ -14,6 +14,8 @@ SPDX-License-Identifier: Apache-2.0
 [![Open Source AI](https://img.shields.io/badge/Open%20Source%20AI-Compliant-brightgreen.svg)](https://opensource.org/ai)
 [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Art.%2050%20Compliant-success.svg)](./ETHICS_CHECKLIST.md)
 
+> **Para evaluar:** comandos, vídeos de la demo y dónde mirar en [Cómo probarlo](#-cómo-probarlo).
+
 ---
 
 ## 👥 Equipo 1: «Attention Is All She Needs»
@@ -117,120 +119,106 @@ A5 ==>|"Multiplica invitaciones"| A1
 
 ---
 
-## 🚀 Instalación, Configuración y Reproducción
+## 🚀 Cómo probarlo
 
-El proyecto está diseñado bajo una arquitectura modular agnóstica que ofrece **tres vías de prueba inmediata** según los recursos disponibles:
+**Probado en** Ubuntu 24.04 (x86_64): AMD Ryzen 7 7840HS (16 hilos), 30 GB de RAM y GPU NVIDIA RTX 4060 Laptop (8 GB), con Docker 29 y Python 3.13. También en CPU, sin GPU, con 2 núcleos y 6 GB de RAM. En Windows, macOS (Apple Silicon) y Linux ARM las dependencias se resuelven, pero el procesado no se ha probado.
 
-### 1. Clonar el Repositorio y Crear el Entorno
+> ⚠️ **Sin GPU funciona, pero es lento.** Con 2 núcleos y 6 GB de RAM, un vídeo de 84 s tardó **45 min**: 32 min la detección de personas y 10 el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 8 min. La primera vez se suman unos minutos para descargar los modelos (~2,5 GB).
+
+### Requisitos
+
+* **Python 3.11+** con [uv](https://docs.astral.sh/uv/) (recomendado) o pip.
+* **ffmpeg**, solo sin Docker (la imagen ya lo trae). Hay versión para Linux, macOS y Windows:
+  ```bash
+  sudo apt install ffmpeg     # Ubuntu / Debian
+  brew install ffmpeg         # macOS
+  winget install ffmpeg       # Windows
+  ```
+* **Token de OVHcloud AI Endpoints**, para la transcripción y el LLM: `cp .env.example .env` y rellena `OVH_AI_ENDPOINTS_ACCESS_TOKEN`. Sin él, el *worker* lo avisa al arrancar y falla al transcribir.
+* **Con Docker y GPU**, el **NVIDIA Container Toolkit**. Si no está, el *worker* se lanza en CPU y la API lo avisa en su log. [Guía oficial](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html); en Ubuntu/Debian:
+  ```bash
+  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+  curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+  sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+  docker run --rm --gpus all ubuntu nvidia-smi   # debe mostrar tu GPU
+  ```
+
+### 1. Tests (1 minuto, sin GPU ni token)
+
 ```bash
 git clone https://github.com/ComunidadIA-OS/attention-is-all-she-needs.git
 cd attention-is-all-she-needs
 
-# Con uv (Recomendado — instalación ultra-rápida y reproducible):
-uv venv
-source .venv/bin/activate # En Linux / macOS
-# o en Windows PowerShell: .venv\Scripts\Activate.ps1
-
-uv pip install -e ".[dev]"
-
-# (Alternativa con pip estándar):
-# python -m venv .venv && source .venv/bin/activate
-# pip install -e ".[dev]"
+uv sync --extra dev && uv run pytest
+# o con pip:
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
+pip install -e ".[dev]" && python -m pytest tests/
 ```
 
----
+Entre otros, validan:
+* `tests/test_contracts.py`: contratos de audio, solape temporal, matriz de 4 cuadrantes *Seeing and Hearing* (Verónica Vilaplana), regla anti-*equality-washing* (Kanter 1977 / Tuchman 1978) y abstención ética ($p < 0{,}80 \rightarrow \text{no\_determinado}$).
+* `tests/test_compliance_adapters.py`: purga biométrica en RAM (*Zero Facial Retention*), denegación de Sello Oficial ante sanciones LISOS o *cherry-picking* (Art. 6 Apache-2.0), rehabilitación corporativa (*Self-Cleaning*, ventana de 3 años) y firma `SHA-256` con ID de supervisión pseudonimizado (`operador_supervision_id`).
 
-### 2. Modos de Verificación para el Tribunal Evaluador
+### 2. Demo con Docker
 
-#### 🟢 Modo A: Verificación Inmediata y Determinista (Zero Setup — <3 segundos)
-> **Recomendado para evaluación técnica rápida sin requerir GPUs ni credenciales en la nube.**
-Ejecuta la suite completa de pruebas unitarias sobre datos reales preprocesados del corpus *Àgora* y trazas de vídeo:
 ```bash
-python -m pytest tests/ -v
+docker compose --profile jobs build   # imágenes de la API, el front y el worker (este ocupa ~12,5 GB: 10–20 min la primera vez)
+docker compose up -d                  # almacén S3, API en http://localhost:8000 y front en http://localhost:8080
 ```
 
-### 4. Despliegue con Docker (Opcional)
-Para levantar la demo completa (subir un vídeo y ver sus resultados), ver [Demo: subir un vídeo y ver sus resultados](#-demo-subir-un-vídeo-y-ver-sus-resultados).
-* **Qué valida:**
-* **Suite de pruebas unitarias y contratos éticos (10 tests en esta rama + 5 tests del motor determinista en PR de fusión):**
-* `tests/test_contracts.py` (6 tests): Contratos de audio, solape temporal, matriz de 4 cuadrantes *Seeing and Hearing* (Verónica Vilaplana), regla anti-*equality-washing* (Kanter 1977 / Tuchman 1978) y abstención ética ($p < 0{,}80 \rightarrow \text{no\_determinado}$).
-* `tests/test_compliance_adapters.py` (4 tests): Purga biométrica en RAM (*Zero Facial Retention*), denegación de Sello Oficial ante sanciones LISOS o *cherry-picking* (Art. 6 Apache-2.0), rehabilitación corporativa activa (*Self-Cleaning* con ventana de 3 años e informes históricos) e inmutabilidad criptográfica `SHA-256` con ID de supervisión pseudonimizado (`operador_supervision_id`).
+* El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker-<video_id>` por vídeo, y lo borra al lanzar el siguiente. Su log: `docker logs aiasn-worker-<video_id>`.
+* La API usa el socket de Docker, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.
+* ¿El puerto 8000 o el 8080 está ocupado? Cámbialos con `API_PORT` y `FRONT_PORT` en `.env`.
 
-#### ☁️ Modo B: Inferencia Cloud con AI Endpoints de OVHcloud (Infraestructura Oficial)
-> **Aprovecha el catálogo de modelos servidos en Europa por OVHcloud con aceleración GPU.**
-1. Copiar la plantilla de configuración:
+### 3. Demo sin Docker
+
 ```bash
-cp .env.example .env
+uv sync --extra worker --extra api    # ~7 GB (PyTorch y CUDA)
+uv run uvicorn aiasn.api.app:create_app --factory --port 8000
+python -m http.server 8080 --directory frontend-piloto   # front en http://localhost:8080/?api=http://localhost:8000
 ```
-2. Configurar en `.env` tu token de acceso proporcionado por OVHcloud:
-```env
-OVH_BASE_URL="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
-OVH_AI_ENDPOINTS_ACCESS_TOKEN="tu_token_aqui"
-OVH_ASR_MODEL="whisper-large-v3"
-```
-3. Ejecutar el pipeline de audio sobre una muestra de prueba:
-```bash
-python scripts/test_audio_ovh.py tests/fixtures/muestra_audio.wav ca
-```
-*Genera de forma automática el archivo tabular estructurado con turnos de palabra, diarización y marcas de tiempo.*
 
-#### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)
+Sin la imagen `aiasn-worker`, la API lanza el *worker* como proceso (`API__LAUNCHER=process` para forzarlo) y guarda el lake en `data/`. También se puede procesar un vídeo sin la API:
+
+```bash
+uv run python -m aiasn.run_pipelines --file video.mp4
+```
+
+### 4. Analizar un vídeo
+
+Los vídeos de la demo, con su licencia y autoría, están en [`videos-final-demo/`](videos-final-demo/README.md).
+
+* **Desde el front** (<http://localhost:8080>): «Elegir vídeo» → «Analizar».
+* **Desde la API**:
+  ```bash
+  curl -F file=@video.mp4 http://localhost:8000/videos   # → {"video_id": "video-3f9a"}
+  curl http://localhost:8000/videos/video-3f9a           # estado; con "ok", también el resultado
+  ```
+  Documentación interactiva en <http://localhost:8000/docs>.
+* **Si falla** (por ejemplo, si OVHcloud corta la conexión): sin Docker, `uv run python -m aiasn.run_pipelines --video-id <video_id>` sigue desde el paso que falló; con Docker, vuelve a subir el vídeo.
+
+### 5. Vídeo anotado: comprobar el resultado a ojo
+
+Dibuja sobre el vídeo lo que ha detectado el pipeline:
+* una caja por persona con `P<id> | F/M`;
+* una caja verde *speaking* en la cara de quien habla;
+* en amarillo, los textos que lee el OCR.
+
+Funciona **sin Docker**, después de procesar el vídeo, porque usa los fotogramas que quedan en `tmp/<video_id>/video/frames`. Con Docker, esos fotogramas se borran con el contenedor del *worker*.
+
+```bash
+uv run python -m aiasn.pipelines.video_annotation <video_id>   # → tmp/<video_id>/video/annotated.mp4
+```
+
+### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)
 > **Para todas las Administraciones Públicas del Estado (RTVE, 3Cat/TV3, EITB, CRTVG, universidades, ministerios, diputaciones y ayuntamientos) sujetas al Esquema Nacional de Seguridad (ENS), al Art. 157 de la Ley 40/2015 (reutilización de sistemas) y a la Directiva UE 2019/882 de Accesibilidad.**
 * **Soberanía Lingüística Cooficial e Inclusividad por Diseño (`ADR-0010`):** Soporte nativo sin traducción intermedia para todas las **lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) + `en`**, e inclusión automática de resumen en **Lectura Fácil (Norma UNE 153101 / WCAG 2.2 AA)** (`resumen_lectura_facil`) compatible con lectores de pantalla (`NVDA`/`JAWS`).
 * **Aislamiento de Licencias (`aiasn/model_adapters/vision_adapter.py`):** Permite ingerir trazas precomputadas vía archivo plano (`.csv` / `.tsv` mediante `CSVPrecomputedAdapter`, doctrina de separación de procesos de la FSF) o ejecutar inferencia local 100 % permisiva (`PermissiveYOLOXAdapter` con **YOLOX Apache-2.0**, **InsightFace MIT** e **EasyOCR Apache-2.0**), sin contaminar entornos B2B o públicos con licencias copyleft (AGPL-3.0).
 * **Círculo Virtuoso de Referentes Femeninos sin Reentrenamiento (*Green AI Flywheel*):** Los rótulos y menciones extraídos por consenso de alta confianza ($p \ge 0{,}80$) enriquecen un diccionario ligero local (`.csv`/`.json`) interoperable con **`Top Rosies Talent`**, **`ReDivIAcat`** y **`tFemTIC`** (`IDEAI-UPC` / `donesCOEINF`) y con **`WikiMujeres` / `Wikidata`**, mejorando el reconocimiento futuro (Cuadrante 4) tanto *offline/batch* como sincronizado sin coste de GPU en reentrenamiento.
 * **Extensión en Caliente para las 4 Modalidades (*Shift-Left Parity*):** Diseñado para inyectarse como asistente preventivo en herramientas de **Vídeo** (`OBS Studio`, `DaVinci Resolve`, `Premiere`), **Audio/Podcasts** (`Audacity`, `Audition`), **Imagen/Cartelería** (`Canva`, `Figma`) y **Texto/Prensa** (`WordPress`, `Docs`), y emitir certificados con huella inmutable **`SHA-256`** (`emitir_sello_auditoria`).
-
----
-
-## 🎬 Demo: subir un vídeo y ver sus resultados
-
-La API recibe un vídeo, lanza el *worker* que lo procesa (audio, vídeo, NLP, silver y gold) y devuelve los resultados agrupados como las secciones del front. Se procesa un vídeo cada vez.
-
-### Antes de empezar
-
-* **GPU NVIDIA (muy recomendable).** Sin GPU todo funciona en CPU, pero el paso de vídeo tarda unas 5 veces la duración del vídeo (un vídeo de 2 min: ~10–12 min, frente a ~2 min con GPU).
-* **Con Docker** hace falta además el **NVIDIA Container Toolkit**, para que los contenedores vean la GPU. Si no está, el *worker* se lanza en CPU y la API lo avisa en su log. Guía oficial: <https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html>. En Ubuntu/Debian:
-```bash
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
-| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
-| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-docker run --rm --gpus all ubuntu nvidia-smi # debe mostrar tu GPU
-```
-* **Token de OVHcloud** para la transcripción y el LLM: `cp .env.example .env` y rellena `OVH_AI_ENDPOINTS_ACCESS_TOKEN`.
-* **Modelos:** no hay que descargarlos a mano. Cada uno se descarga la primera vez que se usa (~2,5 GB en total, entre ellos word2vec de 1,6 GB), así que el primer vídeo tarda más (medido: 8,3 min el primero frente a 1,9 min los siguientes, en un vídeo de 96 s con GPU). Con Docker quedan en el volumen `aiasn-models`; sin Docker, en la caché de cada librería (o en `MODELS_DIR` si la defines).
-* **Límite actual:** vídeos de hasta ~2 minutos; con audios más largos la transcripción de OVHcloud falla.
-* **Probado en** Linux con GPU NVIDIA. Windows y macOS están por probar; en macOS la instalación sin Docker aún no funciona (`onnxruntime-gpu` no existe para macOS).
-
-### Con Docker
-
-```bash
-docker compose --profile jobs build # imágenes de la API y del worker (la del worker, ~8 GB, tarda 10–20 min la primera vez)
-docker compose up -d # almacén S3 (SeaweedFS), API en http://localhost:8000 y front en http://localhost:8080
-```
-
-El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker` por vídeo y lo borra al lanzar el siguiente (hasta entonces, `docker logs aiasn-worker-<video_id>`). La API usa el socket de Docker para ello, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.
-
-### Sin Docker
-
-```bash
-uv sync --extra worker --extra api
-uv run uvicorn aiasn.api.app:create_app --factory --port 8000
-```
-
-Sin la imagen `aiasn-worker`, la API lanza el *worker* como proceso hijo (`API__LAUNCHER=process` para forzarlo) y guarda el lake en la carpeta `data/`. También se puede procesar un vídeo sin la API: `uv run python -m aiasn.run_pipelines --file video.mp4`.
-
-### Uso
-
-```bash
-curl -F file=@video.mp4 http://localhost:8000/videos # → {"video_id": "video-3f9a"}
-curl http://localhost:8000/videos/video-3f9a # estado; con "ok", también el resultado
-```
-
-O, desde el navegador, abre el front en <http://localhost:8080>: «Elegir vídeo» → «Analizar». Documentación interactiva de la API en <http://localhost:8000/docs>. Si los puertos 8000 u 8080 están ocupados, cámbialos con `API_PORT` y `FRONT_PORT` en `.env`.
 
 ---
 

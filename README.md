@@ -148,16 +148,11 @@ uv pip install -e ".[dev]"
 
 ### 2. Modos de Verificación para el Tribunal Evaluador
 
-#### 🟢 Modo A: Verificación Inmediata y Automática (Zero Setup — <3 segundos)
-> **Comando atómico con auto-detección inteligente:** Si Docker está activo, ejecuta los tests dentro del contenedor aislado; si Docker no está disponible, conmuta automáticamente a tu entorno local (`uv run pytest` o Python activo) y ejecuta también los 14 tests del frontend piloto si detecta Node.js:
+#### 🟢 Modo A: Verificación Inmediata (sin GPU ni credenciales — unos 10 segundos)
 ```bash
-python scripts/run_tests.py
+pip install -e ".[dev,api]"
+python -m pytest tests/ -v
 ```
-*(O si prefieres invocar la herramienta directamente según tu flujo de trabajo:)*
-* **Vía Docker (aislado, sin configurar nada en tu máquina):** `docker compose run --rm backend pytest`
-* **Vía uv (entorno local reproducible):** `uv run pytest`
-* **Vía Python estándar:** `pytest tests/ -v` (requiere `.venv` activado)
-* **Frontend piloto (Node.js):** `node frontend-piloto/tests/run.mjs`
 
 ### 4. Despliegue con Docker (Opcional)
 Para levantar la demo completa (subir un vídeo y ver sus resultados), ver [Demo: subir un vídeo y ver sus resultados](#-demo-subir-un-vídeo-y-ver-sus-resultados).

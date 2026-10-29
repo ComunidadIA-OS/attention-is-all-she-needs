@@ -12,8 +12,10 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 # cpu: everything in uv.lock except the CUDA packages, then PyTorch from its CPU index and onnxruntime for onnxruntime-gpu
-# (--no-config there: the overrides of pyproject.toml would drop onnxruntime on x86_64)
-RUN if [ "$DEVICE" = cpu ]; then \
+# (--no-config there: the overrides of pyproject.toml would drop onnxruntime on x86_64).
+# The uv cache survives a failed build: after a network cut, the next build goes on from what it already downloaded.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    if [ "$DEVICE" = cpu ]; then \
         uv export --frozen --no-dev --extra worker --no-emit-project --no-hashes -o all.txt \
         && grep -v -E '^(torch|torchvision|triton|cuda-[a-z-]+|onnxruntime-gpu|nvidia-[a-z0-9-]+)==' all.txt > cpu.txt \
         && grep -E '^nvidia-ml-py==' all.txt >> cpu.txt \

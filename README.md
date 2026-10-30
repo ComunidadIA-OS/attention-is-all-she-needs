@@ -15,6 +15,7 @@ SPDX-License-Identifier: Apache-2.0
 [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Art.%2050%20Compliant-success.svg)](./ETHICS_CHECKLIST.md)
 
 ---
+<img width="964" height="902" alt="image" src="https://github.com/user-attachments/assets/34be94c4-8475-474e-aa3c-83689edce1ed" />
 
 ## 💡 El Giro Epistémico: «Attention Is All She Needs»
 

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
 """Suite de Pruebas Unitarias y Verificación de Contratos de Datos.
 
 Proyecto: «Attention Is All She Needs» (AIASN)
@@ -110,3 +113,4 @@ class TestDataContracts:
         # Asegurar que NO se persisten vectores biometricos (embeddings faciales de 512 dim)
         assert "face_embedding" not in track_record
         assert "biometric_vector" not in track_record
+

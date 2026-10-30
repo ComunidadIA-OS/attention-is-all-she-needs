@@ -7,7 +7,7 @@ name = "attention-is-all-she-needs"
 version = "0.1.0"
 description = "Auditoría de paridad, protagonismo y perspectiva de género en medios audiovisuales mediante IA abierta"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "Alba Camiña García", email = "albacaminagarcia@gmail.com" },
@@ -30,50 +30,101 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 
+# Base: what every container needs (lake, settings, silver and gold). The rest goes in the extras of each container
 dependencies = [
-    "requests>=2.28.0",
-    "pydantic>=2.0.0"
+    "fsspec>=2024.6",
+    "numpy>=1.26",
+    "pandas>=2.2.3",
+    "pyarrow>=26.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.16.1",
+    "s3fs>=2024.6",
 ]
 
 [project.optional-dependencies]
-audio = [
-    "soundfile>=0.12.0"
+dev = [
+    "attention-is-all-she-needs[api]",   # test_api imports the API
+    "httpx>=0.27",   # the API test client
+    "pytest>=7.0.0",
 ]
-video = [
-    "opencv-python>=4.7.0",
-    "pillow>=9.5.0",
-    "easyocr>=1.7.0"
+# The worker: models and audio/video processing (GPU)
+worker = [
+    "easyocr>=1.7.2",
+    "gdown>=5.0",
+    "insightface>=0.7.3",
+    "langfuse>=4.0",   # traces of the LLM calls (LANGFUSE_ENABLED); LiteLLM sends them
+    "lap>=0.5.12",   # required by the ultralytics trackers
+    "litellm>=1.60.2",
+    "mivolo",
+    # The GPU build only exists for x86_64 Linux and Windows; macOS and ARM get the CPU one
+    "onnxruntime-gpu>=1.22.0; sys_platform != 'darwin' and (platform_machine == 'x86_64' or platform_machine == 'AMD64')",
+    "onnxruntime>=1.22.0; sys_platform == 'darwin' or (platform_machine != 'x86_64' and platform_machine != 'AMD64')",
+    "python-speech-features>=0.6",
+    "requests>=2.28.0",
+    "scipy>=1.11",
+    "sentencepiece>=0.2.0",
+    "tenacity>=9.0",   # what litellm needs to retry a failed call (LlmSettings.retries)
+    "torchvision>=0.20.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.48.0",
+    "transnetv2-pytorch>=1.0.5",
+    "ultralytics>=8.3.163",
 ]
-ai = [
-    "transformers>=4.30.0",
-    "torch>=2.0.0"
+# The API: upload a video, launch the worker, serve gold
+api = [
+    "docker>=7.1",
+    "fastapi>=0.115",
+    "python-multipart>=0.0.9",
+    "uvicorn[standard]>=0.30",
 ]
-analysis = [
-    "pandas>=2.0.0",
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "scikit-learn>=1.2.0"
-]
-all = [
-    "soundfile>=0.12.0",
-    "opencv-python>=4.7.0",
-    "pillow>=9.5.0",
-    "easyocr>=1.7.0",
-    "transformers>=4.30.0",
-    "torch>=2.0.0",
-    "pandas>=2.0.0",
-    "matplotlib>=3.7.0",
-    "seaborn>=0.12.0",
-    "scikit-learn>=1.2.0"
+# Only the exploration notebooks
+notebooks = [
+    "gliner[all]>=0.2.14",
+    "openai>=1.59.3",
+    "pysentimiento>=0.7",
+    "scikit-learn>=1.6.1",
+    "seaborn>=0.13.2",
+    "yt-dlp>=2025.1.15",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
 "Bug Tracker" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs/issues"
 "Source" = "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+
+[tool.setuptools.packages.find]
+include = ["aiasn*"]   # the rest of the repo (notebooks, data, tmp, models...) is not part of the package
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.uv]
+override-dependencies = [
+    # mivolo pins ultralytics==8.1.0; we keep the modern version used by the notebooks
+    "ultralytics>=8.3.163",
+    # insightface depends on the CPU onnxruntime, which shadows onnxruntime-gpu (same files): keep only the GPU one
+    # where it exists
+    "onnxruntime>=1.22.0; sys_platform == 'darwin' or (platform_machine != 'x86_64' and platform_machine != 'AMD64')",
+    # mivolo depends on lapx, which installs the same `lap` module (without `lapjv` since 0.10): keep only lap
+    "lapx; sys_platform == 'never'",
+    # Same cv2 module as opencv-python-headless (easyocr), plus GUI libraries we do not use: keep only the headless one
+    "opencv-python; sys_platform == 'never'",
+    # ultralytics only imports polars for results summaries we do not use (~180 MB)
+    "polars; sys_platform == 'never'",
+]
+# mivolo's setup.py uses pkg_resources (gone in setuptools 81); the project itself needs setuptools>=61
+build-constraint-dependencies = ["setuptools>=61,<81"]
+
+[tool.uv.sources]
+# needed by the MiVOLO v2 code on the Hugging Face Hub; pinned commit of the official repo
+mivolo = { git = "https://github.com/WildChlamydia/MiVOLO.git", rev = "37475e3f8818b5f22448003feec3e64b01bfb188" }

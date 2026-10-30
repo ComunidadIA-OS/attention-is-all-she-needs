@@ -1,0 +1,188 @@
+# SPDX-FileCopyrightText: 2026 Equipo 1: Attention Is All She Needs (Alba Camiña García, Pilar de la Fuente Diez, Rocío Jiménez Villén)
+# SPDX-License-Identifier: Apache-2.0
+
+# The demo: an S3 store, the API and the worker image.
+#   docker compose --profile jobs build    # both images (the worker one takes a while)
+#   docker compose up -d                   # store, API (http://localhost:8000) and front (http://localhost:8080)
+#   docker compose --profile langfuse up -d   # the same and Langfuse (http://localhost:3000), see LANGFUSE_* in .env
+# The worker is not a running service: the API starts a container of its image for each video.
+name: aiasn
+
+services:
+  store:
+    image: chrislusf/seaweedfs:4.50   # S3-compatible, Apache-2.0
+    command: server -s3 -dir=/data
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-aiasn}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+    volumes:
+      - store:/data
+    restart: unless-stopped
+
+  api:
+    build: { context: ., dockerfile: docker/api.Dockerfile }
+    image: aiasn-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - path: .env   # OVHcloud token and any other setting
+        required: false
+    environment:   # how the containers are wired; the API passes these on to each worker
+      LAKE_URI: s3://aiasn
+      STORAGE__ENDPOINT_URL: http://store:8333
+      STORAGE__ACCESS_KEY: ${S3_ACCESS_KEY:-aiasn}
+      STORAGE__SECRET_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+      MODELS_DIR: /models
+      HF_HOME: /models/huggingface
+      API__LAUNCHER: docker
+      # Data minimisation: each worker deletes the video and its frames once processed (false: keep them to debug)
+      PRIVACY__DELETE_MEDIA_AFTER_RUN: ${DELETE_MEDIA_AFTER_RUN:-true}
+      LANGFUSE_BASE_URL: http://langfuse-web:3000   # where the workers send the traces, when LANGFUSE_ENABLED
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # to start the worker containers
+    depends_on:
+      - store
+    restart: unless-stopped   # also retries until the store is up
+
+  front:
+    build: { context: ., dockerfile: docker/front.Dockerfile }
+    image: aiasn-front
+    ports:
+      - "${FRONT_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+      args:
+        DEVICE: ${WORKER_DEVICE:-gpu}   # cpu: without the CUDA libraries, for machines with no NVIDIA GPU
+    image: aiasn-worker
+    profiles: [jobs]   # only built here; the API runs it with the models volume
+
+  # Langfuse (traces of the LLM calls), self-hosted: docker compose --profile langfuse up -d, then
+  # http://localhost:3000 with LANGFUSE_INIT_USER_EMAIL / _PASSWORD. Its project and keys are created at start up
+  # from .env, so the workers can send traces right away. Events go to the store, under aiasn/langfuse/.
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4.71.0   # MIT
+    profiles: [langfuse]
+    depends_on: &langfuse-depends-on
+      store: { condition: service_started }
+      postgres: { condition: service_healthy }
+      clickhouse: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment: &langfuse-env
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+      DATABASE_URL: postgresql://postgres:${LANGFUSE_POSTGRES_PASSWORD:-postgres}@postgres:5432/postgres
+      SALT: ${LANGFUSE_SALT:-cambia_esta_sal}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:-redis}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: aiasn
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: langfuse/events/
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://store:8333
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-aiasn}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: aiasn
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: langfuse/media/
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://store:8333
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-aiasn}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-aiasn-secret}
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+    restart: unless-stopped
+
+  langfuse-web:
+    image: langfuse/langfuse:4.71.0   # MIT
+    profiles: [langfuse]
+    depends_on: *langfuse-depends-on
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-cambia_este_secreto}
+      LANGFUSE_INIT_ORG_ID: aiasn
+      LANGFUSE_INIT_ORG_NAME: AIASN
+      LANGFUSE_INIT_PROJECT_ID: aiasn-piloto
+      LANGFUSE_INIT_PROJECT_NAME: AIASN piloto
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}   # the same keys the workers use
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-AIASN}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.11
+    profiles: [langfuse]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - langfuse-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    profiles: [langfuse]
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - langfuse-clickhouse:/var/lib/clickhouse
+      - langfuse-clickhouse-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.12
+    profiles: [langfuse]
+    command: --requirepass ${LANGFUSE_REDIS_PASSWORD:-redis} --maxmemory-policy noeviction
+    volumes:
+      - langfuse-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${LANGFUSE_REDIS_PASSWORD:-redis}", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  store:
+    name: aiasn-store
+  models:
+    name: aiasn-models   # the name the API mounts in the worker (api.worker.volumes)
+  langfuse-postgres:
+  langfuse-clickhouse:
+  langfuse-clickhouse-logs:
+  langfuse-redis:
+
+networks:
+  default:
+    name: aiasn   # the network the API puts the worker in (api.worker.network)

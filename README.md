@@ -117,12 +117,28 @@ winget install ffmpeg       # Windows
    uv run python scripts/annotate_video.py <video_id>   # → tmp/<video_id>/video/annotated.mp4
    ```
 
-### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)
-> **Para todas las Administraciones Públicas del Estado (RTVE, 3Cat/TV3, EITB, CRTVG, universidades, ministerios, diputaciones y ayuntamientos) sujetas al Esquema Nacional de Seguridad (ENS), al Art. 157 de la Ley 40/2015 (reutilización de sistemas) y a la Directiva UE 2019/882 de Accesibilidad.**
-* **Soberanía Lingüística Cooficial e Inclusividad por Diseño (`ADR-0010`):** Soporte nativo sin traducción intermedia para todas las **lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) + `en`**, e inclusión automática de resumen en **Lectura Fácil (Norma UNE 153101 / WCAG 2.2 AA)** (`resumen_lectura_facil`) compatible con lectores de pantalla (`NVDA`/`JAWS`).
-* **Aislamiento de Licencias (estado real):** El pipeline de vídeo actual usa **Ultralytics YOLO (AGPL-3.0)** para detectar personas (`aiasn/model_adapters/person_tracker.py`), **InsightFace** para caras (`face_detector.py`) y **EasyOCR (Apache-2.0)** para rótulos, todos tras los adaptadores de `aiasn/model_adapters/`. En `aiasn/core/compliance.py` existen `CSVPrecomputedAdapter` (ingesta de trazas `.csv` / `.tsv`, separación de procesos) y un esqueleto `PermissiveYOLOXAdapter` (**hoja de ruta: aún no implementa inferencia sobre vídeo**). La sustitución por YOLOX (Apache-2.0) para despliegues B2B es **trabajo de Fase 2**, no está implementada. Nota: el código de InsightFace es MIT, pero sus **pesos preentrenados (p. ej. `buffalo_l`) son solo para investigación no comercial**; un uso comercial exigiría licencia o un modelo alternativo.
-* **Círculo Virtuoso de Referentes Femeninos sin Reentrenamiento (*Green AI Flywheel*):** Los rótulos y menciones extraídos por consenso de alta confianza ($p \ge 0{,}80$) enriquecen un diccionario ligero local (`.csv`/`.json`) interoperable con **`Top Rosies Talent`**, **`ReDivIAcat`** y **`tFemTIC`** (`IDEAI-UPC` / `donesCOEINF`) y con **`WikiMujeres` / `Wikidata`**, mejorando el reconocimiento futuro (Cuadrante 4) tanto *offline/batch* como sincronizado sin coste de GPU en reentrenamiento.
-* **Extensión en Caliente para las 4 Modalidades (*Shift-Left Parity*):** Diseñado para inyectarse como asistente preventivo en herramientas de **Vídeo** (`OBS Studio`, `DaVinci Resolve`, `Premiere`), **Audio/Podcasts** (`Audacity`, `Audition`), **Imagen/Cartelería** (`Canva`, `Figma`) y **Texto/Prensa** (`WordPress`, `Docs`), y emitir certificados con huella inmutable **`SHA-256`** (`emitir_sello_auditoria`).
+## 🧭 Estado actual y hoja de ruta (a 29/10/2026)
+
+AIASN es un **prototipo** del reto. Esta sección dice con claridad qué hay, qué está en revisión y qué **se pretende hacer y falta**, para que nadie lo confunda con una funcionalidad ya disponible.
+
+**Hecho en v0.1.0 (rama `dev`):** pipelines de audio, vídeo y NLP con extracción abierta; cálculo determinista de métricas (4 cuadrantes, ratio voz/pantalla, TIF en tres estados, alertas); arquitectura *medallion* (bronze, silver, gold) con trazabilidad por vídeo; API FastAPI con procesado de un vídeo cada vez; frontend piloto (HTML/JS) con panel de revisión de personas con género dudoso y botones «Asumo / No asumo» cuyas decisiones se guardan en la API; contenedores con Docker Compose; borrado del vídeo y de sus temporales al terminar; tiempos, tokens del LLM y huellas SHA-256 de los 6 vídeos de la demo medidos en una RTX 4060 Laptop (`DATASET_CARD.md`, 1.2); validación empírica exploratoria de audio sobre el corpus `Àgora` confirmando el 14,61 % de Ground Truth ([`docs/evaluacion_experimental_agora.md`](./docs/evaluacion_experimental_agora.md)); plan de producción en OVHcloud (`ARCHITECTURE.md`); observabilidad opcional de las llamadas al LLM con Langfuse (desactivada por defecto); documentación de gobernanza (ADR, fichas, checklist ético).
+
+**Pendiente principal** (el detalle y el resto de áreas están en la [hoja de ruta](./docs/hoja_de_ruta.md)):
+
+* **Seguridad del despliegue:** HTTPS, autenticación y control de acceso. **Hoy la API y el front no deben exponerse a Internet.**
+* **Supervisión humana:** que la revisión recalcule las métricas y condicione el informe, identificar a cada operadora con un pseudónimo propio, vistas por rol e integrar `emitir_sello_auditoria` en la API.
+* **Validación:** evaluación completa de extremo a extremo con el pipeline unificado y métricas formales WER/DER en todo el corpus (la calibración exploratoria de componentes de audio y el cálculo exacto del 14,61 % de habla femenina ya se han completado: [informe](./docs/evaluacion_experimental_agora.md)), y medición empírica del ahorro de cómputo frente al análisis continuo a 30 fps.
+* **Vistas por rol y capa ciudadana**, y el **frontend alternativo** de la rama `feat/frontend-dashboard` (no integrado).
+* **Licencias:** sustituir Ultralytics YOLO (AGPL-3.0) por un adaptador permisivo (YOLOX).
+* **Marco legal para terceros:** revisión jurídica del contrato de servicios y de la plantilla del Art. 50.3.
+
+### Alcance de esta entrega
+
+| | |
+| :--- | :--- |
+| **Dentro del alcance (entrega y demostración del reto)** | Análisis de **vídeos cortos** (probados hasta 5 min 12 s de audio), subidos de uno en uno · métricas **agregadas** de presencia y voz de mujeres y hombres · género **atribuido o percibido** con abstención por debajo de 0,80 y revisión humana de los casos dudosos · ejecución en local o con Docker Compose en una **red controlada** · datos de prueba públicos con licencia abierta |
+| **Fuera del alcance (hoja de ruta o decisión futura)** | Servicio multiusuario o expuesto a Internet · producción con terceros y contrato de servicios (solo borrador) · evaluación, selección o vigilancia de personas · identificación biométrica · análisis masivo de canales o *scraping* · vídeos largos · certificación pública con el Sello · tratamiento de **menores** o de categorías especiales de datos · garantías de disponibilidad, tiempos de respuesta o exactitud |
+| **Límites declarados** | Prototipo: los resultados son orientativos y exigen revisión humana · los tiempos y tokens están medidos en una sola máquina (RTX 4060 Laptop); el ahorro de cómputo frente a analizarlo todo y el coste de producción son estimaciones · la clasificación normativa del sistema está en revisión ([ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md)) · los vídeos de calibración interna no se redistribuyen ([`DATASET_CARD.md`](./DATASET_CARD.md), 1.1) |
 
 Seguimiento día a día en el [tablero del equipo](https://github.com/users/ewigkeitt-cloud/projects/1).
 

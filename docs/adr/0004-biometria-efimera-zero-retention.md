@@ -28,4 +28,5 @@ Se adopta la **Opción B**. AIASN no persiste, indexa ni comercializa huellas bi
   * Aprobación asegurada en la evaluación ética ALTAI.
 * **Compromisos asumidos:**
   * El sistema no recuerda identidades entre vídeos independientes sin el apoyo de rótulos (*chirons*) de texto o metadatos públicos; cada contenido se audita de forma autónoma.
+  * Mientras se analiza el vídeo, se generan fotogramas temporales en disco (`tmp/`), que con Docker Compose se eliminan al finalizar la ejecución; no debe describirse como un sistema que no procesa rostros, sino como una garantía estricta de no persistencia de vectores biométricos identificativos en el almacén de datos.
 

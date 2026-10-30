@@ -9,11 +9,11 @@
 
 **Destino en Repositorio GitHub:** Entregable oficial en `docs/evidencias_trabajo_en_equipo.md` (evaluable bajo el criterio de Software Libre, Gobernanza Abierta y Trabajo en Equipo por la Oficina Técnica de ComunidadIA-OS y el jurado del reto — baremo oficial: 10 % a 25 % de la nota final).  
 **Documentos Vinculados:**
-* [`22_registro_debates_decisiones_y_consenso_equipo.md`](./22_registro_debates_decisiones_y_consenso_equipo.md) (`docs/debates_y_decisiones.md`)
-* [`18_marco_normativo_mercado_y_gobernanza_etica.md`](./18_marco_normativo_mercado_y_gobernanza_etica.md) (`docs/marco_normativo_y_mercado.md`)
-* [`12_guia_consultas_mentores_y_argumentario_equipo.md`](./12_guia_consultas_mentores_y_argumentario_equipo.md)
-* [`10_protocolo_colaboracion_github_y_coautoria.md`](./10_protocolo_colaboracion_github_y_coautoria.md)
-* [`17_backlog_issues_y_milestones_github.md`](./17_backlog_issues_y_milestones_github.md)
+* [**docs/adr/README.md**](./adr/README.md): Registro Canónico de Decisiones de Arquitectura (ADR-0001 a ADR-0013).
+* [**docs/marco_normativo_y_mercado.md**](./marco_normativo_y_mercado.md): Marco normativo integral, cumplimiento RIA y mercado B2B.
+* [**docs/hoja_de_ruta.md**](./hoja_de_ruta.md): Planificación técnica, backlog ágil y evolución del prototipo.
+* [**CONTRIBUTING.md**](../CONTRIBUTING.md): Protocolo de trabajo colaborativo en GitHub y coautoría paritaria (`Co-authored-by`).
+* [**ETHICS_CHECKLIST.md**](../ETHICS_CHECKLIST.md): Autoevaluación ética ALTAI y trazabilidad de gobernanza.
 
 ---
 
@@ -43,7 +43,7 @@ flowchart TD
 > [!IMPORTANT]
 > **Dictamen sobre Régimen de Enlaces y Criterios del Jurado (Bases Oficiales / ComunidadIA-OS):**
 > 1. **Prohibición de enlaces a repositorios o carpetas privadas:** Las bases del reto y las instrucciones de la Oficina Técnica estipulan que **todo el material evaluable por el tribunal debe ser públicamente accesible dentro del repositorio oficial en la organización `ComunidadIA-OS`**. Enlazar a un Google Drive privado provocaría errores de permisos (*Access Denied*) durante la deliberación de los jueces, invalidando el contenido.
-> 2. **Validez absoluta y mérito de enlaces internos en GitHub:** El uso de enlaces relativos a archivos dentro del propio repositorio (por ejemplo, `[Ver Registro Canónico de Debates](docs/debates_y_decisiones.md)`), así como vínculos a GitHub Issues (#2 a #9) o Pull Requests (#16) **no solo está 100 % permitido, sino que constituye la mejor práctica de ingeniería exigida por la Oficina Técnica**, bonificando la trazabilidad documental.
+> 2. **Validez absoluta y mérito de enlaces internos en GitHub:** El uso de enlaces relativos a archivos dentro del propio repositorio (por ejemplo, `[Ver Registro de Decisiones de Arquitectura](./adr/README.md)`), así como vínculos a GitHub Issues (#2 a #9) o Pull Requests (#16) **no solo está 100 % permitido, sino que constituye la mejor práctica de ingeniería exigida por la Oficina Técnica**, bonificando la trazabilidad documental.
 > 3. **Alojamiento nativo de evidencias gráficas:** Todas las capturas de pantalla, diagramas y transcripciones se incorporan de forma nativa en la estructura de carpetas del repositorio (`docs/assets/evidencias/`), garantizando su visualización permanente e independiente de servicios externos.
 
 ---
@@ -67,8 +67,8 @@ flowchart LR
 1. **Canal Oficial de Discord (`#reto-mujeres-ia-abierta`):** Canal primario de comunicación diaria. Utilizado para el micro-standup matinal asíncrono (*¿Qué cerré ayer?*, *¿Qué abro hoy?*, *¿Tengo algún bloqueo?*) y la resolución rápida de dudas de implementación.
 2. **Google Meet (Sincronización de Hitos Clave):**
    * *Reunión Inaugural (Sábado, 17/10 — 11:27 a 13:20 CEST):* Sesión sincrónica de **cerca de 2 horas (~1h53m)** tras la formación de Innovación de Montse Guàrdia. Requerida para asentar la visión compartida, debatir a fondo el mapa mental de Canva, alinear las fortalezas de cada integrante y acordar el enfoque 4D frente a las ideas iniciales.
-   * *Segunda Sesión Sincrónica (Lunes, 19/10):* Encuentro de seguimiento de inicio de semana en el que participaron las tres integrantes. Tras la salida anticipada de Pilar por compromisos previos, Alba y Rocío continuaron la sesión de trabajo sincrónica en profundidad mano a mano para proyectar la presentación interactiva de Alba ([`presentacion_AIASN_equipo.html`](../documentacion-tecnica/recursos/presentacion_AIASN_equipo.html)), estructurar los 3 niveles de explotación y coordinar los contactos de mentoras.
-   * *Tercera Sesión Sincrónica — Reunión de Hitos y Cierre de Arquitectura (Domingo, 25/10 — 15:40 a 17:00 h CET):* Celebrada por Google Meet con asistencia completa de las tres integrantes (**Alba**, **Pilar** y **Rocío**). Se adoptaron formalmente las decisiones de cierre del MVP: uso selectivo de YOLO bajo licencia Apache-2.0 (`ADR-0002`), procesamiento local con salvaguarda *Zero Facial Retention* (`ADR-0004`), blindaje de cuota no binaria (`ADR-0006`), exclusión de inferencia biométrica de edad, eliminación de números romanos en el frontend accesible de Pilar, preservación de la soberanía ciudadana como línea futura en la interfaz, adopción de métricas de clima comunicativo frente al conteo de interrupciones, acuerdo de opciones flexibles de despliegue (entorno local ligero con `uv` y contenedor Docker opcional) y reparto de entregables para la entrega del 30/10 a las 08:00 h. Acta íntegra y cronológica en [`25_acta_y_acuerdos_reunion_equipo_25_octubre.md`](./25_acta_y_acuerdos_reunion_equipo_25_octubre.md) y PDF oficial en Drive ([`documentos_reunion_pdf/04_acta_reunion_equipo_25_octubre_gemini.pdf`](../documentos_reunion_pdf/04_acta_reunion_equipo_25_octubre_gemini.pdf)).
+   * *Segunda Sesión Sincrónica (Lunes, 19/10):* Encuentro de seguimiento de inicio de semana en el que participaron las tres integrantes. Tras la salida anticipada de Pilar por compromisos previos, Alba y Rocío continuaron la sesión de trabajo sincrónica en profundidad mano a mano para proyectar la presentación interactiva de Alba (presentación estratégica de 7 diapositivas), estructurar los 3 niveles de explotación y coordinar los contactos de mentoras.
+   * *Tercera Sesión Sincrónica — Reunión de Hitos y Cierre de Arquitectura (Domingo, 25/10 — 15:40 a 17:00 h CET):* Celebrada por Google Meet con asistencia completa de las tres integrantes (**Alba**, **Pilar** y **Rocío**). Se adoptaron formalmente las decisiones de cierre del MVP: uso selectivo de YOLO bajo licencia Apache-2.0 (`ADR-0002`), procesamiento local con salvaguarda *Zero Facial Retention* (`ADR-0004`), blindaje de cuota no binaria (`ADR-0006`), exclusión de inferencia biométrica de edad, eliminación de números romanos en el frontend accesible de Pilar, preservación de la soberanía ciudadana como línea futura en la interfaz, adopción de métricas de clima comunicativo frente al conteo de interrupciones, acuerdo de opciones flexibles de despliegue (entorno local ligero con `uv` y contenedor Docker opcional) y reparto de entregables para la entrega del 30/10 a las 08:00 h (con acuerdos formalizados en el catálogo de ADRs y la hoja de ruta del proyecto).
 3. **Mapeo Conceptual en Canva:** Pizarra colaborativa compartida para plasmar desafíos metodológicos, diagramas de flujo y esquemas de interfaces antes de la codificación.
 4. **Flujo de Trabajo en GitHub (Issues, PRs y Activación de Kanban):**
    * *Fase de Prototipado y Desarrollo Modular (Semana 1):* El avance operativo se gestionó ágilmente mediante **GitHub Issues (#2 a #9)** y ramas temáticas (`feat/`, `docs/`, `fix/`) con Pull Requests protegidas, evitando la burocracia de tableros estáticos en la fase exploratoria.
@@ -78,7 +78,7 @@ flowchart LR
 
 ### 2.2. Coordinación y Ejecución Real de Consultas a Mentores/as
 
-Para maximizar el rendimiento de las tutorías oficiales y respetar el tiempo del profesorado, el equipo acordó internamente no duplicar preguntas ni enviar mensajes dispersos. La interlocución real con cada mentor/a se distribuyó y ejecutó de la siguiente forma (acreditada en [`12_guia_consultas_mentores_y_argumentario_equipo.md`](./12_guia_consultas_mentores_y_argumentario_equipo.md)):
+Para maximizar el rendimiento de las tutorías oficiales y respetar el tiempo del profesorado, el equipo acordó internamente no duplicar preguntas ni enviar mensajes dispersos. La interlocución real con cada mentor/a se distribuyó y ejecutó de la siguiente forma coordinada:
 
 ```mermaid
 flowchart TD
@@ -152,7 +152,7 @@ El equipo ha fundamentado cada decisión algorítmica y cada umbral del sistema 
 
 ## 4. Matriz Ejecutiva de Debates Técnicos Resueltos
 
-A continuación se resume la matriz de los debates y deliberaciones colegiadas del equipo. El registro exhaustivo, las citas literales y el análisis de alternativas están formalizados en [`docs/debates_y_decisiones.md`](./22_registro_debates_decisiones_y_consenso_equipo.md):
+A continuación se resume la matriz de los debates y deliberaciones colegiadas del equipo. El registro exhaustivo, las citas literales y el análisis de alternativas están formalizados en el catálogo de decisiones de arquitectura ([`docs/adr/`](./adr/README.md)) y en los commits correspondientes:
 
 | ID | Debate / Duda Técnica | Propuestas en Discusión | Decisión Colegiada Adoptada | Motivo Principal de Descarte | Trazabilidad en Código |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -176,12 +176,12 @@ A continuación se registran las evidencias documentales capturadas en los disti
 Tras la sesión de Innovación de Montse Guàrdia, el equipo celebró su **reunión sincrónica de arranque (11:27 a 13:20 CEST — 1 hora y 53 minutos de duración)**, según consta en el acta oficial de notas de Gemini. En ella se debatió el tablero inicial de retos de Rocío y se consolidó el mapa mental conjunto:
 
 ```markdown
-![Evidencia 01 — Mapa Mental Conjunto en Canva (17/10)](../documentacion-tecnica/recursos/canva/canva_02_reunion_equipo_17oct.png)
+![Evidencia 01 — Mapa Mental Conjunto en Canva (17/10)](../img/evidencias/canva_02_reunion_equipo_17oct.png)
 *Figura 1: Pizarra colaborativa de la reunión inaugural del equipo (17/10), donde se definieron las áreas de trabajo compartidas, el enfoque multimodal 4D y la coordinación técnica.*
 ```
 
 ```markdown
-![Evidencia 02 — Borrador Inicial de Desafíos y Métricas de Vídeo](../documentacion-tecnica/recursos/canva/canva_01_borrador_inicial_rocio.png)
+![Evidencia 02 — Borrador Inicial de Desafíos y Métricas de Vídeo](../img/evidencias/canva_01_borrador_inicial_rocio.png)
 *Figura 2: Pizarra inicial de retos técnicos, dudas metodológicas y propuesta de KPIs audiovisuales compilado por Rocío.*
 ```
 
@@ -197,7 +197,7 @@ Tras la sesión de Innovación de Montse Guàrdia, el equipo celebró su **reuni
 El lunes 19 de octubre el equipo celebró su segunda sesión sincrónica por Google Meet para revisar la evolución del fin de semana y fijar la hoja de ruta operativa, con la participación inicial de las tres integrantes. Habiendo tenido Pilar que ausentarse con antelación por compromisos previos, Alba y Rocío continuaron la sesión de trabajo sincrónica en profundidad mano a mano, en la que se asentaron los consensos metodológicos, técnicos y de producto clave:
 
 1. **Exposición de la Presentación Estratégica Interactiva de Alba:**  
-   Alba proyectó y explicó a Rocío la aplicación interactiva de 7 diapositivas que había preparado específicamente para la reunión ([`recursos/presentacion_AIASN_equipo.html`](../documentacion-tecnica/recursos/presentacion_AIASN_equipo.html)):
+   Alba proyectó y explicó a Rocío la aplicación interactiva de 7 diapositivas que había preparado específicamente para la reunión:
    * **Slide 1 y Slide 5 (Los Tres Niveles de Usuario y Explotación del Modelo Híbrido):** Alba formalizó y expuso por primera vez la arquitectura de negocio y tracción en 3 capas:
      * *Nivel 1 · Ciudadanía (Bottom-Up):* «Votar con los pies y con la confianza» mediante la Ficha de Confianza móvil en 3 segundos (estilo BlaBlaCar/Wallapop: `Verificado 50-50`, `En Proceso`, `Alerta de Postureo`) para decisiones formativas, laborales y culturales.
      * *Nivel 2 · Empresas y Marcas (B2B):* El «Copiloto Preventivo en Edición» para productoras de TV, agencias y corporaciones obligadas por la Ley 2/2024 y la directiva CSRD, permitiendo subsanar el *equality-washing* en la sala de montaje antes de emitir.
@@ -207,7 +207,7 @@ El lunes 19 de octubre el equipo celebró su segunda sesión sincrónica por Goo
    * **Slide 4 (La Constelación del Protagonismo en 3D):** Modelado de la topología del debate mediante Grafo de Conocimiento en 3 Dimensiones (tamaño = voz, brillo = autoridad por OCR, nebulosas = temas BGE-M3 y aristas = Test de Bechdel Relacional).
    * **Slide 6 (Estrategia Dual de Datasets - ADR-007):** `Àgora` como laboratorio de calibración del 14 % de habla femenina y *«Quanta, quanta IA!»* como demostración viva multimodal.
 2. **Transferencia de Recursos y Reparto de Interlocución con Mentores:**  
-   En esa misma sesión de trabajo mano a mano, Alba guio a Rocío a través de la documentación técnica ([`01_gestion_operativa_y_logistica.md`](./01_gestion_operativa_y_logistica.md) y [`12_guia_consultas_mentores_y_argumentario_equipo.md`](./12_guia_consultas_mentores_y_argumentario_equipo.md)) para localizar los correos y usuarios de Discord oficiales de los mentores, acordando formalmente que Alba contactaría a Montse Guàrdia y Rocío a la Dra. Verónica Vilaplana.
+   En esa misma sesión de trabajo mano a mano, Alba guio a Rocío a través de las notas de coordinación técnica para localizar los correos y usuarios de Discord oficiales de los mentores, acordando formalmente que Alba contactaría a Montse Guàrdia y Rocío a la Dra. Verónica Vilaplana.
 
 ---
 
@@ -308,7 +308,7 @@ Evidencia de cómo el equipo resolvió colegiadamente un riesgo legal crítico y
 Evidencia de la iniciativa de interacción técnica directa con la comunidad y los mentores en el canal general de Discord:
 
 ```markdown
-![Evidencia 03 — Consulta de Rocío en el Discord oficial sobre despliegue del MVP](../documentacion-tecnica/recursos/discord/discord_consulta_rocio_docker_ovh_25oct.jpg)
+![Evidencia 03 — Consulta de Rocío en el Discord oficial sobre despliegue del MVP](../img/evidencias/discord_consulta_rocio_docker_ovh_25oct.png)
 *Figura 3: Consulta técnica de Rocío (`rjvillen`) en el canal público `#reto-mujeres-ia-abierta` (25/10/2026, 16:50 h) sobre las opciones de despliegue del MVP (demo local en Docker Compose vs. plataforma cloud OVHcloud).*
 ```
 

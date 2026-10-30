@@ -19,7 +19,7 @@ SPDX-License-Identifier: Apache-2.0
 | :-: | :--- | :---: | :--- | :--- |
 | **1** | **Agencia y Supervisión Humana** | ⚠️ **Parcial (ver 1.1 y 1.3)** | Panel de revisión de personas con género dudoso y botones *«Asumo / No asumo»* en el frontend piloto (*HitL*); las decisiones se guardan, pero no recalculan las métricas ni bloquean el informe (hoja de ruta). | Karina Gibert (`1:00:50`) y Ángela Gasch |
 | **2** | **Robustez Técnica y Seguridad** | ✅ **Verificado** | Separación determinista: Inferencia IA abierta + Cálculo Python sin alucinaciones. | Fonollosa (VAD/Whisper), Vilaplana (VLMs) |
-| **3** | **Privacidad y Gobernanza de Datos** | ⚠️ **Parcial (ver 3.5)** | *Zero Facial Retention* (biometría efímera en RAM) y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
+| **3** | **Privacidad y Gobernanza de Datos** | ⚠️ **Parcial (ver 3.5)** | Biometría efímera sin retención de vectores faciales y amparo Art. 67 RDL 24/2021. | Karina Gibert (`2:05:10`) y Ángela Gasch |
 | **4** | **Transparencia y Explicabilidad** | ✅ **Verificado** | Declaración RIA (obligatoria desde ago 2026) y *Data Profile* de `Àgora` (14%). | Jorge Teixeira y Karina Gibert (`0:40:41`) |
 | **5** | **Diversidad, Equidad y No Sesgo** | ✅ **Verificado** | Detector de *Equality-Washing* (4 cuadrantes) y tratamiento de bolsa `unknown`. | Vilaplana (Diap. 91-92) y Karina (Diap. 10) |
 | **6** | **Bienestar Social y Ambiental** | ⚠️ **Parcial (ver 6.1)** | *Green AI*: personas en 1 de cada 4 fotogramas y rótulos a 1 fps; ahorro y coste pendientes de medir (Whisper en OVHcloud: ≈0,15 € por hora de audio). | Montse Guàrdia (`1:55:45`) y David Buenhombre |
@@ -57,8 +57,8 @@ SPDX-License-Identifier: Apache-2.0
 
 ## 3. Privacidad y Gobernanza de Datos (*Privacy & Data Governance*)
 
-- [x] **3.1. Principio de *Zero Facial Retention* (Biometría Efímera en Memoria):**  
-  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales** y no identifica a nadie contra una base de datos. Los *embeddings* faciales (`InsightFace`) se calculan en memoria únicamente para agrupar apariciones de la misma persona dentro de un vídeo y se descartan antes de escribir en el lake (`aiasn/pipelines/video.py`).
+- [x] **3.1. Principio de Biometría Efímera y No Retención de Vectores Faciales:**  
+  *Justificación:* En cumplimiento de los trílogos europeos liderados bajo presidencia española (citados por Karina Gibert y Ángela Gasch), **el sistema no almacena ni indexa vectores o huellas biométricas faciales** y no identifica a nadie mediante su cara contra una base de datos (se conservan datos derivados por persona: posición en pantalla, género estimado y su probabilidad). Los *embeddings* faciales (`InsightFace`) se calculan en memoria únicamente para agrupar apariciones de la misma persona dentro de un vídeo y se descartan antes de escribir en el lake (`aiasn/pipelines/video.py`).
 - [x] **3.2. Prioridad Absoluta al Dato Declarado sobre la Biometría:**  
   *Justificación:* Siguiendo la regla de oro de Verónica Vilaplana (Diap. 68), la lectura de rótulos mediante OCR (*«Dra. Maria Pons — Catedràtica d'Economia»*) o las actas oficiales tienen **prevalencia jerárquica estricta** sobre cualquier inferencia física facial o vocal.
 - [x] **3.3. Amparo Legal de Datos en Fase de Prototipo (Art. 67 RDL 24/2021):**  

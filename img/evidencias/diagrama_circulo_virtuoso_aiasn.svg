@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" width="100%" height="100%" font-family="Segoe UI, Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="redBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#450a0a"/>
+      <stop offset="100%" stop-color="#7f1d1d"/>
+    </linearGradient>
+    <linearGradient id="greenBox" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="purpleAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f87171"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1200" height="680" rx="18" fill="url(#bgGrad)"/>
+
+  <!-- Cabecera -->
+  <text x="600" y="44" text-anchor="middle" fill="#f8fafc" font-size="24" font-weight="700">
+    DEL «CÍRCULO VICIOSO» AL «CÍRCULO VIRTUOSO» DE REFERENTES FEMENINOS (AIASN)
+  </text>
+  <text x="600" y="72" text-anchor="middle" fill="#94a3b8" font-size="14" font-weight="500">
+    Arquitectura Técnica: Retroalimentación Incremental sin Reentrenamiento (Zero-Retraining Feedback Loop — 0 W GPU)
+  </text>
+
+  <!-- BLOQUE 1: CIRCULO VICIOSO -->
+  <rect x="40" y="95" width="1120" height="205" rx="14" fill="#1e293b" stroke="#ef4444" stroke-width="2" stroke-opacity="0.7"/>
+  <text x="65" y="125" fill="#fca5a5" font-size="16" font-weight="700">
+    🔴 1. ANTES (SIN AIASN): EL CÍRCULO VICIOSO DE LA INVISIBILIDAD EPISTÉMICA
+  </text>
+
+  <!-- Cajas Vicioso -->
+  <g transform="translate(65, 145)">
+    <rect x="0" y="0" width="235" height="95" rx="10" fill="url(#redBox)" stroke="#f87171" stroke-width="1.5"/>
+    <text x="117" y="28" text-anchor="middle" fill="#fecaca" font-size="13" font-weight="700">1. Invisibilidad en Medios</text>
+    <text x="117" y="50" text-anchor="middle" fill="#f8fafc" font-size="12">Solo 14 % de habla femenina</text>
+    <text x="117" y="68" text-anchor="middle" fill="#cbd5e1" font-size="11">(Ground Truth Àgora UPC)</text>
+
+    <line x1="235" y1="47" x2="270" y2="47" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+
+    <rect x="275" y="0" width="235" height="95" rx="10" fill="url(#redBox)" stroke="#f87171" stroke-width="1.5"/>
+    <text x="392" y="28" text-anchor="middle" fill="#fecaca" font-size="13" font-weight="700">2. Sin Fuentes Secundarias</text>
+    <text x="392" y="50" text-anchor="middle" fill="#f8fafc" font-size="12">Ausencia de citas verificables</text>
+    <text x="392" y="68" text-anchor="middle" fill="#cbd5e1" font-size="11">que acrediten autoridad</text>
+
+    <line x1="510" y1="47" x2="545" y2="47" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+
+    <rect x="550" y="0" width="245" height="95" rx="10" fill="url(#redBox)" stroke="#f87171" stroke-width="1.5"/>
+    <text x="672" y="28" text-anchor="middle" fill="#fecaca" font-size="13" font-weight="700">3. Borrado en Wikipedia (19%)</text>
+    <text x="672" y="50" text-anchor="middle" fill="#f8fafc" font-size="12">Rechazo por falta de relevancia</text>
+    <text x="672" y="68" text-anchor="middle" fill="#cbd5e1" font-size="11">y ceguera en detectores NLP</text>
+
+    <line x1="795" y1="47" x2="830" y2="47" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+
+    <rect x="835" y="0" width="235" height="95" rx="10" fill="url(#redBox)" stroke="#f87171" stroke-width="1.5"/>
+    <text x="952" y="28" text-anchor="middle" fill="#fecaca" font-size="13" font-weight="700">4. Sesgo en LLMs y Paneles</text>
+    <text x="952" y="50" text-anchor="middle" fill="#f8fafc" font-size="12">La IA aprende que el experto</text>
+    <text x="952" y="68" text-anchor="middle" fill="#cbd5e1" font-size="11">es hombre → Invitan a hombres</text>
+
+    <!-- Flecha de retorno vicioso -->
+    <path d="M 952 95 L 952 135 L 117 135 L 117 100" fill="none" stroke="#f87171" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrowRed)"/>
+    <text x="535" y="130" text-anchor="middle" fill="#fca5a5" font-size="12" font-style="italic">
+      Bucle de retroalimentación negativa: perpetúa la exclusión en medios e IA
+    </text>
+  </g>
+
+  <!-- FLECHA CENTRAL DE TRANSICION -->
+  <rect x="380" y="312" width="440" height="36" rx="18" fill="url(#purpleAccent)"/>
+  <text x="600" y="335" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="700">
+    ⚡ CORTOCIRCUITO EPISTÉMICO DE AIASN (GREEN AI FLYWHEEL) ⚡
+  </text>
+
+  <!-- BLOQUE 2: CIRCULO VIRTUOSO -->
+  <rect x="40" y="362" width="1120" height="285" rx="14" fill="#0f2922" stroke="#10b981" stroke-width="2.5"/>
+  <text x="65" y="394" fill="#6ee7b7" font-size="16" font-weight="700">
+    🟢 2. CON AIASN: EL «CÍRCULO VIRTUOSO» (ENRIQUECIMIENTO AUTÓNOMO DEL DICCIONARIO SIN REENTRENAR GPU)
+  </text>
+
+  <!-- 5 Cajas Virtuoso -->
+  <g transform="translate(55, 415)">
+    <!-- Paso 1 -->
+    <rect x="0" y="0" width="196" height="125" rx="10" fill="url(#greenBox)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="98" y="25" text-anchor="middle" fill="#a7f3d0" font-size="13" font-weight="700">1. Más Auditoría</text>
+    <text x="98" y="43" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="700">→ Más Expertas</text>
+    <text x="98" y="68" text-anchor="middle" fill="#f8fafc" font-size="11">Empresas y medios usan</text>
+    <text x="98" y="84" text-anchor="middle" fill="#f8fafc" font-size="11">AIASN (y extensión en vivo)</text>
+    <text x="98" y="100" text-anchor="middle" fill="#d1fae5" font-size="11">e invitan a más mujeres</text>
+
+    <line x1="196" y1="62" x2="220" y2="62" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+
+    <!-- Paso 2 -->
+    <rect x="224" y="0" width="196" height="125" rx="10" fill="url(#greenBox)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="322" y="25" text-anchor="middle" fill="#a7f3d0" font-size="13" font-weight="700">2. Extracción</text>
+    <text x="322" y="43" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="700">Automática (p ≥ 0,80)</text>
+    <text x="322" y="68" text-anchor="middle" fill="#f8fafc" font-size="11">Consenso multimodal:</text>
+    <text x="322" y="84" text-anchor="middle" fill="#f8fafc" font-size="11">lee rótulos (rol_ocr) y voz</text>
+    <text x="322" y="100" text-anchor="middle" fill="#d1fae5" font-size="11">(HitL solo si p &lt; 0,80)</text>
+
+    <line x1="420" y1="62" x2="444" y2="62" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+
+    <!-- Paso 3 -->
+    <rect x="448" y="0" width="196" height="125" rx="10" fill="url(#greenBox)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="546" y="25" text-anchor="middle" fill="#a7f3d0" font-size="13" font-weight="700">3. Diccionario Más Rico</text>
+    <text x="546" y="43" text-anchor="middle" fill="#fde047" font-size="11" font-weight="700">Top Rosies Talent (UPC)</text>
+    <text x="546" y="68" text-anchor="middle" fill="#f8fafc" font-size="11">Actualiza .csv/.json local</text>
+    <text x="546" y="84" text-anchor="middle" fill="#f8fafc" font-size="11">(offline/batch o síncrono)</text>
+    <text x="546" y="100" text-anchor="middle" fill="#d1fae5" font-size="11">+ ReDivIAcat y WikiMujeres</text>
+
+    <line x1="644" y1="62" x2="668" y2="62" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+
+    <!-- Paso 4 -->
+    <rect x="672" y="0" width="196" height="125" rx="10" fill="url(#greenBox)" stroke="#fde047" stroke-width="2"/>
+    <text x="770" y="25" text-anchor="middle" fill="#fde047" font-size="13" font-weight="700">4. IA Más Inteligente</text>
+    <text x="770" y="43" text-anchor="middle" fill="#fde047" font-size="12" font-weight="700">SIN REENTRENAR GPU</text>
+    <text x="770" y="68" text-anchor="middle" fill="#f8fafc" font-size="11">Reconoce automáticamente</text>
+    <text x="770" y="84" text-anchor="middle" fill="#f8fafc" font-size="11">a más expertas citadas</text>
+    <text x="770" y="100" text-anchor="middle" fill="#a7f3d0" font-size="11" font-weight="700">(Cuadrante 4 — 0 € / 0 W)</text>
+
+    <line x1="868" y1="62" x2="892" y2="62" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrowGreen)"/>
+
+    <!-- Paso 5 -->
+    <rect x="896" y="0" width="194" height="125" rx="10" fill="url(#greenBox)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="993" y="25" text-anchor="middle" fill="#a7f3d0" font-size="13" font-weight="700">5. Más Visibilidad</text>
+    <text x="993" y="43" text-anchor="middle" fill="#a7f3d0" font-size="12" font-weight="700">→ Más Invitaciones</text>
+    <text x="993" y="68" text-anchor="middle" fill="#f8fafc" font-size="11">Valida biografías en</text>
+    <text x="993" y="84" text-anchor="middle" fill="#f8fafc" font-size="11">Wikipedia (nutre LLMs)</text>
+    <text x="993" y="100" text-anchor="middle" fill="#d1fae5" font-size="11">y las llaman a más paneles</text>
+
+    <!-- Flecha de retorno virtuoso -->
+    <path d="M 993 125 L 993 175 L 98 175 L 98 130" fill="none" stroke="#34d399" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <rect x="270" y="158" width="550" height="30" rx="15" fill="#065f46" stroke="#34d399" stroke-width="1.5"/>
+    <text x="545" y="178" text-anchor="middle" fill="#ecfdf5" font-size="12" font-weight="700">
+      🔄 Retroalimentación Positiva (Flywheel): Cuantos más vídeos se auditan, más sabio es el sistema a 0 W de GPU
+    </text>
+  </g>
+</svg>
+

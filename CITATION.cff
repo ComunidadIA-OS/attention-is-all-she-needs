@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Attention Is All She Needs (AIASN): Open Source AI for Gender Parity and Representation Audit in Audiovisual Media"
+version: 0.1.0
+date-released: 2026-10-30
+license: Apache-2.0
+url: "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+repository-code: "https://github.com/ComunidadIA-OS/attention-is-all-she-needs"
+authors:
+  - family-names: "Camiña García"
+    given-names: "Alba"
+    email: "albacaminagarcia@gmail.com"
+    affiliation: "Equipo 1 - Reto «Mujeres por la IA Abierta»"
+  - family-names: "de la Fuente Diez"
+    given-names: "Pilar"
+    email: "pilarfuente1992@gmail.com"
+    affiliation: "Equipo 1 - Reto «Mujeres por la IA Abierta»"
+  - family-names: "Jiménez Villén"
+    given-names: "Rocío"
+    email: "rjvillen@gmail.com"
+    affiliation: "Equipo 1 - Reto «Mujeres por la IA Abierta»"
+keywords:
+  - "gender parity"
+  - "open source AI"
+  - "responsible AI"
+  - "audio diarization"
+  - "computer vision"
+  - "EU AI Act"
+  - "human-in-the-loop"
+abstract: >-
+  Auditoría de paridad, protagonismo y perspectiva de género en medios audiovisuales
+  mediante Inteligencia Artificial Abierta y cálculo determinista. Desarrollado para el
+  Reto «Mujeres por la IA Abierta» convocado por SEDIA, ComunidadIA-OS, IDEAI-UPC,
+  donesCOEINF y OVHcloud.
+

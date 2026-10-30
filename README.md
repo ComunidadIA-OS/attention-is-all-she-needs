@@ -14,8 +14,6 @@ SPDX-License-Identifier: Apache-2.0
 [![Open Source AI](https://img.shields.io/badge/Open%20Source%20AI-Compliant-brightgreen.svg)](https://opensource.org/ai)
 [![EU AI Act](https://img.shields.io/badge/EU%20AI%20Act-Art.%2050%20Compliant-success.svg)](./ETHICS_CHECKLIST.md)
 
-> **Para evaluar:** comandos, vídeos de la demo y dónde mirar en [Cómo probarlo](#-cómo-probarlo).
-
 ---
 
 ## 💡 El Giro Epistémico: «Attention Is All She Needs»
@@ -32,107 +30,98 @@ En la esfera pública y mediática, históricamente los «pesos de atención» s
 
 ---
 
-## 🚀 Cómo probarlo
+## 🚀 Set up
 
-**Probado en** Ubuntu 24.04 (x86_64): AMD Ryzen 7 7840HS (16 hilos), 30 GB de RAM y GPU NVIDIA RTX 4060 Laptop (8 GB), con Docker 29 y Python 3.13. También en CPU, sin GPU, con 2 núcleos y 6 GB de RAM. En Windows, macOS (Apple Silicon) y Linux ARM las dependencias se resuelven, pero el procesado no se ha probado.
+> [!NOTE] 
+> Probado en Ubuntu 24.04 (x86_64): AMD Ryzen 7 7840HS (16 hilos), 30 GB de RAM y GPU NVIDIA RTX 4060, Docker 29 y Python 3.13. También en CPU, sin GPU, con 2 núcleos y 6 GB de RAM. En Windows, macOS (Apple Silicon) y Linux ARM las dependencias se resuelven, pero el procesado no se ha probado.
 
-> ⚠️ **Sin GPU funciona, pero es lento.** Un vídeo de 84 s tardó **12 min** con 16 hilos y **45 min** con 2 núcleos y 6 GB de RAM (con GPU, 2 min); casi todo es la detección de personas y el OCR. Con la GPU de arriba, los vídeos de la demo tardan entre 2 y 9 min. La primera vez se suman unos minutos para descargar los modelos (~1,6 GB).
+> [!WARNING]
+> **También funciona Sin GPU, pero es lento.** Un vídeo de 84 s tardó **12 min** con 16 hilos y **45 min** con 2 núcleos y 6 GB de RAM; con GPU, 2 min. Con GPU, los vídeos de la demo tardan entre 2 y 9 min. La primera vez tarda un poco más porque se descargan los modelos (~1,6 GB).
 
-### Requisitos
+### Quick Start
 
-* **Python 3.11+** con [uv](https://docs.astral.sh/uv/) (recomendado) o pip.
-* **ffmpeg**, solo sin Docker (la imagen ya lo trae). Hay versión para Linux, macOS y Windows:
-  ```bash
-  sudo apt install ffmpeg     # Ubuntu / Debian
-  brew install ffmpeg         # macOS
-  winget install ffmpeg       # Windows
-  ```
-* **Token de OVHcloud AI Endpoints**, para la transcripción y el LLM: `cp .env.example .env` y rellena `OVH_AI_ENDPOINTS_ACCESS_TOKEN`. Sin él, el *worker* lo avisa al arrancar y falla al transcribir.
-* **Con Docker y GPU**, el **NVIDIA Container Toolkit**. Si no está, el *worker* se lanza en CPU y la API lo avisa en su log. [Guía oficial](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html); en Ubuntu/Debian:
-  ```bash
-  curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-  curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
-  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
-  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-  sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-  sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
-  docker run --rm --gpus all ubuntu nvidia-smi   # debe mostrar tu GPU
-  ```
+1. Clona el repositorio y pon tu token de OVHcloud AI Endpoints (se necesita para transcripción y LLMs) en `.env`:
+   ```bash
+   git clone https://github.com/ComunidadIA-OS/attention-is-all-she-needs.git
+   cd attention-is-all-she-needs
+   cp .env.example .env   # rellena OVH_AI_ENDPOINTS_ACCESS_TOKEN
+   ```
+2. Los vídeos originales de la demo, con su licencia y autoría, están en [`DATASET_CARD.md`](DATASET_CARD.md) (1.1). Los clips `.mp4` exactos se pueden descargar de [Google Drive](https://drive.google.com/drive/folders/1e5kBlNMkaiqmWc0NBrCf-ULc3tC7L035?usp=sharing).
+3. Tests documentados en [`TESTING.md`](TESTING.md).
+   ```bash
+   uv sync --extra dev # crea o sincroniza el entorno virtual con las dependencias de .toml
+   uv run pytest tests/
+   ```
 
-### 1. Tests (1 minuto, sin GPU ni token)
+### Con Docker
 
+Con GPU NVIDIA hace falta el **NVIDIA Container Toolkit** (consulta la [guía oficial](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) para instalarlo). Sin él, el contenedor de *worker* se lanza en CPU. En Ubuntu/Debian:
 ```bash
-git clone https://github.com/ComunidadIA-OS/attention-is-all-she-needs.git
-cd attention-is-all-she-needs
-
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
-pip install -e ".[dev,api]"
-python -m pytest tests/ -v
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+| sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+| sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+docker run --rm --gpus all ubuntu nvidia-smi   # debería mostrar tu GPU
 ```
 
-Entre otros, validan:
-* `tests/test_contracts.py`: contratos de audio, solape temporal, matriz de 4 cuadrantes *Seeing and Hearing* (Verónica Vilaplana), regla anti-*equality-washing* (Kanter 1977 / Tuchman 1978) y abstención ética ($p < 0{,}80 \rightarrow \text{no\_determinado}$).
-* `tests/test_compliance_adapters.py`: no retención de vectores biométricos faciales (`COLUMNAS_BIOMETRICAS_PROHIBIDAS`), denegación de Sello Oficial ante sanciones LISOS o *cherry-picking* (Art. 6 Apache-2.0), rehabilitación corporativa (*Self-Cleaning*, ventana de 3 años) y firma `SHA-256` con ID de supervisión pseudonimizado (`operador_supervision_id`).
+> [!WARNING]
+> **Sin GPU NVIDIA**, o para ocupar menos disco, pon `WORKER_DEVICE=cpu` en `.env` antes del `build`.
 
-### 2. Demo con Docker
+1. Construye las imágenes y arranca la demo:
+   ```bash
+   docker compose --profile jobs build   # 10–20 min la primera vez
+   docker compose up -d                  # front en http://localhost:8080 y API en http://localhost:8000
+   ```
+   
+   Por defecto, el frontend accesible en http://localhost:8080 y API en http://localhost:8000 (documentación interactiva de la API en <http://localhost:8000/docs>)
+   
+   > [!NOTE]
+   > ¿El puerto 8000 o el 8080 está ocupado? Puedes cambiarlos con `API_PORT` y `FRONT_PORT` en `.env`.
 
+
+3. **Configuración de observabilidad de LLMs con Langfuse (opcional).** Langfuse guarda cada llamada al LLM: prompt, respuesta, modelo, duración y tokens. En `.env` completa:
+   ```env
+   LANGFUSE_ENABLED=true
+   LANGFUSE_PUBLIC_KEY=pk-lf-...          # inventadas: Langfuse crea el proyecto con estas claves al arrancar
+   LANGFUSE_SECRET_KEY=sk-lf-...
+   LANGFUSE_INIT_USER_EMAIL=admin@aiasn.local
+   LANGFUSE_INIT_USER_PASSWORD=...        # tu usuario de la web de Langfuse
+   ```
+   Arranca con `docker compose --profile langfuse up -d` y abre <http://localhost:3000> -> proyecto AIASN piloto -> *Sessions*: una sesión por vídeo. Si las claves no coinciden, el *worker* lo avisa en un log y sigue sin trazabilidad.
+
+### Sin Docker
+
+Necesitas [uv](https://docs.astral.sh/uv/), que instala Python si hace falta, y **ffmpeg**:
 ```bash
-docker compose --profile jobs build   # imágenes de la API, el front y el worker (este ocupa ~12,5 GB: 10–20 min la primera vez)
-docker compose up -d                  # almacén S3, API en http://localhost:8000 y front en http://localhost:8080
+sudo apt install ffmpeg     # Ubuntu / Debian
+brew install ffmpeg         # macOS
+winget install ffmpeg       # Windows
 ```
 
-**Sin GPU NVIDIA**, o para ocupar menos disco, construye el *worker* sin CUDA: pon `WORKER_DEVICE=cpu` en `.env` antes del `build` (o `WORKER_DEVICE=cpu docker compose --profile jobs build worker`). No hay que cambiar nada más:
+1. Instala y arranca la API y el front:
+   ```bash
+   uv sync --extra worker --extra api    # ~7 GB (PyTorch y CUDA)
+   uv run uvicorn aiasn.api.app:create_app --factory --port 8000
+   uv run python -m http.server 8080 --directory frontend-piloto   # front en http://localhost:8080/?api=http://localhost:8000
+   ```
+   La API lanza el *worker* como proceso y guarda el lake en `data/`. Si tienes construida la imagen `aiasn-worker`, la usa: fuérzalo con `API__LAUNCHER=process`.
+2. O procesa un vídeo sin la API. Si falla, `--video-id <video_id>` sigue desde el paso que falló:
+   ```bash
+   uv run python -m aiasn.run_pipelines --file video.mp4
+   ```
+3. **Vídeo anotado**, para comprobar el resultado a ojo: una caja por persona con `P<id> | F/M`, una caja verde *speaking* en la cara de quien habla y, en amarillo, los textos del OCR. Usa los fotogramas que quedan en `tmp/<video_id>/video/frames` después de procesar el vídeo:
+   ```bash
+   uv run python scripts/annotate_video.py <video_id>   # → tmp/<video_id>/video/annotated.mp4
+   ```
 
-| *Worker* | Imagen | Vídeo de 84 s (`csic_javier_oroz.mp4`) |
-|---|---|---|
-| `gpu` (por defecto) | ~12,5 GB | 108 s con una RTX 4060 Laptop |
-| `cpu` | ~4,4 GB | 708 s (~12 min) con 16 hilos, sin GPU |
-
-Los modelos (~1,6 GB, en el volumen `aiasn-models`) y las versiones de las librerías (`uv.lock`) son los mismos; solo cambia el PyTorch y el ONNX Runtime sin CUDA. En la prueba, los KPIs por género salieron iguales; cambió algún *track* corto sin género determinado y el número de ideas, que varía entre ejecuciones porque el LLM no es determinista. Con la imagen `cpu` en un equipo con GPU, la GPU no se usa.
-
-* El *worker* no queda corriendo: la API arranca un contenedor `aiasn-worker-<video_id>` por vídeo, y lo borra al lanzar el siguiente. Su log: `docker logs aiasn-worker-<video_id>`.
-* La API usa el socket de Docker, lo que le da control sobre Docker en esa máquina: no la expongas fuera de tu equipo.
-* ¿El puerto 8000 o el 8080 está ocupado? Cámbialos con `API_PORT` y `FRONT_PORT` en `.env`.
-
-### 3. Analizar un vídeo
-
-Los vídeos de la demo, con su licencia y autoría, y la medición de su ejecución (tiempos, tokens y SHA-256), están en [`DATASET_CARD.md`](./DATASET_CARD.md) (1.1 y 1.2).
-
-* **Desde el front** (<http://localhost:8080>): «Elegir vídeo» → «Analizar». Al finalizar el procesado, el panel muestra la matriz de 4 cuadrantes, las métricas de voz y presencia, y el bloque de supervisión humana (*Human-in-the-Loop*, Art. 14 RIA) con botones interactivos **«Asumo / No asumo»** para arbitrar las personas con género dudoso (decisión persistida en la API vía `POST /videos/{id}/supervision`).
-* **Desde la API**:
-  ```bash
-  curl -F file=@video.mp4 http://localhost:8000/videos   # → {"video_id": "video-3f9a"}
-  curl http://localhost:8000/videos/video-3f9a           # estado; con "ok", también el resultado
-  ```
-  Documentación interactiva en <http://localhost:8000/docs>.
-* **Si falla** (por ejemplo, si OVHcloud corta la conexión): sin Docker, `uv run python -m aiasn.run_pipelines --video-id <video_id>` sigue desde el paso que falló; con Docker, vuelve a subir el vídeo.
-
-Ejecución sin Docker, trazas del LLM con Langfuse y vídeo anotado: [guía de ejecución avanzada](./docs/guia_ejecucion_avanzada.md).
-
----
-
-## 🧭 Estado actual y hoja de ruta (a 29/10/2026)
-
-AIASN es un **prototipo** del reto. Esta sección dice con claridad qué hay, qué está en revisión y qué **se pretende hacer y falta**, para que nadie lo confunda con una funcionalidad ya disponible.
-
-**Hecho en v0.1.0 (rama `dev`):** pipelines de audio, vídeo y NLP con extracción abierta; cálculo determinista de métricas (4 cuadrantes, ratio voz/pantalla, TIF en tres estados, alertas); arquitectura *medallion* (bronze, silver, gold) con trazabilidad por vídeo; API FastAPI con procesado de un vídeo cada vez; frontend piloto (HTML/JS) con panel de revisión de personas con género dudoso y botones «Asumo / No asumo» cuyas decisiones se guardan en la API; contenedores con Docker Compose; borrado del vídeo y de sus temporales al terminar; tiempos, tokens del LLM y huellas SHA-256 de los 6 vídeos de la demo medidos en una RTX 4060 Laptop (`DATASET_CARD.md`, 1.2); validación empírica exploratoria de audio sobre el corpus `Àgora` confirmando el 14,61 % de Ground Truth ([`docs/evaluacion_experimental_agora.md`](./docs/evaluacion_experimental_agora.md)); plan de producción en OVHcloud (`ARCHITECTURE.md`); observabilidad opcional de las llamadas al LLM con Langfuse (desactivada por defecto); documentación de gobernanza (ADR, fichas, checklist ético).
-
-**Pendiente principal** (el detalle y el resto de áreas están en la [hoja de ruta](./docs/hoja_de_ruta.md)):
-
-* **Seguridad del despliegue:** HTTPS, autenticación y control de acceso. **Hoy la API y el front no deben exponerse a Internet.**
-* **Supervisión humana:** que la revisión recalcule las métricas y condicione el informe, identificar a cada operadora con un pseudónimo propio, vistas por rol e integrar `emitir_sello_auditoria` en la API.
-* **Validación:** evaluación completa de extremo a extremo con el pipeline unificado y métricas formales WER/DER en todo el corpus (la calibración exploratoria de componentes de audio y el cálculo exacto del 14,61 % de habla femenina ya se han completado: [informe](./docs/evaluacion_experimental_agora.md)), y medición empírica del ahorro de cómputo frente al análisis continuo a 30 fps.
-* **Vistas por rol y capa ciudadana**, y el **frontend alternativo** de la rama `feat/frontend-dashboard` (no integrado).
-* **Licencias:** sustituir Ultralytics YOLO (AGPL-3.0) por un adaptador permisivo (YOLOX).
-* **Marco legal para terceros:** revisión jurídica del contrato de servicios y de la plantilla del Art. 50.3.
-
-### Alcance de esta entrega
-
-| | |
-| :--- | :--- |
-| **Dentro del alcance (entrega y demostración del reto)** | Análisis de **vídeos cortos** (probados hasta 5 min 12 s de audio), subidos de uno en uno · métricas **agregadas** de presencia y voz de mujeres y hombres · género **atribuido o percibido** con abstención por debajo de 0,80 y revisión humana de los casos dudosos · ejecución en local o con Docker Compose en una **red controlada** · datos de prueba públicos con licencia abierta |
-| **Fuera del alcance (hoja de ruta o decisión futura)** | Servicio multiusuario o expuesto a Internet · producción con terceros y contrato de servicios (solo borrador) · evaluación, selección o vigilancia de personas · identificación biométrica · análisis masivo de canales o *scraping* · vídeos largos · certificación pública con el Sello · tratamiento de **menores** o de categorías especiales de datos · garantías de disponibilidad, tiempos de respuesta o exactitud |
-| **Límites declarados** | Prototipo: los resultados son orientativos y exigen revisión humana · los tiempos y tokens están medidos en una sola máquina (RTX 4060 Laptop); el ahorro de cómputo frente a analizarlo todo y el coste de producción son estimaciones · la clasificación normativa del sistema está en revisión ([ADR-0012](./docs/adr/0012-marco-normativo-omnibus-digital-y-proyecto-de-ley.md)) · los vídeos de calibración interna no se redistribuyen ([`DATASET_CARD.md`](./DATASET_CARD.md), 1.1) |
+### 💻 Modo C: Ejecución Local Permisiva, Offline y Sector Público (ENS / Art. 157 LRJSP / Zero Cloud)
+> **Para todas las Administraciones Públicas del Estado (RTVE, 3Cat/TV3, EITB, CRTVG, universidades, ministerios, diputaciones y ayuntamientos) sujetas al Esquema Nacional de Seguridad (ENS), al Art. 157 de la Ley 40/2015 (reutilización de sistemas) y a la Directiva UE 2019/882 de Accesibilidad.**
+* **Soberanía Lingüística Cooficial e Inclusividad por Diseño (`ADR-0010`):** Soporte nativo sin traducción intermedia para todas las **lenguas cooficiales del Estado (`es`, `ca`, `gl`, `eu`) + `en`**, e inclusión automática de resumen en **Lectura Fácil (Norma UNE 153101 / WCAG 2.2 AA)** (`resumen_lectura_facil`) compatible con lectores de pantalla (`NVDA`/`JAWS`).
+* **Aislamiento de Licencias (estado real):** El pipeline de vídeo actual usa **Ultralytics YOLO (AGPL-3.0)** para detectar personas (`aiasn/model_adapters/person_tracker.py`), **InsightFace** para caras (`face_detector.py`) y **EasyOCR (Apache-2.0)** para rótulos, todos tras los adaptadores de `aiasn/model_adapters/`. En `aiasn/core/compliance.py` existen `CSVPrecomputedAdapter` (ingesta de trazas `.csv` / `.tsv`, separación de procesos) y un esqueleto `PermissiveYOLOXAdapter` (**hoja de ruta: aún no implementa inferencia sobre vídeo**). La sustitución por YOLOX (Apache-2.0) para despliegues B2B es **trabajo de Fase 2**, no está implementada. Nota: el código de InsightFace es MIT, pero sus **pesos preentrenados (p. ej. `buffalo_l`) son solo para investigación no comercial**; un uso comercial exigiría licencia o un modelo alternativo.
+* **Círculo Virtuoso de Referentes Femeninos sin Reentrenamiento (*Green AI Flywheel*):** Los rótulos y menciones extraídos por consenso de alta confianza ($p \ge 0{,}80$) enriquecen un diccionario ligero local (`.csv`/`.json`) interoperable con **`Top Rosies Talent`**, **`ReDivIAcat`** y **`tFemTIC`** (`IDEAI-UPC` / `donesCOEINF`) y con **`WikiMujeres` / `Wikidata`**, mejorando el reconocimiento futuro (Cuadrante 4) tanto *offline/batch* como sincronizado sin coste de GPU en reentrenamiento.
+* **Extensión en Caliente para las 4 Modalidades (*Shift-Left Parity*):** Diseñado para inyectarse como asistente preventivo en herramientas de **Vídeo** (`OBS Studio`, `DaVinci Resolve`, `Premiere`), **Audio/Podcasts** (`Audacity`, `Audition`), **Imagen/Cartelería** (`Canva`, `Figma`) y **Texto/Prensa** (`WordPress`, `Docs`), y emitir certificados con huella inmutable **`SHA-256`** (`emitir_sello_auditoria`).
 
 Seguimiento día a día en el [tablero del equipo](https://github.com/users/ewigkeitt-cloud/projects/1).
 
